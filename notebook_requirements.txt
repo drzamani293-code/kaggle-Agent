@@ -13,3 +13,7 @@ seaborn
 shap
 statsmodels
 xgboost
+
+biopython
+boltz
+torch
