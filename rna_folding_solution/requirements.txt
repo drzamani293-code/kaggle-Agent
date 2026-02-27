@@ -1,0 +1,8 @@
+torch>=2.0.0
+numpy>=1.24.0
+pandas>=2.0.0
+tqdm>=4.65.0
+# Optional but strongly recommended:
+# ViennaRNA>=2.6.0   # Secondary structure prediction (install via conda: conda install -c bioconda viennarna)
+# biopython>=1.81    # PDB parsing and structure handling
+# scipy>=1.10.0      # Scientific computing utilities
