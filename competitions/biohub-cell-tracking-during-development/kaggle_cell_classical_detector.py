@@ -570,15 +570,20 @@ def _nms_by_physical_distance(candidates_df: pd.DataFrame, min_distance_um: floa
     scale = np.array([VOXEL_SIZE_UM["z"], VOXEL_SIZE_UM["y"], VOXEL_SIZE_UM["x"]])
     scaled_coords = candidates_df[["z", "y", "x"]].to_numpy(dtype=float) * scale
     tree = cKDTree(scaled_coords)
-    keep_mask = np.ones(len(candidates_df), dtype=bool)
+    n = len(candidates_df)
+    keep_mask = np.ones(n, dtype=bool)
 
-    for i in range(len(scaled_coords)):
-        if not keep_mask[i]:
-            continue
-        neighbor_idx = tree.query_ball_point(scaled_coords[i], r=min_distance_um)
-        for j in neighbor_idx:
-            if j > i:
-                keep_mask[j] = False
+    pairs = tree.query_pairs(r=min_distance_um, output_type="ndarray")
+    if len(pairs):
+        # pairs are (i, j) with i < j (index order == score-descending order).
+        order = np.argsort(pairs[:, 0], kind="stable")
+        pairs = pairs[order]
+        starts = np.searchsorted(pairs[:, 0], np.arange(n))
+        ends = np.searchsorted(pairs[:, 0], np.arange(n), side="right")
+        for i in range(n):
+            if not keep_mask[i]:
+                continue
+            keep_mask[pairs[starts[i]:ends[i], 1]] = False
 
     return candidates_df[keep_mask]
 

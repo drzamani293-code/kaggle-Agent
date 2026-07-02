@@ -1,21 +1,27 @@
 """
 Biohub - Cell Tracking During Development
-Detector calibration: parameter sweep for the classical 3D detector baseline.
+Recall-preserving detector diagnostics + second calibration sweep.
 
-The Milestone 5 classical detector recovers essentially all GT nodes but
-massively overpredicts (168-205 predicted nodes per timepoint for ~1
-sparse GT node) at its default settings. This sweeps percentile_high,
-threshold, min_distance_um, and max_nodes_per_timepoint over the first 3
-train samples (only timepoints that have GT nodes) to find settings that
-cut overprediction while keeping GT recall near 1.0 and matched distance
-well under 7 um. No tracking, no ML, no final submission - calibration only.
+The first calibration sweep (detector_calibration.py) collapsed recall to
+~0.45-0.53 (missing 80-100 GT nodes) at its best-ranked settings, even
+though the uncalibrated Milestone 5 baseline matched nearly all GT nodes.
+The likely cause: that sweep's threshold floor (0.35) and percentile_high
+floor (99.0) can clip real-but-dim cell signal out of the *raw candidate
+pool* before any of the tunable parameters even get a chance to act - no
+downstream tuning can recover a GT node whose matching peak never made it
+into the pool in the first place.
 
-Performance note: percentile_high is the only swept parameter that changes
-the (expensive) normalize+smooth+peak-detection pass, so that pass is run
-once per (sample, timepoint, percentile_high) and its raw candidate pool
-is reused for every threshold/min_distance_um/max_nodes_per_timepoint
-combination - collapsing the 900-combination sweep's expensive work down
-to `5 x num_cases` image-processing passes instead of `900 x num_cases`.
+This module:
+  Part 1 - measures, at each of 4 pipeline stages (raw candidate pool,
+    after threshold, after NMS, after max_nodes cap), whether every GT
+    node in the first 3 train samples still has >=1 candidate within 7 um
+    - directly localizing where in the pipeline coverage is actually lost.
+  Part 2 - re-sweeps with a much less aggressive parameter range
+    (lower percentile_high/threshold floors, finer/smaller min_distance_um,
+    larger max_nodes_per_timepoint) designed to preserve that coverage.
+  Part 3 - ranks configurations by coverage first, overprediction second.
+
+No tracking, no final submission - diagnostics + calibration only.
 """
 
 from __future__ import annotations
@@ -355,18 +361,19 @@ def find_train_zarr_dirs(roots: Sequence[Path] | None = None) -> list[Path]:
 
 
 # --------------------------------------------------------------------------- #
-# 5. Shared detector primitives (normalize, NMS, matching)
+# 5. Shared detector primitives (normalize, NMS, matching, coverage)
 # --------------------------------------------------------------------------- #
-# Gaussian smoothing / low percentile are not swept - held at the Milestone 5
-# baseline's defaults so the sweep isolates the four requested parameters.
 FIXED_PERCENTILE_LOW = 1.0
 FIXED_GAUSSIAN_SIGMA_Z = 1.0
 FIXED_GAUSSIAN_SIGMA_YX = 1.5
 
-# Defensive cap on raw (pre-NMS) candidates per volume, same rationale as
-# Milestone 5's classical_detector.py: bounds worst-case NMS cost regardless
-# of how many local maxima a given (volume, percentile_high) pass produces.
-MAX_RAW_CANDIDATES_BEFORE_NMS = 5000
+# Defensive cap on raw (pre-NMS) candidates per volume - bounds worst-case
+# NMS/coverage cost regardless of how many local maxima a given
+# (volume, percentile_high) pass produces. Larger than the first sweep's
+# cap since a much lower threshold floor here lets more candidates through.
+MAX_RAW_CANDIDATES_BEFORE_NMS = 20000
+
+_VOXEL_SCALE = np.array([VOXEL_SIZE_UM["z"], VOXEL_SIZE_UM["y"], VOXEL_SIZE_UM["x"]])
 
 
 def normalize_intensity(image: np.ndarray, percentile_low: float, percentile_high: float) -> np.ndarray:
@@ -385,8 +392,7 @@ def _nms_by_physical_distance(candidates_df: pd.DataFrame, min_distance_um: floa
     if len(candidates_df) <= 1:
         return candidates_df
 
-    scale = np.array([VOXEL_SIZE_UM["z"], VOXEL_SIZE_UM["y"], VOXEL_SIZE_UM["x"]])
-    scaled_coords = candidates_df[["z", "y", "x"]].to_numpy(dtype=float) * scale
+    scaled_coords = candidates_df[["z", "y", "x"]].to_numpy(dtype=float) * _VOXEL_SCALE
     tree = cKDTree(scaled_coords)
     n = len(candidates_df)
     keep_mask = np.ones(n, dtype=bool)
@@ -408,8 +414,7 @@ def _nms_by_physical_distance(candidates_df: pd.DataFrame, min_distance_um: floa
 
 def _pairwise_physical_distance_um(coords1_zyx: np.ndarray, coords2_zyx: np.ndarray) -> np.ndarray:
     """Vectorized (N,M) physical-distance cost matrix between two (z,y,x) coordinate arrays."""
-    scale = np.array([VOXEL_SIZE_UM["z"], VOXEL_SIZE_UM["y"], VOXEL_SIZE_UM["x"]])
-    diff = (coords1_zyx[:, None, :] - coords2_zyx[None, :, :]) * scale
+    diff = (coords1_zyx[:, None, :] - coords2_zyx[None, :, :]) * _VOXEL_SCALE
     return np.sqrt((diff ** 2).sum(axis=-1))
 
 
@@ -426,13 +431,31 @@ def _match_single_timepoint(
     return [float(cost[r, c]) for r, c in zip(row_ind, col_ind) if cost[r, c] <= max_distance_um]
 
 
+def _gt_coverage_mask(gt_coords_zyx: np.ndarray, candidates_df: pd.DataFrame, max_distance_um: float) -> np.ndarray:
+    """Boolean array (one per GT node): is there >= 1 candidate within
+    `max_distance_um` physical distance, regardless of 1-1 assignment?
+    This is a looser existence check than Hungarian matching - it upper-
+    bounds the recall any matching scheme could possibly achieve at this
+    pipeline stage.
+    """
+    if len(gt_coords_zyx) == 0:
+        return np.zeros(0, dtype=bool)
+    if len(candidates_df) == 0:
+        return np.zeros(len(gt_coords_zyx), dtype=bool)
+    cand_scaled = candidates_df[["z", "y", "x"]].to_numpy(dtype=float) * _VOXEL_SCALE
+    gt_scaled = gt_coords_zyx * _VOXEL_SCALE
+    tree = cKDTree(cand_scaled)
+    dists, _ = tree.query(gt_scaled, k=1)
+    return np.atleast_1d(dists) <= max_distance_um
+
+
 # --------------------------------------------------------------------------- #
-# 6. Calibration sweep
+# 6. Recall-preserving sweep (Part 2) + stage-wise coverage (Part 1)
 # --------------------------------------------------------------------------- #
-DEFAULT_PERCENTILE_HIGH_VALUES = (99.0, 99.3, 99.5, 99.7, 99.9)
-DEFAULT_THRESHOLD_VALUES = (0.35, 0.45, 0.55, 0.65, 0.75, 0.85)
-DEFAULT_MIN_DISTANCE_UM_VALUES = (3.0, 5.0, 7.0, 9.0, 12.0)
-DEFAULT_MAX_NODES_VALUES = (25, 50, 75, 100, 150, 200)
+DEFAULT_PERCENTILE_HIGH_VALUES = (98.0, 98.5, 99.0, 99.3, 99.5, 99.7)
+DEFAULT_THRESHOLD_VALUES = (0.03, 0.05, 0.08, 0.10, 0.15, 0.20, 0.25, 0.30)
+DEFAULT_MIN_DISTANCE_UM_VALUES = (1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 7.0)
+DEFAULT_MAX_NODES_VALUES = (150, 200, 250, 300, 400, 600)
 
 SWEEP_COLUMNS = [
     "percentile_high", "threshold", "min_distance_um", "max_nodes_per_timepoint",
@@ -440,6 +463,12 @@ SWEEP_COLUMNS = [
     "total_unmatched_gt_nodes", "total_unmatched_pred_nodes",
     "mean_matched_distance_um", "median_matched_distance_um",
     "recall_on_sparse_gt", "precision_against_sparse_gt", "score_proxy",
+]
+
+COVERAGE_COLUMNS = [
+    "percentile_high", "threshold", "min_distance_um", "max_nodes_per_timepoint",
+    "raw_candidate_gt_coverage", "threshold_gt_coverage", "nms_gt_coverage", "cap_gt_coverage",
+    "gt_lost_at_threshold", "gt_lost_at_nms", "gt_lost_at_cap",
 ]
 
 
@@ -481,32 +510,53 @@ def _raw_candidates_for_case(image_zyx: np.ndarray, percentile_high: float, min_
     return candidates
 
 
-def run_detector_calibration_sweep(
+def _coverage_fraction(cases, candidates_by_case: Sequence[pd.DataFrame], total_gt: int, max_distance_um: float) -> int:
+    """Total (not fractional) count of GT nodes with >=1 candidate within
+    `max_distance_um`, across all cases; caller divides by total_gt.
+    """
+    covered = 0
+    for (_, _, _, gt_coords), candidates_df in zip(cases, candidates_by_case):
+        covered += int(_gt_coverage_mask(gt_coords, candidates_df, max_distance_um).sum())
+    return covered
+
+
+def run_recall_preserving_calibration(
     n_samples: int = 3,
     percentile_high_values: Sequence[float] = DEFAULT_PERCENTILE_HIGH_VALUES,
     threshold_values: Sequence[float] = DEFAULT_THRESHOLD_VALUES,
     min_distance_um_values: Sequence[float] = DEFAULT_MIN_DISTANCE_UM_VALUES,
     max_nodes_values: Sequence[int] = DEFAULT_MAX_NODES_VALUES,
     match_max_distance_um: float = 7.0,
-    csv_path: str = "/kaggle/working/detector_calibration_sweep.csv",
+    sweep_csv_path: str = "/kaggle/working/detector_recall_preserving_sweep.csv",
+    coverage_csv_path: str = "/kaggle/working/detector_stage_coverage.csv",
     verbose: bool = True,
-) -> pd.DataFrame:
-    """Sweep (percentile_high, threshold, min_distance_um, max_nodes_per_timepoint)
-    over the first `n_samples` train samples (timepoints with GT nodes only),
-    reporting per-combination overprediction/recall/precision diagnostics.
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Sweep the recall-preserving parameter grid over the first `n_samples`
+    train samples (timepoints with GT nodes only), computing BOTH the usual
+    overprediction/recall/precision sweep metrics (Part 2) AND, for every
+    combination, stage-wise GT coverage (Part 1): does every GT node still
+    have >=1 candidate within `match_max_distance_um` after the raw
+    candidate pool, after thresholding, after NMS, and after the
+    max_nodes_per_timepoint cap.
+
+    Returns (sweep_df, coverage_df); both share the same parameter columns
+    and row order, so they can be joined on
+    [percentile_high, threshold, min_distance_um, max_nodes_per_timepoint].
     """
     train_dirs = find_train_zarr_dirs()
     if not train_dirs:
         print("[error] no train samples found.")
-        return pd.DataFrame(columns=SWEEP_COLUMNS)
+        return pd.DataFrame(columns=SWEEP_COLUMNS), pd.DataFrame(columns=COVERAGE_COLUMNS)
 
     cases = _collect_gt_cases(train_dirs[:n_samples])
     if not cases:
         print("[error] none of the selected samples have GT nodes.")
-        return pd.DataFrame(columns=SWEEP_COLUMNS)
+        return pd.DataFrame(columns=SWEEP_COLUMNS), pd.DataFrame(columns=COVERAGE_COLUMNS)
+
+    total_gt = sum(len(gt_coords) for _, _, _, gt_coords in cases)
 
     if verbose:
-        print(f"Calibrating over {len(cases)} (sample, timepoint) case(s) with GT nodes.")
+        print(f"Calibrating over {len(cases)} (sample, timepoint) case(s), {total_gt} total GT node(s).")
 
     min_threshold = min(threshold_values)
     image_cache: dict[tuple[str, int], np.ndarray] = {}
@@ -518,38 +568,42 @@ def run_detector_calibration_sweep(
         return image_cache[key]
 
     sweep_start = time.time()
-    rows = []
+    sweep_rows = []
+    coverage_rows = []
 
     for percentile_high in percentile_high_values:
         ph_start = time.time()
-        # Expensive step, run once per case for this percentile_high.
         raw_candidates_by_case = [
             _raw_candidates_for_case(get_image(sample_name, sample_dir, t), percentile_high, min_threshold)
             for sample_name, sample_dir, t, _ in cases
         ]
+        raw_covered = _coverage_fraction(cases, raw_candidates_by_case, total_gt, match_max_distance_um)
         if verbose:
-            print(f"  percentile_high={percentile_high}: candidate pools built in {time.time() - ph_start:.1f}s")
+            print(
+                f"  percentile_high={percentile_high}: candidate pools built in {time.time() - ph_start:.1f}s "
+                f"(raw_candidate_gt_coverage={raw_covered / total_gt:.3f})"
+            )
 
         for threshold in threshold_values:
-            filtered_by_case = [
-                raw[raw["score"] >= threshold] for raw in raw_candidates_by_case
-            ]
+            filtered_by_case = [raw[raw["score"] >= threshold] for raw in raw_candidates_by_case]
+            threshold_covered = _coverage_fraction(cases, filtered_by_case, total_gt, match_max_distance_um)
 
             for min_distance_um in min_distance_um_values:
-                # NMS depends on (percentile_high, threshold, min_distance_um);
-                # max_nodes_per_timepoint is then just a free slice of the result.
                 nms_by_case = [
                     _nms_by_physical_distance(filtered, min_distance_um) for filtered in filtered_by_case
                 ]
+                nms_covered = _coverage_fraction(cases, nms_by_case, total_gt, match_max_distance_um)
 
                 for max_nodes in max_nodes_values:
                     sum_gt = sum_pred = sum_matched = 0
                     all_distances: list[float] = []
+                    cap_covered = 0
 
                     for (_, _, _, gt_coords), nms_df in zip(cases, nms_by_case):
                         capped = nms_df.iloc[:max_nodes]
                         pred_coords = capped[["z", "y", "x"]].to_numpy(dtype=float)
 
+                        cap_covered += int(_gt_coverage_mask(gt_coords, capped, match_max_distance_um).sum())
                         matched_distances = _match_single_timepoint(pred_coords, gt_coords, match_max_distance_um)
 
                         sum_gt += len(gt_coords)
@@ -571,11 +625,15 @@ def run_detector_calibration_sweep(
                     )
                     score_proxy = recall_on_sparse_gt - 0.002 * avg_pred_nodes
 
-                    rows.append({
+                    params = {
                         "percentile_high": percentile_high,
                         "threshold": threshold,
                         "min_distance_um": min_distance_um,
                         "max_nodes_per_timepoint": max_nodes,
+                    }
+
+                    sweep_rows.append({
+                        **params,
                         "avg_gt_nodes": avg_gt_nodes,
                         "avg_pred_nodes": avg_pred_nodes,
                         "avg_matched_nodes": avg_matched_nodes,
@@ -588,65 +646,132 @@ def run_detector_calibration_sweep(
                         "score_proxy": score_proxy,
                     })
 
-    sweep_df = pd.DataFrame(rows, columns=SWEEP_COLUMNS)
+                    coverage_rows.append({
+                        **params,
+                        "raw_candidate_gt_coverage": raw_covered / total_gt,
+                        "threshold_gt_coverage": threshold_covered / total_gt,
+                        "nms_gt_coverage": nms_covered / total_gt,
+                        "cap_gt_coverage": cap_covered / total_gt,
+                        "gt_lost_at_threshold": raw_covered - threshold_covered,
+                        "gt_lost_at_nms": threshold_covered - nms_covered,
+                        "gt_lost_at_cap": nms_covered - cap_covered,
+                    })
 
-    out_path = Path(csv_path)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    sweep_df.to_csv(out_path, index=False)
+    sweep_df = pd.DataFrame(sweep_rows, columns=SWEEP_COLUMNS)
+    coverage_df = pd.DataFrame(coverage_rows, columns=COVERAGE_COLUMNS)
+
+    sweep_out = Path(sweep_csv_path)
+    sweep_out.parent.mkdir(parents=True, exist_ok=True)
+    sweep_df.to_csv(sweep_out, index=False)
+
+    coverage_out = Path(coverage_csv_path)
+    coverage_out.parent.mkdir(parents=True, exist_ok=True)
+    coverage_df.to_csv(coverage_out, index=False)
 
     if verbose:
         print(
             f"\nSwept {len(sweep_df)} parameter combination(s) over {len(cases)} case(s) "
-            f"in {time.time() - sweep_start:.1f}s"
+            f"({total_gt} GT node(s)) in {time.time() - sweep_start:.1f}s"
         )
-        print(f"Saved sweep to {out_path} (shape={sweep_df.shape})")
+        print(f"Saved sweep to {sweep_out} (shape={sweep_df.shape})")
+        print(f"Saved stage coverage to {coverage_out} (shape={coverage_df.shape})")
 
-    return sweep_df
+    return sweep_df, coverage_df
 
 
-def print_top_calibration_results(sweep_df: pd.DataFrame, top_n: int = 20) -> pd.DataFrame:
-    """Sort by total_unmatched_gt_nodes asc, avg_pred_nodes asc,
-    mean_matched_distance_um asc, and print/return the top `top_n` rows.
+# --------------------------------------------------------------------------- #
+# Part 3. Ranking and reporting
+# --------------------------------------------------------------------------- #
+PARAM_COLUMNS = ["percentile_high", "threshold", "min_distance_um", "max_nodes_per_timepoint"]
+
+
+def _merge_sweep_and_coverage(sweep_df: pd.DataFrame, coverage_df: pd.DataFrame) -> pd.DataFrame:
+    return sweep_df.merge(coverage_df, on=PARAM_COLUMNS, how="inner")
+
+
+def print_top_recall_preserving_results(
+    sweep_df: pd.DataFrame, coverage_df: pd.DataFrame, top_n: int = 20
+) -> pd.DataFrame:
+    """Sort by cap_gt_coverage desc, avg_pred_nodes asc, mean_matched_distance_um
+    asc, and print/return the top `top_n` rows.
     """
-    if len(sweep_df) == 0:
+    merged = _merge_sweep_and_coverage(sweep_df, coverage_df)
+    if len(merged) == 0:
         print("[warn] sweep produced no rows to rank.")
-        return sweep_df
+        return merged
 
-    ranked = sweep_df.sort_values(
-        by=["total_unmatched_gt_nodes", "avg_pred_nodes", "mean_matched_distance_um"],
-        ascending=[True, True, True],
+    ranked = merged.sort_values(
+        by=["cap_gt_coverage", "avg_pred_nodes", "mean_matched_distance_um"],
+        ascending=[False, True, True],
     ).reset_index(drop=True)
 
     top = ranked.head(top_n)
-    print(f"\nTop {len(top)} parameter set(s) "
-          f"(sorted by total_unmatched_gt_nodes, then avg_pred_nodes, then mean_matched_distance_um):")
+    print(
+        f"\nTop {len(top)} parameter set(s) "
+        f"(sorted by cap_gt_coverage desc, then avg_pred_nodes asc, then mean_matched_distance_um asc):"
+    )
     print(top.to_string(index=False))
     return top
 
 
-def run_detector_calibration(
+def print_high_recall_low_overprediction_configs(
+    sweep_df: pd.DataFrame,
+    coverage_df: pd.DataFrame,
+    min_cap_gt_coverage: float = 0.95,
+    min_recall_on_sparse_gt: float = 0.95,
+) -> pd.DataFrame:
+    """Configs meeting both cap_gt_coverage >= `min_cap_gt_coverage` and
+    recall_on_sparse_gt >= `min_recall_on_sparse_gt`, sorted by avg_pred_nodes
+    ascending (i.e. the least overpredicting config among those that
+    actually preserve recall).
+    """
+    merged = _merge_sweep_and_coverage(sweep_df, coverage_df)
+    qualifying = merged[
+        (merged["cap_gt_coverage"] >= min_cap_gt_coverage)
+        & (merged["recall_on_sparse_gt"] >= min_recall_on_sparse_gt)
+    ].sort_values(by="avg_pred_nodes", ascending=True).reset_index(drop=True)
+
+    print(
+        f"\nConfigs with cap_gt_coverage >= {min_cap_gt_coverage} and "
+        f"recall_on_sparse_gt >= {min_recall_on_sparse_gt} (sorted by avg_pred_nodes asc): "
+        f"{len(qualifying)} found"
+    )
+    if len(qualifying):
+        print(qualifying.to_string(index=False))
+    else:
+        print("  (none - consider loosening min_cap_gt_coverage / min_recall_on_sparse_gt)")
+    return qualifying
+
+
+def run_recall_preserving_diagnostics(
     n_samples: int = 3,
     percentile_high_values: Sequence[float] = DEFAULT_PERCENTILE_HIGH_VALUES,
     threshold_values: Sequence[float] = DEFAULT_THRESHOLD_VALUES,
     min_distance_um_values: Sequence[float] = DEFAULT_MIN_DISTANCE_UM_VALUES,
     max_nodes_values: Sequence[int] = DEFAULT_MAX_NODES_VALUES,
     match_max_distance_um: float = 7.0,
-    csv_path: str = "/kaggle/working/detector_calibration_sweep.csv",
+    sweep_csv_path: str = "/kaggle/working/detector_recall_preserving_sweep.csv",
+    coverage_csv_path: str = "/kaggle/working/detector_stage_coverage.csv",
     top_n: int = 20,
-) -> pd.DataFrame:
-    """Run the full sweep and print the top `top_n` calibrated parameter sets."""
-    sweep_df = run_detector_calibration_sweep(
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Run the full recall-preserving sweep + stage coverage diagnostics,
+    then print the top-ranked configs and the high-recall/low-overprediction
+    subset.
+    """
+    sweep_df, coverage_df = run_recall_preserving_calibration(
         n_samples=n_samples,
         percentile_high_values=percentile_high_values,
         threshold_values=threshold_values,
         min_distance_um_values=min_distance_um_values,
         max_nodes_values=max_nodes_values,
         match_max_distance_um=match_max_distance_um,
-        csv_path=csv_path,
+        sweep_csv_path=sweep_csv_path,
+        coverage_csv_path=coverage_csv_path,
     )
-    print_top_calibration_results(sweep_df, top_n=top_n)
-    return sweep_df
+    print_top_recall_preserving_results(sweep_df, coverage_df, top_n=top_n)
+    print_high_recall_low_overprediction_configs(sweep_df, coverage_df)
+    return sweep_df, coverage_df
 
 
 if __name__ == "__main__":
-    run_detector_calibration(n_samples=3)
+    run_recall_preserving_diagnostics(n_samples=3)
