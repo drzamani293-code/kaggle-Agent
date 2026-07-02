@@ -64,13 +64,14 @@ def get_input_roots() -> list[Path]:
     return roots
 
 
-def find_test_zarr_dirs(roots: Sequence[Path] | None = None) -> list[Path]:
-    """Recursively locate every *.zarr folder belonging to the test split.
+def find_zarr_dirs_for_split(split: str, roots: Sequence[Path] | None = None) -> list[Path]:
+    """Recursively locate every *.zarr folder belonging to the given split
+    (e.g. "test" or "train").
 
     `roots` defaults to the auto-detected input roots (see `get_input_roots`).
     Falls back to *all* discovered .zarr folders if none live under a path
-    component literally named "test" (some datasets ship test-only data
-    without an explicit "test" directory).
+    component literally matching `split` (some datasets ship split-only data
+    without an explicit split directory).
     """
     if roots is None:
         roots = get_input_roots()
@@ -89,15 +90,20 @@ def find_test_zarr_dirs(roots: Sequence[Path] | None = None) -> list[Path]:
     if not all_zarr_dirs:
         return []
 
-    test_dirs = [p for p in all_zarr_dirs if "test" in {part.lower() for part in p.parts}]
-    if test_dirs:
-        return sorted(set(test_dirs))
+    split_dirs = [p for p in all_zarr_dirs if split.lower() in {part.lower() for part in p.parts}]
+    if split_dirs:
+        return sorted(set(split_dirs))
 
     print(
-        "[warn] no .zarr folder had a 'test' path component; "
-        "treating all discovered .zarr folders as test data."
+        f"[warn] no .zarr folder had a '{split}' path component; "
+        "treating all discovered .zarr folders as this split's data."
     )
     return sorted(set(all_zarr_dirs))
+
+
+def find_test_zarr_dirs(roots: Sequence[Path] | None = None) -> list[Path]:
+    """Recursively locate every *.zarr folder belonging to the test split."""
+    return find_zarr_dirs_for_split("test", roots)
 
 
 # --------------------------------------------------------------------------- #
