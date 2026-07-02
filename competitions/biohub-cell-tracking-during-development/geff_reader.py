@@ -183,7 +183,7 @@ def read_full_zarr_array(array_dir: Path) -> np.ndarray:
     if not shape:  # 0-d array
         return read_chunk_at(meta, ())
 
-    n_chunks = [math.ceil(shape[d] / chunk_shape[d]) for d in range(len(shape))]
+    n_chunks = [math.ceil(shape[d] / chunk_shape[d]) if shape[d] else 0 for d in range(len(shape))]
     full = np.full(shape, meta["fill_value"], dtype=meta["dtype"])
     for index in itertools.product(*(range(n) for n in n_chunks)):
         chunk = read_chunk_at(meta, index)
