@@ -13,3 +13,4 @@ seaborn
 shap
 statsmodels
 xgboost
+zarr
