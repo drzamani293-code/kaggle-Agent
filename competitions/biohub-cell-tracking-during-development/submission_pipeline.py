@@ -8,6 +8,7 @@ a schema-valid dummy submission.csv (node + edge rows) with no ML involved.
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from typing import Sequence
@@ -27,19 +28,53 @@ REQUIRED_COLUMNS = [
 # Fallback (t, z, y, x) shape used when a volume's metadata can't be read.
 DEFAULT_SHAPE = (3, 64, 64, 64)
 
-CANDIDATE_INPUT_ROOTS = [Path("/kaggle/input")]
-
 
 # --------------------------------------------------------------------------- #
-# 1. Discover test .zarr folders
+# 1. Auto-detect the Kaggle input root, then discover test .zarr folders
 # --------------------------------------------------------------------------- #
-def find_test_zarr_dirs(roots: Sequence[Path] = CANDIDATE_INPUT_ROOTS) -> list[Path]:
+def get_input_roots() -> list[Path]:
+    """Auto-detect candidate input roots, without hardcoding any dataset path.
+
+    Priority order:
+    1. ``KAGGLE_INPUT_DIR`` env var - explicit override, e.g. for local testing.
+    2. ``/kaggle/input`` - the real Kaggle competition environment.
+    3. ``./input`` - a relative fallback for running outside Kaggle.
+
+    Only roots that actually exist are returned, de-duplicated by resolved path.
+    """
+    candidates = []
+    env_root = os.environ.get("KAGGLE_INPUT_DIR")
+    if env_root:
+        candidates.append(Path(env_root))
+    candidates.append(Path("/kaggle/input"))
+    candidates.append(Path("input"))
+
+    roots: list[Path] = []
+    seen: set[Path] = set()
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+        except OSError:
+            continue
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        if candidate.exists():
+            roots.append(candidate)
+    return roots
+
+
+def find_test_zarr_dirs(roots: Sequence[Path] | None = None) -> list[Path]:
     """Recursively locate every *.zarr folder belonging to the test split.
 
+    `roots` defaults to the auto-detected input roots (see `get_input_roots`).
     Falls back to *all* discovered .zarr folders if none live under a path
     component literally named "test" (some datasets ship test-only data
     without an explicit "test" directory).
     """
+    if roots is None:
+        roots = get_input_roots()
+
     all_zarr_dirs: list[Path] = []
     for root in roots:
         try:
@@ -68,38 +103,47 @@ def find_test_zarr_dirs(roots: Sequence[Path] = CANDIDATE_INPUT_ROOTS) -> list[P
 # --------------------------------------------------------------------------- #
 # 2. Safely read Zarr volume metadata
 # --------------------------------------------------------------------------- #
-def read_zarr_shape(zarr_path: Path) -> tuple[int, ...]:
-    """Safely read the array shape of a (possibly OME-Zarr) volume.
+def read_zarr_metadata(zarr_path: Path) -> dict:
+    """Safely read metadata for a (possibly OME-Zarr) volume.
 
-    Never raises: returns DEFAULT_SHAPE and prints a warning on any failure
-    so a corrupt / partial / unusual store can't crash the whole pipeline.
+    Never raises: any failure is recorded in the returned dict (`used_fallback`
+    + `note`) and `DEFAULT_SHAPE` is used instead, so one bad store can't
+    crash the whole pipeline.
     """
+    info = {
+        "path": str(zarr_path),
+        "shape": None,
+        "dtype": None,
+        "used_fallback": False,
+        "note": "",
+    }
+
     if zarr is None:
-        print(f"[warn] zarr package not installed; using default shape for {zarr_path.name}")
-        return DEFAULT_SHAPE
+        info.update(shape=DEFAULT_SHAPE, used_fallback=True, note="zarr package not installed")
+        return info
 
     try:
         store = zarr.open(str(zarr_path), mode="r")
     except Exception as exc:
-        print(f"[warn] could not open {zarr_path}: {exc!r}; using default shape")
-        return DEFAULT_SHAPE
+        info.update(shape=DEFAULT_SHAPE, used_fallback=True, note=f"could not open store: {exc!r}")
+        return info
 
     try:
         if hasattr(store, "shape"):
-            shape = store.shape
+            arr = store
         else:
             array_keys = sorted(store.array_keys())
             if not array_keys:
                 raise ValueError("zarr group has no child arrays")
-            shape = store[array_keys[0]].shape
+            arr = store[array_keys[0]]
+        shape = tuple(int(s) for s in arr.shape)
+        if not shape:
+            raise ValueError("empty shape")
+        info.update(shape=shape, dtype=str(arr.dtype))
     except Exception as exc:
-        print(f"[warn] could not read shape for {zarr_path}: {exc!r}; using default shape")
-        return DEFAULT_SHAPE
+        info.update(shape=DEFAULT_SHAPE, used_fallback=True, note=f"could not read shape: {exc!r}")
 
-    if not shape:
-        print(f"[warn] empty shape for {zarr_path}; using default shape")
-        return DEFAULT_SHAPE
-    return tuple(int(s) for s in shape)
+    return info
 
 
 def center_zyx(shape: tuple[int, ...]) -> tuple[int, int, int]:
@@ -145,13 +189,13 @@ def build_dummy_rows(
     return rows, next_id, next_node_id + 3
 
 
-def build_submission(zarr_dirs: Sequence[Path]) -> pd.DataFrame:
+def build_submission(zarr_dirs: Sequence[Path], metadata: dict[Path, dict]) -> pd.DataFrame:
     rows: list[dict] = []
     next_id = 0
     next_node_id = 0
     for zarr_path in zarr_dirs:
         dataset_name = zarr_path.stem
-        shape = read_zarr_shape(zarr_path)
+        shape = metadata[zarr_path]["shape"]
         dataset_rows, next_id, next_node_id = build_dummy_rows(
             dataset_name, shape, next_id, next_node_id
         )
@@ -162,65 +206,101 @@ def build_submission(zarr_dirs: Sequence[Path]) -> pd.DataFrame:
 # --------------------------------------------------------------------------- #
 # 4. Validation
 # --------------------------------------------------------------------------- #
-def validate_submission(df: pd.DataFrame, expected_datasets: Sequence[str]) -> None:
-    errors: list[str] = []
+def validate_submission(df: pd.DataFrame, expected_datasets: Sequence[str]) -> str:
+    """Run every structural check and print a full pass/fail report.
 
-    if list(df.columns) != REQUIRED_COLUMNS:
-        errors.append(f"columns mismatch: {list(df.columns)} != {REQUIRED_COLUMNS}")
+    Raises AssertionError if any check fails; returns the report string
+    otherwise.
+    """
+    checks: list[dict] = []
 
-    if df.isna().any().any():
-        errors.append(f"NaN values found in columns: {df.columns[df.isna().any()].tolist()}")
+    def check(name: str, passed: bool, detail: str = "") -> None:
+        checks.append({"name": name, "passed": bool(passed), "detail": detail})
 
-    if df["id"].tolist() != list(range(len(df))):
-        errors.append("id column is not consecutive starting at 0")
+    check("columns match required schema", list(df.columns) == REQUIRED_COLUMNS,
+          f"got {list(df.columns)}")
 
-    missing = set(expected_datasets) - set(df["dataset"].unique())
-    if missing:
-        errors.append(f"missing datasets in submission: {sorted(missing)}")
+    na_cols = df.columns[df.isna().any()].tolist()
+    check("no NaN values anywhere", not na_cols, f"NaN columns: {na_cols}")
+
+    check("id column is consecutive starting at 0", df["id"].tolist() == list(range(len(df))))
+
+    missing = sorted(set(expected_datasets) - set(df["dataset"].unique()))
+    check("every expected test dataset is present", not missing, f"missing: {missing}")
+
+    check("row_type values are only 'node'/'edge'", set(df["row_type"].unique()) <= {"node", "edge"})
 
     nodes = df[df["row_type"] == "node"]
     edges = df[df["row_type"] == "edge"]
 
     bad_nodes = nodes[(nodes["source_id"] != -1) | (nodes["target_id"] != -1)]
-    if len(bad_nodes):
-        errors.append(f"{len(bad_nodes)} node rows have source_id/target_id != -1")
+    check("node rows have source_id=target_id=-1", len(bad_nodes) == 0, f"{len(bad_nodes)} bad rows")
 
     bad_edges = edges[
         (edges["node_id"] != -1) | (edges["t"] != -1) | (edges["z"] != -1)
         | (edges["y"] != -1) | (edges["x"] != -1)
     ]
-    if len(bad_edges):
-        errors.append(f"{len(bad_edges)} edge rows have node_id/t/z/y/x != -1")
+    check("edge rows have node_id,t,z,y,x=-1", len(bad_edges) == 0, f"{len(bad_edges)} bad rows")
+
+    check("node_id is unique among node rows", nodes["node_id"].is_unique)
 
     valid_node_ids = set(nodes["node_id"])
     bad_source = edges[~edges["source_id"].isin(valid_node_ids)]
     bad_target = edges[~edges["target_id"].isin(valid_node_ids)]
-    if len(bad_source):
-        errors.append(f"{len(bad_source)} edges reference an unknown source_id")
-    if len(bad_target):
-        errors.append(f"{len(bad_target)} edges reference an unknown target_id")
+    check("edge source_id values reference an existing node_id", len(bad_source) == 0,
+          f"{len(bad_source)} bad rows")
+    check("edge target_id values reference an existing node_id", len(bad_target) == 0,
+          f"{len(bad_target)} bad rows")
 
-    if errors:
-        raise AssertionError("Submission validation FAILED:\n- " + "\n- ".join(errors))
+    lines = ["Validation report:"]
+    all_passed = True
+    for c in checks:
+        mark = "PASS" if c["passed"] else "FAIL"
+        if not c["passed"]:
+            all_passed = False
+        line = f"  [{mark}] {c['name']}"
+        if c["detail"] and not c["passed"]:
+            line += f"  -- {c['detail']}"
+        lines.append(line)
+    report = "\n".join(lines)
+    print(report)
 
-    n_datasets = df["dataset"].nunique()
-    print(f"Validation passed: {len(df)} rows, {n_datasets} dataset(s), no issues found.")
+    if not all_passed:
+        raise AssertionError("Submission validation FAILED. See report above.")
+    return report
 
 
 # --------------------------------------------------------------------------- #
 # 5. Main
 # --------------------------------------------------------------------------- #
 def main() -> None:
-    zarr_dirs = find_test_zarr_dirs()
+    input_roots = get_input_roots()
+    print(f"Auto-detected input root(s): {[str(r) for r in input_roots] or 'none found'}")
+
+    zarr_dirs = find_test_zarr_dirs(input_roots)
     if not zarr_dirs:
-        print("[error] no .zarr test folders were found under /kaggle/input. Nothing to submit.")
+        print("[error] no .zarr test folders were found. Nothing to submit.")
         sys.exit(1)
 
-    print(f"Found {len(zarr_dirs)} test .zarr dataset(s):")
+    print(f"\nDiscovered {len(zarr_dirs)} test dataset(s):")
     for p in zarr_dirs:
-        print(f"  - {p}")
+        print(f"  - {p.stem}  ({p})")
 
-    submission = build_submission(zarr_dirs)
+    print("\nZarr metadata per dataset:")
+    metadata: dict[Path, dict] = {}
+    for p in zarr_dirs:
+        info = read_zarr_metadata(p)
+        metadata[p] = info
+        fallback_note = f"  [fallback used: {info['note']}]" if info["used_fallback"] else ""
+        print(f"  - {p.stem}: shape={info['shape']} dtype={info['dtype']}{fallback_note}")
+
+    submission = build_submission(zarr_dirs, metadata)
+
+    print(f"\nsubmission.csv shape: {submission.shape}")
+    print("\nsubmission.csv head:")
+    print(submission.head(10).to_string(index=False))
+
+    print()
     expected_datasets = [p.stem for p in zarr_dirs]
     validate_submission(submission, expected_datasets)
 
@@ -228,9 +308,7 @@ def main() -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     submission.to_csv(out_path, index=False)
 
-    print(f"\nSaved submission to {out_path}")
-    print(f"Shape: {submission.shape}")
-    print(submission.head(10).to_string(index=False))
+    print(f"\nConfirmation: {out_path} exists -> {out_path.exists()}")
 
 
 if __name__ == "__main__":
