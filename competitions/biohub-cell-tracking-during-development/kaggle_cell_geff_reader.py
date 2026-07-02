@@ -403,5 +403,4 @@ def run_diagnostics_on_first_n_train_samples(n: int = 3, t: int = 0) -> list[str
     return reports
 
 
-if __name__ == "__main__":
-    run_diagnostics_on_first_n_train_samples(n=3)
+run_diagnostics_on_first_n_train_samples(n=3)
