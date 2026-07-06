@@ -536,36 +536,42 @@ def discover_test_datasets(test_dir: Path, sample_submission_path: Path) -> dict
     return {"chosen": chosen, "source": source, "from_sample_submission": from_submission, "from_test_dir": from_dir}
 
 
-def build_canonical_splits(dataset_names: Sequence[str]) -> dict:
-    """The canonical, minimal splits schema the predict script accepts:
-    split 0's test list is exactly the discovered dataset names.
+def build_canonical_splits(dataset_names: Sequence[str]) -> list:
+    """The canonical splits schema the predict script accepts: a LIST whose
+    element 0 is the fold-0 dict with `test` set to the discovered dataset
+    names. predict_unet_transformer.py does `folds[fold]["test"]` with an
+    INTEGER `fold` (0), so the top-level JSON MUST be a list - a
+    `{"0": {...}}` dict would json.load into STRING keys and raise
+    `KeyError: 0` at predict time.
     """
-    return {"0": {"test": list(dataset_names), "train": [], "val": []}}
+    return [{"test": list(dataset_names), "train": [], "val": []}]
 
 
-def rewrite_template_splits(template: dict, dataset_names: Sequence[str]) -> dict:
-    """Rewrites a template splits object's split-0 test list with the
-    discovered dataset names, handling the common shapes:
-      - numbered-dict:   {"0": {"test": [...]}, "1": {...}}
-      - splits-list:     {"splits": [{"test": [...]}, ...]}
-      - canonical:       {"0": {"test": [...]}}
-    Any unrecognized shape yields None so the caller rebuilds canonically.
-    Only split 0 is ever predicted, so only its test list must be correct;
-    other splits are left untouched.
+def rewrite_template_splits(template, dataset_names: Sequence[str]) -> list | None:
+    """Rewrites a template into a LIST whose element 0's `test` is the
+    discovered names (predict indexes `folds[0]` with an integer). Handles:
+      - list template:          [{"test": [...]}, ...]
+      - splits-list template:   {"splits": [{"test": [...]}, ...]}
+      - numbered-dict template: {"0": {"test": [...]}, "1": {...}}
+    Fold 0's other keys (train/val) are preserved where present. Returns
+    None for an unrecognized shape so the caller rebuilds canonically. The
+    result is ALWAYS a list - never a `{"0": ...}` dict.
     """
     names = list(dataset_names)
-    if isinstance(template, dict) and "splits" in template and isinstance(template["splits"], list) and template["splits"]:
-        new = dict(template)
-        new_splits = [dict(s) for s in template["splits"]]
-        if isinstance(new_splits[0], dict):
-            new_splits[0]["test"] = names
-            new["splits"] = new_splits
-            return new
-        return None
-    if isinstance(template, dict) and "0" in template and isinstance(template["0"], dict):
-        new = {k: (dict(v) if isinstance(v, dict) else v) for k, v in template.items()}
-        new["0"]["test"] = names
+    if isinstance(template, list) and template and isinstance(template[0], dict):
+        new = [dict(e) if isinstance(e, dict) else e for e in template]
+        new[0] = dict(new[0])
+        new[0]["test"] = names
         return new
+    if isinstance(template, dict) and isinstance(template.get("splits"), list) and template["splits"] and isinstance(template["splits"][0], dict):
+        new = [dict(e) if isinstance(e, dict) else e for e in template["splits"]]
+        new[0] = dict(new[0])
+        new[0]["test"] = names
+        return new
+    if isinstance(template, dict) and isinstance(template.get("0"), dict):
+        split0 = dict(template["0"])
+        split0["test"] = names
+        return [split0]
     return None
 
 
@@ -606,13 +612,12 @@ def prepare_splits(
     if splits is None:
         splits = build_canonical_splits(names)
 
-    # Verify split-0 test names exist on disk; if any is missing (e.g. the
-    # template nested names somewhere we didn't rewrite), rebuild canonically
-    # from only the verified-present discovered names.
-    split0 = splits.get("0") if isinstance(splits, dict) and "0" in splits else None
-    if split0 is None and isinstance(splits, dict) and isinstance(splits.get("splits"), list) and splits["splits"]:
-        split0 = splits["splits"][0]
-    split0_test = list(split0.get("test", [])) if isinstance(split0, dict) else []
+    # `splits` is ALWAYS a list now - fold 0 is `splits[0]` (predict indexes
+    # folds[0] with an integer). Verify split-0 test names exist on disk; if
+    # any is missing (e.g. a template nested names somewhere we didn't
+    # rewrite), rebuild canonically from only the verified-present names.
+    split0 = splits[0] if isinstance(splits, list) and splits and isinstance(splits[0], dict) else {}
+    split0_test = list(split0.get("test", []))
 
     verified_present = [n for n in split0_test if _dataset_present_in_test_dir(test_dir, n)]
     missing = [n for n in split0_test if not _dataset_present_in_test_dir(test_dir, n)]
@@ -623,19 +628,34 @@ def prepare_splits(
         rebuilt_canonical = True
         template_used = False
         split0_test = present_names
+        verified_present = [n for n in present_names if _dataset_present_in_test_dir(test_dir, n)]
+        missing = [n for n in present_names if not _dataset_present_in_test_dir(test_dir, n)]
 
     out_splits_path.parent.mkdir(parents=True, exist_ok=True)
     out_splits_path.write_text(json.dumps(splits, indent=2))
+
+    # Verify the WRITTEN file matches EXACTLY how predict_unet_transformer.py
+    # reads it: `folds = json.load(f); test_names = folds[fold]["test"]` with
+    # `fold == 0` (an integer). The file MUST be a list and folds[0]["test"]
+    # MUST equal the discovered names - the exact regression the KeyError: 0
+    # fallback surfaced (a {"0": ...} dict json.loads to string keys).
+    with open(out_splits_path) as f:
+        folds = json.load(f)
+    assert isinstance(folds, list), "splits file must be a JSON list (predict indexes folds[0] with an integer)"
+    assert len(folds) > 0, "splits list must be non-empty"
+    assert isinstance(folds[0], dict), "splits[0] must be a dict"
+    assert folds[0]["test"] == split0_test, "folds[0]['test'] must equal the discovered test names"
 
     diagnostic = {
         "discovered": discovery, "template_path": str(template_path) if template_path else None,
         "template_used": template_used, "rebuilt_canonical": rebuilt_canonical,
         "split0_test_names": split0_test, "verified_present": verified_present, "missing": missing,
         "out_splits_path": str(out_splits_path),
+        "final_schema": "list", "predict_index_check": "folds[0]['test'] OK",
     }
     diagnostic_path.parent.mkdir(parents=True, exist_ok=True)
     diagnostic_path.write_text(json.dumps(diagnostic, indent=2))
-    print(f"  [splits] wrote {out_splits_path} with {len(split0_test)} test dataset(s): {split0_test}")
+    print(f"  [splits] wrote {out_splits_path} (list schema) with {len(split0_test)} test dataset(s): {split0_test}")
     return {"splits": splits, "split0_test_names": split0_test, "diagnostic": diagnostic}
 
 # --------------------------------------------------------------------------- #
@@ -1270,25 +1290,48 @@ def run_milestone16_tests() -> None:
     public_template = scratch / "public_template.json"
     public_template.write_text(json.dumps({"0": {"test": PUBLIC_TEST_DATASET_NAMES, "train": []}}))
 
+    splits_out_path = scratch / "tracking_repo" / SPLITS_FILENAME
     result = prepare_splits(
         test_dir=test_dir, sample_submission_path=sample_sub, template_path=public_template,
-        out_splits_path=scratch / "tracking_repo" / SPLITS_FILENAME, diagnostic_path=scratch / "milestone16_splits.json",
+        out_splits_path=splits_out_path, diagnostic_path=scratch / "milestone16_splits.json",
     )
     split0 = set(result["split0_test_names"])
     assert split0 == set(hidden_names), f"expected hidden names, got {split0}"
     for public in PUBLIC_TEST_DATASET_NAMES:
         assert public not in split0, f"public name {public} leaked into splits"
-    written = json.loads((scratch / "tracking_repo" / SPLITS_FILENAME).read_text())
-    assert set(written["0"]["test"]) == set(hidden_names)
-    assert not (set(json.dumps(written).split()) & set(PUBLIC_TEST_DATASET_NAMES))
 
-    # Test 2: rewrite_template_splits handles all three schemas.
+    # The WRITTEN splits file must be a LIST (predict indexes folds[0] with an
+    # integer). Simulate exactly how predict_unet_transformer.py reads it:
+    #   folds = json.load(f); test_names = folds[fold]["test"]   (fold == 0)
+    with open(splits_out_path) as f:
+        folds = json.load(f)
+    assert isinstance(folds, list), "REGRESSION: splits file must be a list, not a {'0': ...} dict"
+    fold = 0
+    assert folds[fold]["test"] == list(hidden_names), "folds[0]['test'] must equal the discovered hidden names"
+    # The previous KeyError: 0 bug - a dict with string key "0" - must never
+    # be what is written.
+    assert not isinstance(folds, dict), "final splits file must not be a dict"
+    assert not (set(json.dumps(folds).split()) & set(PUBLIC_TEST_DATASET_NAMES)), "public names must not leak"
+    # Diagnostic records the list schema + the predict-index check.
+    diag = json.loads((scratch / "milestone16_splits.json").read_text())
+    assert diag["final_schema"] == "list"
+    assert diag["predict_index_check"] == "folds[0]['test'] OK"
+
+    # Test 2: rewrite_template_splits ALWAYS returns a LIST for every
+    # recognized schema, with folds[0]["test"] == the discovered names.
     names2 = ["x1", "x2"]
-    numbered = rewrite_template_splits({"0": {"test": ["old"]}, "1": {"test": ["z"]}}, names2)
-    assert numbered["0"]["test"] == names2 and numbered["1"]["test"] == ["z"]
+    numbered = rewrite_template_splits({"0": {"test": ["old"], "train": ["keep"]}, "1": {"test": ["z"]}}, names2)
+    assert isinstance(numbered, list) and numbered[0]["test"] == names2
+    assert numbered[0].get("train") == ["keep"], "fold-0 train key should be preserved"
     splits_list = rewrite_template_splits({"splits": [{"test": ["old"]}, {"test": ["z"]}]}, names2)
-    assert splits_list["splits"][0]["test"] == names2
+    assert isinstance(splits_list, list) and splits_list[0]["test"] == names2
+    list_template = rewrite_template_splits([{"test": ["old"], "val": ["v"]}], names2)
+    assert isinstance(list_template, list) and list_template[0]["test"] == names2 and list_template[0].get("val") == ["v"]
     assert rewrite_template_splits({"weird": 1}, names2) is None
+    # Regression: build_canonical_splits must be a list, never a {"0": ...} dict.
+    canonical = build_canonical_splits(names2)
+    assert isinstance(canonical, list) and canonical[0]["test"] == names2
+    assert not isinstance(canonical, dict)
 
     # Test 3: GEFF->submission conversion topology enforcement on a
     # hand-built graph (no zarr needed). Node 5 is unselected (a dangling
