@@ -1,0 +1,5 @@
+# The DuckDB file is a rebuildable artifact; regenerate with
+# scripts/init_intelligence_db.py. The JSON seeds under data/ are the source
+# of truth, so the binary DB is not tracked.
+*.duckdb
+*.duckdb.wal
