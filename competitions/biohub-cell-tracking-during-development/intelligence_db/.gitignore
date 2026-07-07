@@ -3,3 +3,8 @@
 # of truth, so the binary DB is not tracked.
 *.duckdb
 *.duckdb.wal
+
+# The repo-root .gitignore ignores *.json; the seed JSONs here ARE the
+# source of truth and must be tracked, so re-include them explicitly.
+!data/seed_experiments.json
+!data/public_sources.json

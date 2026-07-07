@@ -1,0 +1,142 @@
+{
+  "_comment": "Seed of our OWN Kaggle runs for this competition. Scores are public-leaderboard scores of our own submissions; stats come from our own run diagnostics (milestone*_reference_submission_report.json / milestone*_geff_conversion.json). created_at encodes run order (not necessarily exact wall-clock). No hidden data.",
+  "experiments": [
+    {
+      "experiment_id": "M16_BASELINE",
+      "milestone": "M16",
+      "variant": "baseline",
+      "label": "baseline learned graph",
+      "notebook_name": "milestone16_reference_learned_graph_runner",
+      "raw_file": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone16_reference_learned_graph_runner.py",
+      "command": {"det_threshold": 0.99, "ilp_edge_weight": -1.0, "ilp_appearance_weight": 0.1, "ilp_disappearance_weight": 0.1, "ilp_division_weight": 1.0, "use_ilp": true},
+      "postprocess_ops": [],
+      "public_score": 0.874,
+      "status": "scored",
+      "created_at": "2026-06-25",
+      "notes": "Reference UNet+transformer+ILP learned graph. Establishes the 0.874 baseline that all later variants are measured against.",
+      "submission_stats": {"n_rows": 250789, "n_nodes": 131797, "n_edges": 118992, "max_in_degree": 1, "max_out_degree": 2, "fallback_used": false, "valid": true, "final_source": "reference_learned_graph"},
+      "postprocess_stats": {"safe_divisions_added": 0, "gap1_closed": 0, "gap2_recovered": 0, "synthetic_nodes_added": 0, "isolated_nodes_pruned": 0, "edges_removed": 0, "nodes_before": 131797, "nodes_after": 131797, "edges_before": 118992, "edges_after": 118992, "per_dataset": []}
+    },
+    {
+      "experiment_id": "M17_C_DET_0985",
+      "milestone": "M17",
+      "variant": "C",
+      "label": "det-threshold 0.985",
+      "notebook_name": "milestone17_reference_tuning_runner",
+      "raw_file": "competitions/biohub-cell-tracking-during-development/M17_VARIANT_C_TUNED_ILP.txt",
+      "command": {"det_threshold": 0.985, "ilp_edge_weight": -1.0, "ilp_appearance_weight": 0.1, "ilp_disappearance_weight": 0.1, "ilp_division_weight": 1.0, "use_ilp": true},
+      "postprocess_ops": [],
+      "public_score": 0.874,
+      "status": "scored",
+      "created_at": "2026-06-28",
+      "notes": "Lower det-threshold admits more detections but the ILP re-optimizes to essentially the same graph. Score identical to baseline.",
+      "submission_stats": {"n_rows": 255786, "n_nodes": 134499, "n_edges": 121287, "max_in_degree": 1, "max_out_degree": 2, "fallback_used": false, "valid": true, "final_source": "reference_learned_graph"},
+      "postprocess_stats": {"safe_divisions_added": 0, "gap1_closed": 0, "gap2_recovered": 0, "synthetic_nodes_added": 0, "isolated_nodes_pruned": 0, "edges_removed": 0, "nodes_before": 134499, "nodes_after": 134499, "edges_before": 121287, "edges_after": 121287, "per_dataset": []}
+    },
+    {
+      "experiment_id": "M18_C_EDGE_PRUNE",
+      "milestone": "M18",
+      "variant": "C",
+      "label": "conservative edge prune",
+      "notebook_name": "milestone18_edge_prune_runner",
+      "raw_file": "competitions/biohub-cell-tracking-during-development/M18_VARIANT_C_EDGE_PRUNE.txt",
+      "command": {"det_threshold": 0.99, "ilp_edge_weight": -1.0, "ilp_appearance_weight": 0.1, "ilp_disappearance_weight": 0.1, "ilp_division_weight": 1.0, "use_ilp": true},
+      "postprocess_ops": ["edge_prune_and_gate"],
+      "public_score": 0.874,
+      "status": "scored",
+      "created_at": "2026-07-01",
+      "notes": "Post-ILP AND-gate prune (long AND low-prob) removed 54 edges. Too small to move the metric; score identical to baseline.",
+      "submission_stats": {"n_rows": 250735, "n_nodes": 131797, "n_edges": 118938, "max_in_degree": 1, "max_out_degree": 2, "fallback_used": false, "valid": true, "final_source": "reference_learned_graph"},
+      "postprocess_stats": {"safe_divisions_added": 0, "gap1_closed": 0, "gap2_recovered": 0, "synthetic_nodes_added": 0, "isolated_nodes_pruned": 0, "edges_removed": 54, "nodes_before": 131797, "nodes_after": 131797, "edges_before": 118992, "edges_after": 118938, "per_dataset": []}
+    },
+    {
+      "experiment_id": "M19_A_SAFE_DIVISIONS_PRUNE",
+      "milestone": "M19",
+      "variant": "A",
+      "label": "safe_divisions_prune",
+      "notebook_name": "milestone19_metric_postprocess_runner",
+      "raw_file": "competitions/biohub-cell-tracking-during-development/M19_VARIANT_A_SAFE_DIVISIONS_PRUNE.txt",
+      "command": {"det_threshold": 0.99, "ilp_edge_weight": -1.0, "ilp_appearance_weight": 0.1, "ilp_disappearance_weight": 0.1, "ilp_division_weight": 1.0, "use_ilp": true},
+      "postprocess_ops": ["safe_divisions", "prune_isolated"],
+      "public_score": 0.877,
+      "status": "scored",
+      "created_at": "2026-07-04",
+      "notes": "First metric-aware post-processing. +466 safe division edges, zero synthetic nodes. Moved the score for the first time: 0.874 -> 0.877. Confirms the division term (0.1 weight) is a live lever.",
+      "submission_stats": {"n_rows": 251255, "n_nodes": 131797, "n_edges": 119458, "max_in_degree": 1, "max_out_degree": 2, "fallback_used": false, "valid": true, "final_source": "reference_learned_graph_postprocessed"},
+      "postprocess_stats": {"safe_divisions_added": 466, "gap1_closed": 0, "gap2_recovered": 0, "synthetic_nodes_added": 0, "isolated_nodes_pruned": 0, "edges_removed": 0, "nodes_before": 131797, "nodes_after": 131797, "edges_before": 118992, "edges_after": 119458, "per_dataset": []}
+    },
+    {
+      "experiment_id": "M19_C_FULL_CHAIN_PENDING",
+      "milestone": "M19",
+      "variant": "C",
+      "label": "full_chain",
+      "notebook_name": "milestone19_metric_postprocess_runner",
+      "raw_file": "competitions/biohub-cell-tracking-during-development/M19_VARIANT_C_FULL_CHAIN.txt",
+      "command": {"det_threshold": 0.99, "ilp_edge_weight": -1.0, "ilp_appearance_weight": 0.1, "ilp_disappearance_weight": 0.1, "ilp_division_weight": 1.0, "use_ilp": true},
+      "postprocess_ops": ["safe_divisions", "gap1", "gap2", "linefit", "prune_isolated"],
+      "public_score": null,
+      "status": "pending",
+      "created_at": "2026-07-07",
+      "notes": "Full lb893-style chain on top of the M19-A division core: single-frame + velocity-gated two-frame gap recovery (1309 synthetic nodes) + line-fit smoothing. Submitted; public score pending. Synthetic nodes are the risk to watch (node over-prediction penalty).",
+      "submission_stats": {"n_rows": 254824, "n_nodes": 133106, "n_edges": 121718, "max_in_degree": 1, "max_out_degree": 2, "fallback_used": false, "valid": true, "final_source": "reference_learned_graph_postprocessed"},
+      "postprocess_stats": {"safe_divisions_added": 466, "gap1_closed": 593, "gap2_recovered": 358, "synthetic_nodes_added": 1309, "isolated_nodes_pruned": 0, "edges_removed": 0, "nodes_before": 131797, "nodes_after": 133106, "edges_before": 118992, "edges_after": 121718, "per_dataset": []}
+    }
+  ],
+  "decisions": [
+    {
+      "decision_id": "DEC_AFTER_M18",
+      "after_experiment_id": "M18_C_EDGE_PRUNE",
+      "observation": "det-threshold (0.99/0.985/0.995/0.975) and a small post-ILP edge prune all score 0.874. The predict command is a flat lever; the ILP re-optimizes to the same graph.",
+      "recommendation": "Stop tuning the predict command. Move to post-GEFF metric-aware processing targeting the node over-prediction penalty and the 0.1-weighted division term.",
+      "next_variant": "M19_A_SAFE_DIVISIONS_PRUNE",
+      "risk_level": "low",
+      "created_at": "2026-07-02"
+    },
+    {
+      "decision_id": "DEC_AFTER_M19A",
+      "after_experiment_id": "M19_A_SAFE_DIVISIONS_PRUNE",
+      "observation": "Safe divisions + isolated prune moved 0.874 -> 0.877 with zero synthetic nodes. Metric-aware post-processing is the correct path.",
+      "recommendation": "Spend the next submission on M19-C full_chain (adds gap recovery + smoothing on the same division core). Gate on valid=True and fallback_used=False before submitting.",
+      "next_variant": "M19_C_FULL_CHAIN_PENDING",
+      "risk_level": "medium",
+      "created_at": "2026-07-05"
+    }
+  ],
+  "lessons": [
+    {
+      "lesson_id": "LES_DET_FLAT",
+      "topic": "predict command",
+      "lesson": "det-threshold changes across 0.975-0.995 are flat at 0.874: the ILP re-optimizes to essentially the same graph, so the detection threshold is not a scoring lever on the learned path.",
+      "evidence_experiment_ids": "M16_BASELINE,M17_C_DET_0985",
+      "confidence": "high"
+    },
+    {
+      "lesson_id": "LES_EDGE_PRUNE_FLAT",
+      "topic": "post-ILP edge prune",
+      "lesson": "A small conservative post-ILP edge prune (54 edges, AND-gate on long+low-prob) did not move the score. Tiny edge-set edits are below the metric's resolution.",
+      "evidence_experiment_ids": "M18_C_EDGE_PRUNE",
+      "confidence": "high"
+    },
+    {
+      "lesson_id": "LES_SAFE_DIVISIONS",
+      "topic": "divisions",
+      "lesson": "Geometric safe-division recovery improved 0.874 -> 0.877 (+466 division edges, no synthetic nodes). The 0.1-weighted division term is a real, reachable lever the det-threshold cannot touch.",
+      "evidence_experiment_ids": "M19_A_SAFE_DIVISIONS_PRUNE",
+      "confidence": "high"
+    },
+    {
+      "lesson_id": "LES_NODE_PENALTY",
+      "topic": "metric",
+      "lesson": "The score penalizes node over-prediction (0.1*(T_pred-T_true)/T_true). Adding synthetic nodes (gap recovery) is a risk: they must land close enough to real GT nodes to be matched, or they inflate T_pred for no edge benefit. Prune isolated nodes; add synthetic nodes cautiously.",
+      "evidence_experiment_ids": "M19_A_SAFE_DIVISIONS_PRUNE,M19_C_FULL_CHAIN_PENDING",
+      "confidence": "medium"
+    },
+    {
+      "lesson_id": "LES_POSTPROCESS_OVER_ILP",
+      "topic": "strategy",
+      "lesson": "Post-GEFF metric-aware processing is more promising than blind ILP-weight changes so far: the public 0.893 notebook uses the IDENTICAL predict command to our M16, so its gain is entirely post-processing, not re-weighting the ILP.",
+      "evidence_experiment_ids": "M16_BASELINE,M19_A_SAFE_DIVISIONS_PRUNE",
+      "confidence": "high"
+    }
+  ]
+}
