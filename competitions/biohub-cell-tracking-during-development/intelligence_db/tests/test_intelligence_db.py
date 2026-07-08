@@ -41,14 +41,16 @@ def test_db_initializes_and_seeds(tmp: Path) -> None:
         ids = {r[0] for r in con.execute("SELECT experiment_id FROM experiments").fetchall()}
     finally:
         con.close()
-    assert n_exp == 10, f"expected 10 seed experiments, got {n_exp}"
-    assert n_sub == 10 and n_pp == 10, f"expected stats for all 10 (sub={n_sub}, pp={n_pp})"
+    assert n_exp == 14, f"expected 14 seed experiments, got {n_exp}"
+    assert n_sub == 14 and n_pp == 14, f"expected stats for all 14 (sub={n_sub}, pp={n_pp})"
     assert n_src == 8, f"expected 8 public sources, got {n_src}"
-    assert n_dec >= 4 and n_les >= 5, f"expected seed decisions/lessons (dec={n_dec}, les={n_les})"
+    assert n_dec >= 6 and n_les >= 5, f"expected seed decisions/lessons (dec={n_dec}, les={n_les})"
     for e in ["M16_BASELINE", "M17_C_DET_0985", "M18_C_EDGE_PRUNE",
               "M19_A_SAFE_DIVISIONS_PRUNE", "M19_C_FULL_CHAIN_PENDING",
               "M20_A_FULLCHAIN_TUNED", "M20_A_FULLCHAIN_TUNED_FIXED",
-              "M21_A_PILKWANG350_M19C_GATES", "M21_B_PILKWANG350_SAFE_DIV_ONLY", "M21_C_PILKWANG350_LIGHT_GAP"]:
+              "M21_A_PILKWANG350_M19C_GATES", "M21_B_PILKWANG350_SAFE_DIV_ONLY", "M21_C_PILKWANG350_LIGHT_GAP",
+              "M22_ARTIFACT_FORENSIC", "M22_A_TRUEBASE_SAFE_DIV_TUNE",
+              "M22_B_TRUEBASE_LIGHT_GAP", "M22_C_TRUEBASE_DIV_PLUS_GAP1_ONLY"]:
         assert e in ids, f"missing seed experiment {e}"
     print("  ok: db initializes and seeds")
 
@@ -70,16 +72,16 @@ def test_reports_generated(tmp: Path) -> None:
     # Timeline must show baseline and the +0.003 steps to M19-A and M19-C.
     timeline = (tmp_reports / "score_timeline.md").read_text()
     assert "0.8740" in timeline and "0.8770" in timeline and "0.8800" in timeline and "+0.003" in timeline
-    # M21 variants are pending -> next_actions is the "run M21 pack" branch with
-    # the A/C/B submit order; M19-C stays the standing best.
+    # M22 true-base variants are BLOCKED on artifact recovery and nothing is
+    # pending -> next_actions is the "recover the true M19-C artifact" branch.
     nxt = (tmp_reports / "next_actions.md").read_text()
     assert "0.880" in nxt, "best score should appear in next_actions"
-    assert "submit order" in nxt.lower() and "pilkwang" in nxt.lower()
-    idx_a = nxt.find("M21_A_PILKWANG350_M19C_GATES")
-    idx_c = nxt.find("M21_C_PILKWANG350_LIGHT_GAP")
-    idx_b = nxt.find("M21_B_PILKWANG350_SAFE_DIV_ONLY")
-    assert 0 <= idx_a < idx_c < idx_b, "submit order must be A then C then B"
-    print("  ok: reports generated with M21 submit-order recommendation")
+    assert "recover" in nxt.lower() and "forensic" in nxt.lower() and "131797" in nxt and "118992" in nxt
+    idx_a = nxt.find("M22_A_TRUEBASE_SAFE_DIV_TUNE")
+    idx_b = nxt.find("M22_B_TRUEBASE_LIGHT_GAP")
+    idx_c = nxt.find("M22_C_TRUEBASE_DIV_PLUS_GAP1_ONLY")
+    assert 0 <= idx_a < idx_b < idx_c, "true-base submit order must be A then B then C"
+    print("  ok: reports generated with M22 artifact-recovery recommendation")
 
 
 def test_scored_and_best(tmp: Path) -> None:
@@ -87,20 +89,22 @@ def test_scored_and_best(tmp: Path) -> None:
     con = C.connect(db)
     try:
         m19c = con.execute("SELECT public_score, status FROM experiments WHERE experiment_id='M19_C_FULL_CHAIN_PENDING'").fetchone()
-        m20_unsafe = con.execute("SELECT public_score, status FROM experiments WHERE experiment_id='M20_A_FULLCHAIN_TUNED'").fetchone()
-        m20_fixed = con.execute("SELECT public_score, status FROM experiments WHERE experiment_id='M20_A_FULLCHAIN_TUNED_FIXED'").fetchone()
+        m21a = con.execute("SELECT public_score, status FROM experiments WHERE experiment_id='M21_A_PILKWANG350_M19C_GATES'").fetchone()
+        m22a = con.execute("SELECT public_score, status FROM experiments WHERE experiment_id='M22_A_TRUEBASE_SAFE_DIV_TUNE'").fetchone()
         best = con.execute("SELECT experiment_id, public_score FROM experiments WHERE public_score IS NOT NULL ORDER BY public_score DESC, created_at LIMIT 1").fetchone()
-        pending_ids = {r[0] for r in con.execute("SELECT experiment_id FROM experiments WHERE public_score IS NULL AND status != 'unsafe'").fetchall()}
+        pending_ids = {r[0] for r in con.execute("SELECT experiment_id FROM experiments WHERE public_score IS NULL AND status NOT IN ('unsafe','blocked','diagnostic')").fetchall()}
+        n_blocked = con.execute("SELECT COUNT(*) FROM experiments WHERE status='blocked'").fetchone()[0]
     finally:
         con.close()
     assert m19c[0] is not None and abs(m19c[0] - 0.880) < 1e-9 and m19c[1] == "scored", f"M19-C should be scored 0.880, got {m19c}"
     assert best[0] == "M19_C_FULL_CHAIN_PENDING" and abs(best[1] - 0.880) < 1e-9, \
-        f"best should remain M19-C @0.880 while M21 pending, got {best}"
-    assert m20_unsafe[1] == "unsafe", f"old M20 should be marked unsafe, got {m20_unsafe}"
-    assert m20_fixed[1] == "unsafe", f"M20-FIXED should be unsafe (baseline mismatch), got {m20_fixed}"
-    assert pending_ids == {"M21_A_PILKWANG350_M19C_GATES", "M21_B_PILKWANG350_SAFE_DIV_ONLY",
-                           "M21_C_PILKWANG350_LIGHT_GAP"}, f"only M21 A/B/C should be pending, got {pending_ids}"
-    print("  ok: M19-C best @0.880; both M20 unsafe; M21 A/B/C pending")
+        f"best should remain M19-C @0.880, got {best}"
+    assert m21a[0] is not None and abs(m21a[0] - 0.874) < 1e-9 and m21a[1] == "scored", \
+        f"M21-A should be scored 0.874 (failed to beat M19-C), got {m21a}"
+    assert m22a[1] == "blocked", f"M22-A should be blocked until true base recovered, got {m22a}"
+    assert pending_ids == set(), f"nothing should be pending (M22 blocked, M21 drift blocked), got {pending_ids}"
+    assert n_blocked >= 5, f"expected M21-B/C + M22 A/B/C blocked, got {n_blocked}"
+    print("  ok: M19-C best @0.880; M21-A scored 0.874; M22 A/B/C blocked; nothing pending")
 
 
 def test_update_idempotent(tmp: Path) -> None:

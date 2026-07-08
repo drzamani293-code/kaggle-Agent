@@ -133,29 +133,55 @@ def report_next_actions(con) -> str:
     """)
     best_id, best_score = (best[0][0], best[0][1]) if best else (None, None)
 
-    # Genuinely-open work vs superseded/unsafe attempts.
+    # Genuinely-open work vs superseded/unsafe/blocked attempts.
     pending = _fetch(con, """
         SELECT experiment_id, created_at FROM experiments
-        WHERE public_score IS NULL AND status != 'unsafe' ORDER BY created_at
+        WHERE public_score IS NULL AND status NOT IN ('unsafe', 'blocked', 'diagnostic') ORDER BY created_at
     """)
     unsafe = _fetch(con, """
         SELECT e.experiment_id, p.nodes_before, p.edges_before
         FROM experiments e LEFT JOIN postprocess_stats p USING (experiment_id)
         WHERE e.status = 'unsafe' ORDER BY e.created_at
     """)
+    blocked = _fetch(con, "SELECT experiment_id FROM experiments WHERE status = 'blocked' ORDER BY created_at")
+    blocked_m22 = [r[0] for r in blocked if r[0].startswith("M22_")]
 
     out = ["# Next Actions", "",
            f"_Generated {_now()} from intelligence.duckdb._", "",
            f"**Best scored experiment:** `{best_id}` at **{_fmt_score(best_score)}**.",
            f"**M19-C full_chain:** {m19c_status} (score {_fmt_score(m19c_score)}).",
-           f"**Open (pending):** {len(pending)} · **unsafe/superseded:** {len(unsafe)}.", "",
+           f"**Open (pending):** {len(pending)} · **blocked:** {len(blocked)} · **unsafe/superseded:** {len(unsafe)}.", "",
            "## Recommendation", ""]
 
     pending_ids = [r[0] for r in pending]
     m21_order = [e for e in ["M21_A_PILKWANG350_M19C_GATES", "M21_C_PILKWANG350_LIGHT_GAP",
                              "M21_B_PILKWANG350_SAFE_DIV_ONLY"] if e in pending_ids]
+    m22_order = [e for e in ["M22_A_TRUEBASE_SAFE_DIV_TUNE", "M22_B_TRUEBASE_LIGHT_GAP",
+                             "M22_C_TRUEBASE_DIV_PLUS_GAP1_ONLY"] if e in blocked_m22]
 
-    if pending:
+    if blocked_m22 and not pending:
+        out += [
+            "**Primary next action: recover the TRUE M19-C artifact** (base `n_nodes_before=131797`,",
+            "`n_edges_before=118992`). It is likely a **NOTEBOOK input** from the original M19-C run",
+            "(e.g. a kernel named like *\"Biohub Cell Tracking: Learned Graph w G\"*), not one of the two",
+            "dataset support packs (pilkwang350 -> 142193, tom99763 -> 161098; both fail the base check).",
+            "",
+            "1. Run **`M22_ARTIFACT_FORENSIC_DIAGNOSTIC`** on Kaggle with ALL candidate inputs attached",
+            "   (datasets AND notebooks). It enumerates every artifact root, records artifact_name +",
+            "   weight_sha256, and smoke-runs each non-bad pack until the base equals 131797 / 118992.",
+            "2. If it prints **TRUE_M19C_ARTIFACT_FOUND**, run the true-base M22 variants in this order,",
+            "   each gated on `OK_TO_SUBMIT_TRUEBASE_EXPERIMENT` (true-artifact + public-base-count guards):",
+        ]
+        for i, eid in enumerate(m22_order, 1):
+            out.append(f"   {i}. `{eid}`")
+        out += [
+            "3. If it prints **TRUE_M19C_ARTIFACT_NOT_FOUND**, attach the original M19-C Notebook input and",
+            "   re-run the forensic. Do NOT create submit-ready runs until the true base is confirmed.",
+            "",
+            "Do **NOT** spend submissions on pilkwang350 drift variants: M21-A already scored 0.874 (< 0.880).",
+            f"**Keep `{best_id}` at {_fmt_score(best_score)} as final** until a true-base score beats it.",
+        ]
+    elif pending:
         out += [
             "With up to **5 daily submissions** available, run the controlled **M21** variants on the",
             "**pinned pilkwang** artifact (`pilkwang/biohub-tracking-support-pack-50ep-v1`). Each is",

@@ -60,10 +60,11 @@ def cmd_timeline(con) -> int:
 def cmd_pending(con) -> int:
     rows = con.execute("""
         SELECT experiment_id, created_at, status FROM experiments
-        WHERE public_score IS NULL AND status != 'unsafe' ORDER BY created_at
+        WHERE public_score IS NULL AND status NOT IN ('unsafe', 'blocked', 'diagnostic')
+        ORDER BY created_at
     """).fetchall()
     if not rows:
-        print("No pending experiments.")
+        print("No pending experiments (see 'blocked' M22 true-base variants awaiting artifact recovery).")
         return 0
     print("Pending (awaiting public score):")
     for exp_id, created, status in rows:
