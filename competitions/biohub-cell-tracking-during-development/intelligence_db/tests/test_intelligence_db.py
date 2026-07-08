@@ -41,13 +41,14 @@ def test_db_initializes_and_seeds(tmp: Path) -> None:
         ids = {r[0] for r in con.execute("SELECT experiment_id FROM experiments").fetchall()}
     finally:
         con.close()
-    assert n_exp == 7, f"expected 7 seed experiments, got {n_exp}"
-    assert n_sub == 7 and n_pp == 7, f"expected stats for all 7 (sub={n_sub}, pp={n_pp})"
+    assert n_exp == 10, f"expected 10 seed experiments, got {n_exp}"
+    assert n_sub == 10 and n_pp == 10, f"expected stats for all 10 (sub={n_sub}, pp={n_pp})"
     assert n_src == 8, f"expected 8 public sources, got {n_src}"
     assert n_dec >= 4 and n_les >= 5, f"expected seed decisions/lessons (dec={n_dec}, les={n_les})"
     for e in ["M16_BASELINE", "M17_C_DET_0985", "M18_C_EDGE_PRUNE",
               "M19_A_SAFE_DIVISIONS_PRUNE", "M19_C_FULL_CHAIN_PENDING",
-              "M20_A_FULLCHAIN_TUNED", "M20_A_FULLCHAIN_TUNED_FIXED"]:
+              "M20_A_FULLCHAIN_TUNED", "M20_A_FULLCHAIN_TUNED_FIXED",
+              "M21_A_PILKWANG350_M19C_GATES", "M21_B_PILKWANG350_SAFE_DIV_ONLY", "M21_C_PILKWANG350_LIGHT_GAP"]:
         assert e in ids, f"missing seed experiment {e}"
     print("  ok: db initializes and seeds")
 
@@ -69,13 +70,16 @@ def test_reports_generated(tmp: Path) -> None:
     # Timeline must show baseline and the +0.003 steps to M19-A and M19-C.
     timeline = (tmp_reports / "score_timeline.md").read_text()
     assert "0.8740" in timeline and "0.8770" in timeline and "0.8800" in timeline and "+0.003" in timeline
-    # All M20 attempts are unsafe (baseline mismatch) and nothing is pending ->
-    # next_actions is the "keep M19-C / recover baseline artifact" branch.
+    # M21 variants are pending -> next_actions is the "run M21 pack" branch with
+    # the A/C/B submit order; M19-C stays the standing best.
     nxt = (tmp_reports / "next_actions.md").read_text()
-    assert "0.8800" in nxt, "best score should appear in next_actions"
-    assert "keep" in nxt.lower() and "baseline guard" in nxt.lower()
-    assert "do not submit" in nxt.lower() and "131797" in nxt and "118992" in nxt
-    print("  ok: reports generated with expected content")
+    assert "0.880" in nxt, "best score should appear in next_actions"
+    assert "submit order" in nxt.lower() and "pilkwang" in nxt.lower()
+    idx_a = nxt.find("M21_A_PILKWANG350_M19C_GATES")
+    idx_c = nxt.find("M21_C_PILKWANG350_LIGHT_GAP")
+    idx_b = nxt.find("M21_B_PILKWANG350_SAFE_DIV_ONLY")
+    assert 0 <= idx_a < idx_c < idx_b, "submit order must be A then C then B"
+    print("  ok: reports generated with M21 submit-order recommendation")
 
 
 def test_scored_and_best(tmp: Path) -> None:
@@ -91,11 +95,12 @@ def test_scored_and_best(tmp: Path) -> None:
         con.close()
     assert m19c[0] is not None and abs(m19c[0] - 0.880) < 1e-9 and m19c[1] == "scored", f"M19-C should be scored 0.880, got {m19c}"
     assert best[0] == "M19_C_FULL_CHAIN_PENDING" and abs(best[1] - 0.880) < 1e-9, \
-        f"best should remain M19-C @0.880, got {best}"
+        f"best should remain M19-C @0.880 while M21 pending, got {best}"
     assert m20_unsafe[1] == "unsafe", f"old M20 should be marked unsafe, got {m20_unsafe}"
-    assert m20_fixed[1] == "unsafe", f"M20-FIXED should now be unsafe (baseline mismatch), got {m20_fixed}"
-    assert pending_ids == set(), f"nothing should be pending (both M20 unsafe), got {pending_ids}"
-    print("  ok: M19-C best @0.880; both M20 unsafe; nothing pending")
+    assert m20_fixed[1] == "unsafe", f"M20-FIXED should be unsafe (baseline mismatch), got {m20_fixed}"
+    assert pending_ids == {"M21_A_PILKWANG350_M19C_GATES", "M21_B_PILKWANG350_SAFE_DIV_ONLY",
+                           "M21_C_PILKWANG350_LIGHT_GAP"}, f"only M21 A/B/C should be pending, got {pending_ids}"
+    print("  ok: M19-C best @0.880; both M20 unsafe; M21 A/B/C pending")
 
 
 def test_update_idempotent(tmp: Path) -> None:

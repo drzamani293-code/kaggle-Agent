@@ -151,7 +151,32 @@ def report_next_actions(con) -> str:
            f"**Open (pending):** {len(pending)} · **unsafe/superseded:** {len(unsafe)}.", "",
            "## Recommendation", ""]
 
-    if unsafe and not pending and best_id == PENDING_EXP_ID:
+    pending_ids = [r[0] for r in pending]
+    m21_order = [e for e in ["M21_A_PILKWANG350_M19C_GATES", "M21_C_PILKWANG350_LIGHT_GAP",
+                             "M21_B_PILKWANG350_SAFE_DIV_ONLY"] if e in pending_ids]
+
+    if pending:
+        out += [
+            "With up to **5 daily submissions** available, run the controlled **M21** variants on the",
+            "**pinned pilkwang** artifact (`pilkwang/biohub-tracking-support-pack-50ep-v1`). Each is",
+            "artifact-guarded and experimental; submit one only if its report says",
+            "`OK_TO_SUBMIT_EXPERIMENTAL` (artifact guard passed, valid, no fallback).",
+            "",
+        ]
+        if m21_order:
+            out += ["**Submit order recommendation:**"]
+            for i, eid in enumerate(m21_order, 1):
+                out.append(f"{i}. `{eid}`")
+            out.append("")
+        other_pending = [e for e in pending_ids if e not in m21_order]
+        if other_pending:
+            out.append("Other pending: " + ", ".join(f"`{e}`" for e in other_pending) + ".")
+            out.append("")
+        out += [
+            f"**Keep `{best_id}` at {_fmt_score(best_score)} as final** unless a new public score **beats 0.880**.",
+            "Every M20 attempt is unsafe (baseline mismatch); M20 must not be submitted.",
+        ]
+    elif unsafe and not pending and best_id == PENDING_EXP_ID:
         # Every downstream tuning attempt failed the baseline guard: hold M19-C.
         out += [
             f"**Keep `{best_id}` at {_fmt_score(best_score)} as the best/final candidate.**",

@@ -1,29 +1,25 @@
 # Next Actions
 
-_Generated 2026-07-08 14:19 UTC from intelligence.duckdb._
+_Generated 2026-07-08 14:47 UTC from intelligence.duckdb._
 
 **Best scored experiment:** `M19_C_FULL_CHAIN_PENDING` at **0.8800**.
 **M19-C full_chain:** scored (score 0.8800).
-**Open (pending):** 0 · **unsafe/superseded:** 2.
+**Open (pending):** 3 · **unsafe/superseded:** 2.
 
 ## Recommendation
 
-**Keep `M19_C_FULL_CHAIN_PENDING` at 0.8800 as the best/final candidate.**
+With up to **5 daily submissions** available, run the controlled **M21** variants on the
+**pinned pilkwang** artifact (`pilkwang/biohub-tracking-support-pack-50ep-v1`). Each is
+artifact-guarded and experimental; submit one only if its report says
+`OK_TO_SUBMIT_EXPERIMENTAL` (artifact guard passed, valid, no fallback).
 
-Every M20 tuned-full_chain attempt **failed the M19-C baseline guard**: an identical predict
-command produced a DIFFERENT pre-post-processing base graph because the mounted support-pack /
-weights artifact differs from the one that produced M19-C. Gate tuning on a different base is
-uninterpretable and must not be submitted.
+**Submit order recommendation:**
+1. `M21_A_PILKWANG350_M19C_GATES`
+2. `M21_C_PILKWANG350_LIGHT_GAP`
+3. `M21_B_PILKWANG350_SAFE_DIV_ONLY`
 
-Base `n_nodes_before` / `n_edges_before` vs the required **131797 / 118992**:
-- `M20_A_FULLCHAIN_TUNED`: 142193 / 127563  → mismatch, DO_NOT_SUBMIT
-- `M20_A_FULLCHAIN_TUNED_FIXED`: 161098 / 137520  → mismatch, DO_NOT_SUBMIT
-
-- **Do NOT submit M20** (either support pack).
-- **Recover the TRUE M19-C baseline artifact** — the exact support pack / weights that yield
-  `n_nodes_before=131797` and `n_edges_before=118992` — then re-run the guarded M20 and submit
-  only if `baseline_guard_passed=True`.
-- If that artifact cannot be recovered, **M19-C `0.880` is final.**
+**Keep `M19_C_FULL_CHAIN_PENDING` at 0.8800 as final** unless a new public score **beats 0.880**.
+Every M20 attempt is unsafe (baseline mismatch); M20 must not be submitted.
 
 ## Recorded decisions (history)
 
