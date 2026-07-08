@@ -1,8 +1,13 @@
 # Lessons Learned
 
-_Generated 2026-07-08 13:11 UTC from intelligence.duckdb._
+_Generated 2026-07-08 14:19 UTC from intelligence.duckdb._
 
 Distilled, evidence-linked findings driving strategy.
+
+## reproducibility — `LES_BASELINE_REPRO`
+- **Lesson:** The pre-postprocess BASE learned graph must be pinned before comparing post-processing variants: an identical predict command does NOT guarantee the same base if a different support-pack/weights artifact is mounted. Both available 50ep packs (pilkwang, tom99763) produced different base node/edge counts (142193/127563 and 161098/137520) than M19-C's 131797/118992, making M20 gate tuning uninterpretable and unsubmittable. Always record the selected artifact/weights and hard-guard n_nodes_before/n_edges_before against the known-good baseline (tolerance 0) before trusting or submitting a variant.
+- **Evidence:** M19_C_FULL_CHAIN_PENDING,M20_A_FULLCHAIN_TUNED,M20_A_FULLCHAIN_TUNED_FIXED
+- **Confidence:** high
 
 ## predict command — `LES_DET_FLAT`
 - **Lesson:** det-threshold changes across 0.975-0.995 are flat at 0.874: the ILP re-optimizes to essentially the same graph, so the detection threshold is not a scoring lever on the learned path.

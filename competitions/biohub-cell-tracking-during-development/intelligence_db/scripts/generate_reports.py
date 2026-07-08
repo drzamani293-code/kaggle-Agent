@@ -133,13 +133,47 @@ def report_next_actions(con) -> str:
     """)
     best_id, best_score = (best[0][0], best[0][1]) if best else (None, None)
 
+    # Genuinely-open work vs superseded/unsafe attempts.
+    pending = _fetch(con, """
+        SELECT experiment_id, created_at FROM experiments
+        WHERE public_score IS NULL AND status != 'unsafe' ORDER BY created_at
+    """)
+    unsafe = _fetch(con, """
+        SELECT e.experiment_id, p.nodes_before, p.edges_before
+        FROM experiments e LEFT JOIN postprocess_stats p USING (experiment_id)
+        WHERE e.status = 'unsafe' ORDER BY e.created_at
+    """)
+
     out = ["# Next Actions", "",
            f"_Generated {_now()} from intelligence.duckdb._", "",
            f"**Best scored experiment:** `{best_id}` at **{_fmt_score(best_score)}**.",
-           f"**M19-C full_chain:** {m19c_status} (score {_fmt_score(m19c_score)}).", "",
+           f"**M19-C full_chain:** {m19c_status} (score {_fmt_score(m19c_score)}).",
+           f"**Open (pending):** {len(pending)} · **unsafe/superseded:** {len(unsafe)}.", "",
            "## Recommendation", ""]
 
-    if m19c_score is None:
+    if unsafe and not pending and best_id == PENDING_EXP_ID:
+        # Every downstream tuning attempt failed the baseline guard: hold M19-C.
+        out += [
+            f"**Keep `{best_id}` at {_fmt_score(best_score)} as the best/final candidate.**",
+            "",
+            "Every M20 tuned-full_chain attempt **failed the M19-C baseline guard**: an identical predict",
+            "command produced a DIFFERENT pre-post-processing base graph because the mounted support-pack /",
+            "weights artifact differs from the one that produced M19-C. Gate tuning on a different base is",
+            "uninterpretable and must not be submitted.",
+            "",
+            "Base `n_nodes_before` / `n_edges_before` vs the required **131797 / 118992**:",
+        ]
+        for eid, nb, eb in unsafe:
+            out.append(f"- `{eid}`: {nb} / {eb}  → mismatch, DO_NOT_SUBMIT")
+        out += [
+            "",
+            "- **Do NOT submit M20** (either support pack).",
+            "- **Recover the TRUE M19-C baseline artifact** — the exact support pack / weights that yield",
+            "  `n_nodes_before=131797` and `n_edges_before=118992` — then re-run the guarded M20 and submit",
+            "  only if `baseline_guard_passed=True`.",
+            "- If that artifact cannot be recovered, **M19-C `0.880` is final.**",
+        ]
+    elif m19c_score is None:
         out += [
             "M19-C is **pending**. Do not spend the second remaining submission until its public score is known.",
             "",

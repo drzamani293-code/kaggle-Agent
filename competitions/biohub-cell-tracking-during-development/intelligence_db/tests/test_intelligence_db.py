@@ -69,9 +69,12 @@ def test_reports_generated(tmp: Path) -> None:
     # Timeline must show baseline and the +0.003 steps to M19-A and M19-C.
     timeline = (tmp_reports / "score_timeline.md").read_text()
     assert "0.8740" in timeline and "0.8770" in timeline and "0.8800" in timeline and "+0.003" in timeline
-    # M19-C scored 0.880 (> 0.877) -> next_actions is the "tune full_chain" branch.
+    # All M20 attempts are unsafe (baseline mismatch) and nothing is pending ->
+    # next_actions is the "keep M19-C / recover baseline artifact" branch.
     nxt = (tmp_reports / "next_actions.md").read_text()
-    assert "0.8800" in nxt and "tune" in nxt.lower() and "full_chain" in nxt.lower()
+    assert "0.8800" in nxt, "best score should appear in next_actions"
+    assert "keep" in nxt.lower() and "baseline guard" in nxt.lower()
+    assert "do not submit" in nxt.lower() and "131797" in nxt and "118992" in nxt
     print("  ok: reports generated with expected content")
 
 
@@ -88,11 +91,11 @@ def test_scored_and_best(tmp: Path) -> None:
         con.close()
     assert m19c[0] is not None and abs(m19c[0] - 0.880) < 1e-9 and m19c[1] == "scored", f"M19-C should be scored 0.880, got {m19c}"
     assert best[0] == "M19_C_FULL_CHAIN_PENDING" and abs(best[1] - 0.880) < 1e-9, \
-        f"best should be M19-C @0.880 while M20 candidates pending, got {best}"
+        f"best should remain M19-C @0.880, got {best}"
     assert m20_unsafe[1] == "unsafe", f"old M20 should be marked unsafe, got {m20_unsafe}"
-    assert m20_fixed[0] is None and m20_fixed[1] == "pending", f"M20-FIXED should be pending, got {m20_fixed}"
-    assert pending_ids == {"M20_A_FULLCHAIN_TUNED_FIXED"}, f"only M20-FIXED should be pending, got {pending_ids}"
-    print("  ok: M19-C best @0.880; old M20 unsafe; M20-FIXED pending")
+    assert m20_fixed[1] == "unsafe", f"M20-FIXED should now be unsafe (baseline mismatch), got {m20_fixed}"
+    assert pending_ids == set(), f"nothing should be pending (both M20 unsafe), got {pending_ids}"
+    print("  ok: M19-C best @0.880; both M20 unsafe; nothing pending")
 
 
 def test_update_idempotent(tmp: Path) -> None:

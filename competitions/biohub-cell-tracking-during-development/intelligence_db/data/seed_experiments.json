@@ -107,11 +107,11 @@
       "command": {"det_threshold": 0.99, "ilp_edge_weight": -1.0, "ilp_appearance_weight": 0.1, "ilp_disappearance_weight": 0.1, "ilp_division_weight": 1.0, "use_ilp": true},
       "postprocess_ops": ["safe_divisions", "gap1", "gap2", "linefit", "prune_isolated"],
       "public_score": null,
-      "status": "pending",
+      "status": "unsafe",
       "created_at": "2026-07-08",
-      "notes": "FIXED M20: same tuned full_chain gates PLUS a hard baseline guard (tolerance 0) requiring the pre-postprocess base to equal M19-C exactly (n_nodes_before=131797, n_edges_before=118992). On mismatch the report says submission_recommendation=DO_NOT_SUBMIT_BASELINE_MISMATCH. Records selected artifact/repo/weights/support-pack root + manifest to milestone20_artifact_selection.json. Identical predict command and all M19-C infra. Attach ONLY the 50ep-v1 support pack. Built + self-tested (9/9); run manually and submit only if baseline_guard_passed. Pending.",
-      "submission_stats": {"n_rows": null, "n_nodes": null, "n_edges": null, "max_in_degree": null, "max_out_degree": null, "fallback_used": null, "valid": null, "final_source": null},
-      "postprocess_stats": {"safe_divisions_added": 0, "gap1_closed": 0, "gap2_recovered": 0, "synthetic_nodes_added": 0, "isolated_nodes_pruned": 0, "edges_removed": 0, "nodes_before": null, "nodes_after": null, "edges_before": null, "edges_after": null, "per_dataset": []}
+      "notes": "UNSAFE - BASELINE MISMATCH: DO NOT SUBMIT. The baseline guard worked as designed: with support pack tom99763/biohub-tracking-support-pack-50ep-v1 (artifact_name biohub-tracking-support-pack-5090-50ep-v1) the pre-postprocess base was n_nodes_before=161098 / n_edges_before=137520 vs M19-C's 131797/118992, so baseline_guard_passed=False and submission_recommendation=DO_NOT_SUBMIT_BASELINE_MISMATCH. Both available 50ep packs now fail the guard (pilkwang -> 142193/127563, tom99763 -> 161098/137520); neither reproduces the M19-C base. valid=True, fallback_used=False, final_source=reference_learned_graph_postprocessed, but NOT submitted. Keep M19-C (0.880). Recover the true M19-C baseline artifact before retrying.",
+      "submission_stats": {"n_rows": null, "n_nodes": 163325, "n_edges": 142199, "max_in_degree": 1, "max_out_degree": 2, "fallback_used": false, "valid": true, "final_source": "reference_learned_graph_postprocessed"},
+      "postprocess_stats": {"safe_divisions_added": 0, "gap1_closed": 0, "gap2_recovered": 0, "synthetic_nodes_added": 0, "isolated_nodes_pruned": 0, "edges_removed": 0, "nodes_before": 161098, "nodes_after": 163325, "edges_before": 137520, "edges_after": 142199, "per_dataset": []}
     }
   ],
   "decisions": [
@@ -150,6 +150,15 @@
       "next_variant": "M20_A_FULLCHAIN_TUNED_FIXED",
       "risk_level": "medium",
       "created_at": "2026-07-08"
+    },
+    {
+      "decision_id": "DEC_AFTER_M20_FIXED",
+      "after_experiment_id": "M20_A_FULLCHAIN_TUNED_FIXED",
+      "observation": "Both available support packs failed the M19-C baseline guard: pilkwang -> n_nodes_before 142193 / n_edges_before 127563, tom99763 (artifact biohub-tracking-support-pack-5090-50ep-v1) -> 161098 / 137520, vs M19-C 131797 / 118992. Neither reproduces the base learned graph that scored 0.880, so M20 cannot be safely submitted.",
+      "recommendation": "Do NOT submit M20 (either pack). Keep M19-C at 0.880 as the best/final candidate. The tuned full_chain gains are unverifiable until the TRUE M19-C baseline support-pack artifact (the exact pack/weights yielding n_nodes_before=131797, n_edges_before=118992) is recovered; only then re-run the guarded M20. If that artifact cannot be recovered, M19-C 0.880 is final.",
+      "next_variant": "KEEP_M19_C_0880",
+      "risk_level": "low",
+      "created_at": "2026-07-08"
     }
   ],
   "lessons": [
@@ -186,6 +195,13 @@
       "topic": "strategy",
       "lesson": "Post-GEFF metric-aware processing is more promising than blind ILP-weight changes so far: the public 0.893 notebook uses the IDENTICAL predict command to our M16, so its gain is entirely post-processing, not re-weighting the ILP.",
       "evidence_experiment_ids": "M16_BASELINE,M19_A_SAFE_DIVISIONS_PRUNE",
+      "confidence": "high"
+    },
+    {
+      "lesson_id": "LES_BASELINE_REPRO",
+      "topic": "reproducibility",
+      "lesson": "The pre-postprocess BASE learned graph must be pinned before comparing post-processing variants: an identical predict command does NOT guarantee the same base if a different support-pack/weights artifact is mounted. Both available 50ep packs (pilkwang, tom99763) produced different base node/edge counts (142193/127563 and 161098/137520) than M19-C's 131797/118992, making M20 gate tuning uninterpretable and unsubmittable. Always record the selected artifact/weights and hard-guard n_nodes_before/n_edges_before against the known-good baseline (tolerance 0) before trusting or submitting a variant.",
+      "evidence_experiment_ids": "M19_C_FULL_CHAIN_PENDING,M20_A_FULLCHAIN_TUNED,M20_A_FULLCHAIN_TUNED_FIXED",
       "confidence": "high"
     }
   ]
