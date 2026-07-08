@@ -80,6 +80,22 @@
       "notes": "Full lb893-style chain on top of the M19-A division core: single-frame + velocity-gated two-frame gap recovery (1309 synthetic nodes) + line-fit smoothing. Scored 0.880 (+0.003 over M19-A, +0.006 over baseline): gap recovery + smoothing add value ON TOP of divisions, and the 1309 synthetic nodes paid off rather than costing the node penalty. New best.",
       "submission_stats": {"n_rows": 254824, "n_nodes": 133106, "n_edges": 121718, "max_in_degree": 1, "max_out_degree": 2, "fallback_used": false, "valid": true, "final_source": "reference_learned_graph_postprocessed"},
       "postprocess_stats": {"safe_divisions_added": 466, "gap1_closed": 593, "gap2_recovered": 358, "synthetic_nodes_added": 1309, "isolated_nodes_pruned": 0, "edges_removed": 0, "nodes_before": 131797, "nodes_after": 133106, "edges_before": 118992, "edges_after": 121718, "per_dataset": []}
+    },
+    {
+      "experiment_id": "M20_A_FULLCHAIN_TUNED",
+      "milestone": "M20",
+      "variant": "A",
+      "label": "fullchain_tuned",
+      "notebook_name": "milestone20_fullchain_tuned_runner",
+      "raw_file": "competitions/biohub-cell-tracking-during-development/M20_A_FULLCHAIN_TUNED.txt",
+      "command": {"det_threshold": 0.99, "ilp_edge_weight": -1.0, "ilp_appearance_weight": 0.1, "ilp_disappearance_weight": 0.1, "ilp_division_weight": 1.0, "use_ilp": true},
+      "postprocess_ops": ["safe_divisions", "gap1", "gap2", "linefit", "prune_isolated"],
+      "public_score": null,
+      "status": "pending",
+      "created_at": "2026-07-08",
+      "notes": "Tuned M19-C full_chain gates (identical predict command): widened safe-division gates 4.7/6.85/7.45->5.1/7.4/7.9 + higher division caps; gap1 distance 6.2->7.0 + higher caps; gap2 modestly 4.4/10.2->4.7/11.0, normdiff 6.0->6.6, cos_min held at -0.25. Expected div ~600-750, gap1 ~680-820, gap2 ~410-490, synthetic ~1500-1800. Built + self-tested; run manually on Kaggle and gate on valid/fallback/final_source/degrees before submitting. Pending.",
+      "submission_stats": {"n_rows": null, "n_nodes": null, "n_edges": null, "max_in_degree": null, "max_out_degree": null, "fallback_used": null, "valid": null, "final_source": null},
+      "postprocess_stats": {"safe_divisions_added": 0, "gap1_closed": 0, "gap2_recovered": 0, "synthetic_nodes_added": 0, "isolated_nodes_pruned": 0, "edges_removed": 0, "nodes_before": null, "nodes_after": null, "edges_before": null, "edges_after": null, "per_dataset": []}
     }
   ],
   "decisions": [

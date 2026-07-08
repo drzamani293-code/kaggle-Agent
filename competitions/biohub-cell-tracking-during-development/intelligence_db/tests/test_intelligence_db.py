@@ -41,12 +41,12 @@ def test_db_initializes_and_seeds(tmp: Path) -> None:
         ids = {r[0] for r in con.execute("SELECT experiment_id FROM experiments").fetchall()}
     finally:
         con.close()
-    assert n_exp == 5, f"expected 5 seed experiments, got {n_exp}"
-    assert n_sub == 5 and n_pp == 5, f"expected stats for all 5 (sub={n_sub}, pp={n_pp})"
+    assert n_exp == 6, f"expected 6 seed experiments, got {n_exp}"
+    assert n_sub == 6 and n_pp == 6, f"expected stats for all 6 (sub={n_sub}, pp={n_pp})"
     assert n_src == 8, f"expected 8 public sources, got {n_src}"
-    assert n_dec >= 2 and n_les >= 5, f"expected seed decisions/lessons (dec={n_dec}, les={n_les})"
+    assert n_dec >= 3 and n_les >= 5, f"expected seed decisions/lessons (dec={n_dec}, les={n_les})"
     for e in ["M16_BASELINE", "M17_C_DET_0985", "M18_C_EDGE_PRUNE",
-              "M19_A_SAFE_DIVISIONS_PRUNE", "M19_C_FULL_CHAIN_PENDING"]:
+              "M19_A_SAFE_DIVISIONS_PRUNE", "M19_C_FULL_CHAIN_PENDING", "M20_A_FULLCHAIN_TUNED"]:
         assert e in ids, f"missing seed experiment {e}"
     print("  ok: db initializes and seeds")
 
@@ -79,15 +79,17 @@ def test_scored_and_best(tmp: Path) -> None:
     con = C.connect(db)
     try:
         m19c = con.execute("SELECT public_score, status FROM experiments WHERE experiment_id='M19_C_FULL_CHAIN_PENDING'").fetchone()
+        m20 = con.execute("SELECT public_score, status FROM experiments WHERE experiment_id='M20_A_FULLCHAIN_TUNED'").fetchone()
         best = con.execute("SELECT experiment_id, public_score FROM experiments WHERE public_score IS NOT NULL ORDER BY public_score DESC, created_at LIMIT 1").fetchone()
-        n_pending = con.execute("SELECT COUNT(*) FROM experiments WHERE public_score IS NULL").fetchone()[0]
+        pending_ids = {r[0] for r in con.execute("SELECT experiment_id FROM experiments WHERE public_score IS NULL").fetchall()}
     finally:
         con.close()
     assert m19c[0] is not None and abs(m19c[0] - 0.880) < 1e-9 and m19c[1] == "scored", f"M19-C should be scored 0.880, got {m19c}"
     assert best[0] == "M19_C_FULL_CHAIN_PENDING" and abs(best[1] - 0.880) < 1e-9, \
-        f"best should be M19-C @0.880, got {best}"
-    assert n_pending == 0, f"no experiments should be pending, got {n_pending}"
-    print("  ok: M19-C scored; best == M19-C @0.880; nothing pending")
+        f"best should be M19-C @0.880 while M20 pending, got {best}"
+    assert m20[0] is None and m20[1] == "pending", f"M20 should be pending, got {m20}"
+    assert pending_ids == {"M20_A_FULLCHAIN_TUNED"}, f"only M20 should be pending, got {pending_ids}"
+    print("  ok: M19-C best @0.880; M20 pending")
 
 
 def test_update_idempotent(tmp: Path) -> None:
