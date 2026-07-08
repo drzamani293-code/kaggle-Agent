@@ -181,6 +181,32 @@ def report_next_actions(con) -> str:
             "Do **NOT** spend submissions on pilkwang350 drift variants: M21-A already scored 0.874 (< 0.880).",
             f"**Keep `{best_id}` at {_fmt_score(best_score)} as final** until a true-base score beats it.",
         ]
+    elif [e for e in ["M23_B_PILKWANG350_NODE_PRUNE_SAFE_DIV_ONLY", "M23_C_PILKWANG350_EDGE_NODE_BALANCED",
+                      "M23_A_PILKWANG350_NODE_PRUNE_LIGHT"] if e in pending_ids]:
+        m23_order = [e for e in ["M23_B_PILKWANG350_NODE_PRUNE_SAFE_DIV_ONLY",
+                                 "M23_C_PILKWANG350_EDGE_NODE_BALANCED",
+                                 "M23_A_PILKWANG350_NODE_PRUNE_LIGHT"] if e in pending_ids]
+        out += [
+            "M22 forensic returned **TRUE_M19C_ARTIFACT_NOT_FOUND** (the true 131797/118992 base is",
+            "unrecoverable). So attack the pilkwang350 base's **node over-prediction** directly with the",
+            "**M23 node-penalty repair** pack (pinned to pilkwang350 + weight_sha256 guard). Each variant",
+            "prunes low-value detections (preserving divisions + long tracks) then applies conservative",
+            "post-processing; submit one only if its report says `OK_TO_SUBMIT_EXPERIMENTAL` (artifact",
+            "guard passed, not over-pruned >8%, post-repair node count in 130000-145000, valid, no fallback).",
+            "",
+            "**Submit order recommendation:**",
+        ]
+        for i, eid in enumerate(m23_order, 1):
+            reason = {1: " (node-penalty reduction, ZERO synthetic nodes - lowest risk)",
+                      2: " (balanced node+edge repair, gap1 only, no gap2)",
+                      3: " (light repair + full_chain, only if B/C fall short)"}.get(i, "")
+            out.append(f"{i}. `{eid}`{reason}")
+        out += [
+            "",
+            "Why this order: M21-A's synthetic-heavy full_chain on pilkwang350 scored only 0.874, so test",
+            "node-penalty reduction WITHOUT synthetic-node risk first.",
+            f"**Keep `{best_id}` at {_fmt_score(best_score)} as final** unless an M23 score beats 0.880.",
+        ]
     elif pending:
         out += [
             "With up to **5 daily submissions** available, run the controlled **M21** variants on the",

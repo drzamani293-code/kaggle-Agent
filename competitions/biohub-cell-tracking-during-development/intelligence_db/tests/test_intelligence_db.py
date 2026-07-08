@@ -41,16 +41,18 @@ def test_db_initializes_and_seeds(tmp: Path) -> None:
         ids = {r[0] for r in con.execute("SELECT experiment_id FROM experiments").fetchall()}
     finally:
         con.close()
-    assert n_exp == 14, f"expected 14 seed experiments, got {n_exp}"
-    assert n_sub == 14 and n_pp == 14, f"expected stats for all 14 (sub={n_sub}, pp={n_pp})"
+    assert n_exp == 17, f"expected 17 seed experiments, got {n_exp}"
+    assert n_sub == 17 and n_pp == 17, f"expected stats for all 17 (sub={n_sub}, pp={n_pp})"
     assert n_src == 8, f"expected 8 public sources, got {n_src}"
-    assert n_dec >= 6 and n_les >= 5, f"expected seed decisions/lessons (dec={n_dec}, les={n_les})"
+    assert n_dec >= 7 and n_les >= 5, f"expected seed decisions/lessons (dec={n_dec}, les={n_les})"
     for e in ["M16_BASELINE", "M17_C_DET_0985", "M18_C_EDGE_PRUNE",
               "M19_A_SAFE_DIVISIONS_PRUNE", "M19_C_FULL_CHAIN_PENDING",
               "M20_A_FULLCHAIN_TUNED", "M20_A_FULLCHAIN_TUNED_FIXED",
               "M21_A_PILKWANG350_M19C_GATES", "M21_B_PILKWANG350_SAFE_DIV_ONLY", "M21_C_PILKWANG350_LIGHT_GAP",
               "M22_ARTIFACT_FORENSIC", "M22_A_TRUEBASE_SAFE_DIV_TUNE",
-              "M22_B_TRUEBASE_LIGHT_GAP", "M22_C_TRUEBASE_DIV_PLUS_GAP1_ONLY"]:
+              "M22_B_TRUEBASE_LIGHT_GAP", "M22_C_TRUEBASE_DIV_PLUS_GAP1_ONLY",
+              "M23_A_PILKWANG350_NODE_PRUNE_LIGHT", "M23_B_PILKWANG350_NODE_PRUNE_SAFE_DIV_ONLY",
+              "M23_C_PILKWANG350_EDGE_NODE_BALANCED"]:
         assert e in ids, f"missing seed experiment {e}"
     print("  ok: db initializes and seeds")
 
@@ -72,16 +74,16 @@ def test_reports_generated(tmp: Path) -> None:
     # Timeline must show baseline and the +0.003 steps to M19-A and M19-C.
     timeline = (tmp_reports / "score_timeline.md").read_text()
     assert "0.8740" in timeline and "0.8770" in timeline and "0.8800" in timeline and "+0.003" in timeline
-    # M22 true-base variants are BLOCKED on artifact recovery and nothing is
-    # pending -> next_actions is the "recover the true M19-C artifact" branch.
+    # M23 node-penalty repair variants are pending -> next_actions is the M23
+    # branch with submit order B -> C -> A; M19-C stays the standing best.
     nxt = (tmp_reports / "next_actions.md").read_text()
     assert "0.880" in nxt, "best score should appear in next_actions"
-    assert "recover" in nxt.lower() and "forensic" in nxt.lower() and "131797" in nxt and "118992" in nxt
-    idx_a = nxt.find("M22_A_TRUEBASE_SAFE_DIV_TUNE")
-    idx_b = nxt.find("M22_B_TRUEBASE_LIGHT_GAP")
-    idx_c = nxt.find("M22_C_TRUEBASE_DIV_PLUS_GAP1_ONLY")
-    assert 0 <= idx_a < idx_b < idx_c, "true-base submit order must be A then B then C"
-    print("  ok: reports generated with M22 artifact-recovery recommendation")
+    assert "node over-prediction" in nxt.lower() and "repair" in nxt.lower() and "submit order" in nxt.lower()
+    idx_b = nxt.find("M23_B_PILKWANG350_NODE_PRUNE_SAFE_DIV_ONLY")
+    idx_c = nxt.find("M23_C_PILKWANG350_EDGE_NODE_BALANCED")
+    idx_a = nxt.find("M23_A_PILKWANG350_NODE_PRUNE_LIGHT")
+    assert 0 <= idx_b < idx_c < idx_a, "M23 submit order must be B then C then A"
+    print("  ok: reports generated with M23 node-penalty-repair recommendation (B->C->A)")
 
 
 def test_scored_and_best(tmp: Path) -> None:
@@ -101,10 +103,11 @@ def test_scored_and_best(tmp: Path) -> None:
         f"best should remain M19-C @0.880, got {best}"
     assert m21a[0] is not None and abs(m21a[0] - 0.874) < 1e-9 and m21a[1] == "scored", \
         f"M21-A should be scored 0.874 (failed to beat M19-C), got {m21a}"
-    assert m22a[1] == "blocked", f"M22-A should be blocked until true base recovered, got {m22a}"
-    assert pending_ids == set(), f"nothing should be pending (M22 blocked, M21 drift blocked), got {pending_ids}"
+    assert m22a[1] == "blocked", f"M22-A should be blocked (artifact not recovered), got {m22a}"
+    assert pending_ids == {"M23_A_PILKWANG350_NODE_PRUNE_LIGHT", "M23_B_PILKWANG350_NODE_PRUNE_SAFE_DIV_ONLY",
+                           "M23_C_PILKWANG350_EDGE_NODE_BALANCED"}, f"only M23 A/B/C should be pending, got {pending_ids}"
     assert n_blocked >= 5, f"expected M21-B/C + M22 A/B/C blocked, got {n_blocked}"
-    print("  ok: M19-C best @0.880; M21-A scored 0.874; M22 A/B/C blocked; nothing pending")
+    print("  ok: M19-C best @0.880; M21-A scored 0.874; M22 blocked; M23 A/B/C pending")
 
 
 def test_update_idempotent(tmp: Path) -> None:

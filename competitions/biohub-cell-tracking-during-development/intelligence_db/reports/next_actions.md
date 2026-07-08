@@ -1,31 +1,28 @@
 # Next Actions
 
-_Generated 2026-07-08 20:31 UTC from intelligence.duckdb._
+_Generated 2026-07-08 21:03 UTC from intelligence.duckdb._
 
 **Best scored experiment:** `M19_C_FULL_CHAIN_PENDING` at **0.8800**.
 **M19-C full_chain:** scored (score 0.8800).
-**Open (pending):** 0 · **blocked:** 5 · **unsafe/superseded:** 2.
+**Open (pending):** 3 · **blocked:** 5 · **unsafe/superseded:** 2.
 
 ## Recommendation
 
-**Primary next action: recover the TRUE M19-C artifact** (base `n_nodes_before=131797`,
-`n_edges_before=118992`). It is likely a **NOTEBOOK input** from the original M19-C run
-(e.g. a kernel named like *"Biohub Cell Tracking: Learned Graph w G"*), not one of the two
-dataset support packs (pilkwang350 -> 142193, tom99763 -> 161098; both fail the base check).
+M22 forensic returned **TRUE_M19C_ARTIFACT_NOT_FOUND** (the true 131797/118992 base is
+unrecoverable). So attack the pilkwang350 base's **node over-prediction** directly with the
+**M23 node-penalty repair** pack (pinned to pilkwang350 + weight_sha256 guard). Each variant
+prunes low-value detections (preserving divisions + long tracks) then applies conservative
+post-processing; submit one only if its report says `OK_TO_SUBMIT_EXPERIMENTAL` (artifact
+guard passed, not over-pruned >8%, post-repair node count in 130000-145000, valid, no fallback).
 
-1. Run **`M22_ARTIFACT_FORENSIC_DIAGNOSTIC`** on Kaggle with ALL candidate inputs attached
-   (datasets AND notebooks). It enumerates every artifact root, records artifact_name +
-   weight_sha256, and smoke-runs each non-bad pack until the base equals 131797 / 118992.
-2. If it prints **TRUE_M19C_ARTIFACT_FOUND**, run the true-base M22 variants in this order,
-   each gated on `OK_TO_SUBMIT_TRUEBASE_EXPERIMENT` (true-artifact + public-base-count guards):
-   1. `M22_A_TRUEBASE_SAFE_DIV_TUNE`
-   2. `M22_B_TRUEBASE_LIGHT_GAP`
-   3. `M22_C_TRUEBASE_DIV_PLUS_GAP1_ONLY`
-3. If it prints **TRUE_M19C_ARTIFACT_NOT_FOUND**, attach the original M19-C Notebook input and
-   re-run the forensic. Do NOT create submit-ready runs until the true base is confirmed.
+**Submit order recommendation:**
+1. `M23_B_PILKWANG350_NODE_PRUNE_SAFE_DIV_ONLY` (node-penalty reduction, ZERO synthetic nodes - lowest risk)
+2. `M23_C_PILKWANG350_EDGE_NODE_BALANCED` (balanced node+edge repair, gap1 only, no gap2)
+3. `M23_A_PILKWANG350_NODE_PRUNE_LIGHT` (light repair + full_chain, only if B/C fall short)
 
-Do **NOT** spend submissions on pilkwang350 drift variants: M21-A already scored 0.874 (< 0.880).
-**Keep `M19_C_FULL_CHAIN_PENDING` at 0.8800 as final** until a true-base score beats it.
+Why this order: M21-A's synthetic-heavy full_chain on pilkwang350 scored only 0.874, so test
+node-penalty reduction WITHOUT synthetic-node risk first.
+**Keep `M19_C_FULL_CHAIN_PENDING` at 0.8800 as final** unless an M23 score beats 0.880.
 
 ## Recorded decisions (history)
 
@@ -47,3 +44,6 @@ Do **NOT** spend submissions on pilkwang350 drift variants: M21-A already scored
 - **after `M21_A_PILKWANG350_M19C_GATES`** (2026-07-08, risk low):
   - observation: M21-A (pilkwang drift base + proven M19-C gates) scored only 0.874 - equal to baseline, below M19-C 0.880. The newer/larger pilkwang350 base is NOT automatically better; post-processing on a drifted base does not recover the M19-C result.
   - recommendation: Stop tuning on the drift base. Primary next action: recover the TRUE M19-C artifact (base 131797/118992), likely a NOTEBOOK input from the original M19-C run (e.g. a kernel named like 'Biohub Cell Tracking: Learned Graph w G'). Run M22_ARTIFACT_FORENSIC_DIAGNOSTIC to find it, then run the true-base M22 variants (A->B->C), each gated on OK_TO_SUBMIT_TRUEBASE_EXPERIMENT. Keep M19-C 0.880 final until a true-base score beats it.  → next: `M22_ARTIFACT_FORENSIC -> M22_A/B/C`
+- **after `M22_ARTIFACT_FORENSIC`** (2026-07-09, risk medium):
+  - observation: M22 forensic returned TRUE_M19C_ARTIFACT_NOT_FOUND: the Notebook input had no usable repo/weights and no mounted pack reproduces the true M19-C base (131797/118992). The true artifact is unrecoverable for now.
+  - recommendation: Since the true base cannot be recovered, attack the pilkwang350 base's node over-prediction directly: run M23 node-penalty repair (prune low-value detections, preserve divisions+long tracks) then conservative post-processing. Submit order B -> C -> A (test node-penalty reduction with ZERO synthetic nodes first, since M21-A's synthetic-heavy full_chain scored only 0.874). Keep M19-C 0.880 final unless an M23 score beats it.  → next: `M23_B -> M23_C -> M23_A`
