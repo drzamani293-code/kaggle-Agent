@@ -1,6 +1,6 @@
 # Next Actions
 
-_Generated 2026-07-08 11:55 UTC from intelligence.duckdb._
+_Generated 2026-07-08 13:11 UTC from intelligence.duckdb._
 
 **Best scored experiment:** `M19_C_FULL_CHAIN_PENDING` at **0.8800**.
 **M19-C full_chain:** scored (score 0.8800).
@@ -26,3 +26,6 @@ M19-C **improved** to 0.8800 (> 0.877). Gap recovery + smoothing add value on to
 - **after `M19_C_FULL_CHAIN_PENDING`** (2026-07-08, risk medium):
   - observation: M19-C full_chain scored 0.880 (> M19-A 0.877). Gap recovery + line-fit smoothing add value on top of divisions, and 1309 synthetic nodes did not trip the node over-prediction penalty. full_chain is the new best.
   - recommendation: Tune the full_chain gates: slightly widen the safe-division sister/parent-child gates, and sweep the gap1/gap2 distance + velocity gates to admit more metric-valid synthetic chains while watching synthetic_nodes_added vs score to stay ahead of the node penalty.  → next: `M20_A_FULLCHAIN_TUNED`
+- **after `M20_A_FULLCHAIN_TUNED`** (2026-07-08, risk medium):
+  - observation: M20's pre-postprocess base learned graph changed vs M19-C (n_nodes_before 131797->142193, n_edges_before 118992->127563) despite an identical predict command - a different support-pack/weights artifact was selected on Kaggle. The gate-tuning result is not trustworthy or submittable.
+  - recommendation: Use M20_A_FULLCHAIN_TUNED_FIXED, which reproduces M19-C's exact artifact/weights selection, logs the selected artifact/repo/weights/support-pack, and adds a hard baseline guard (tolerance 0) that recommends DO_NOT_SUBMIT_BASELINE_MISMATCH if the base differs. Attach ONLY the canonical 50ep-v1 support pack.  → next: `M20_A_FULLCHAIN_TUNED_FIXED`
