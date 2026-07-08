@@ -74,10 +74,10 @@
       "raw_file": "competitions/biohub-cell-tracking-during-development/M19_VARIANT_C_FULL_CHAIN.txt",
       "command": {"det_threshold": 0.99, "ilp_edge_weight": -1.0, "ilp_appearance_weight": 0.1, "ilp_disappearance_weight": 0.1, "ilp_division_weight": 1.0, "use_ilp": true},
       "postprocess_ops": ["safe_divisions", "gap1", "gap2", "linefit", "prune_isolated"],
-      "public_score": null,
-      "status": "pending",
+      "public_score": 0.880,
+      "status": "scored",
       "created_at": "2026-07-07",
-      "notes": "Full lb893-style chain on top of the M19-A division core: single-frame + velocity-gated two-frame gap recovery (1309 synthetic nodes) + line-fit smoothing. Submitted; public score pending. Synthetic nodes are the risk to watch (node over-prediction penalty).",
+      "notes": "Full lb893-style chain on top of the M19-A division core: single-frame + velocity-gated two-frame gap recovery (1309 synthetic nodes) + line-fit smoothing. Scored 0.880 (+0.003 over M19-A, +0.006 over baseline): gap recovery + smoothing add value ON TOP of divisions, and the 1309 synthetic nodes paid off rather than costing the node penalty. New best.",
       "submission_stats": {"n_rows": 254824, "n_nodes": 133106, "n_edges": 121718, "max_in_degree": 1, "max_out_degree": 2, "fallback_used": false, "valid": true, "final_source": "reference_learned_graph_postprocessed"},
       "postprocess_stats": {"safe_divisions_added": 466, "gap1_closed": 593, "gap2_recovered": 358, "synthetic_nodes_added": 1309, "isolated_nodes_pruned": 0, "edges_removed": 0, "nodes_before": 131797, "nodes_after": 133106, "edges_before": 118992, "edges_after": 121718, "per_dataset": []}
     }
@@ -100,6 +100,15 @@
       "next_variant": "M19_C_FULL_CHAIN_PENDING",
       "risk_level": "medium",
       "created_at": "2026-07-05"
+    },
+    {
+      "decision_id": "DEC_AFTER_M19C",
+      "after_experiment_id": "M19_C_FULL_CHAIN_PENDING",
+      "observation": "M19-C full_chain scored 0.880 (> M19-A 0.877). Gap recovery + line-fit smoothing add value on top of divisions, and 1309 synthetic nodes did not trip the node over-prediction penalty. full_chain is the new best.",
+      "recommendation": "Tune the full_chain gates: slightly widen the safe-division sister/parent-child gates, and sweep the gap1/gap2 distance + velocity gates to admit more metric-valid synthetic chains while watching synthetic_nodes_added vs score to stay ahead of the node penalty.",
+      "next_variant": "M20_A_FULLCHAIN_TUNED",
+      "risk_level": "medium",
+      "created_at": "2026-07-08"
     }
   ],
   "lessons": [
@@ -127,7 +136,7 @@
     {
       "lesson_id": "LES_NODE_PENALTY",
       "topic": "metric",
-      "lesson": "The score penalizes node over-prediction (0.1*(T_pred-T_true)/T_true). Adding synthetic nodes (gap recovery) is a risk: they must land close enough to real GT nodes to be matched, or they inflate T_pred for no edge benefit. Prune isolated nodes; add synthetic nodes cautiously.",
+      "lesson": "The score penalizes node over-prediction (0.1*(T_pred-T_true)/T_true), so synthetic nodes are a risk in principle. In practice M19-C's 1309 velocity/distance-gated synthetic gap nodes still improved the score (0.877 -> 0.880), so well-gated synthetic gap recovery pays off; the gates (per-step distance, velocity consistency) are what keep the added nodes matchable. Continue to track synthetic_nodes_added against score.",
       "evidence_experiment_ids": "M19_A_SAFE_DIVISIONS_PRUNE,M19_C_FULL_CHAIN_PENDING",
       "confidence": "medium"
     },

@@ -65,27 +65,29 @@ def test_reports_generated(tmp: Path) -> None:
         assert name in written, f"{name} not generated"
         text = (tmp_reports / name).read_text()
         assert len(text) > 100, f"{name} looks empty"
-    # Timeline must show baseline and the +0.003 step to M19-A.
+    # Timeline must show baseline and the +0.003 steps to M19-A and M19-C.
     timeline = (tmp_reports / "score_timeline.md").read_text()
-    assert "0.8740" in timeline and "0.8770" in timeline and "+0.003" in timeline
-    # next_actions must reflect the pending branch (hold second submission).
+    assert "0.8740" in timeline and "0.8770" in timeline and "0.8800" in timeline and "+0.003" in timeline
+    # M19-C scored 0.880 (> 0.877) -> next_actions is the "tune full_chain" branch.
     nxt = (tmp_reports / "next_actions.md").read_text()
-    assert "pending" in nxt.lower() and "hold" in nxt.lower()
+    assert "0.8800" in nxt and "tune" in nxt.lower() and "full_chain" in nxt.lower()
     print("  ok: reports generated with expected content")
 
 
-def test_pending_and_best(tmp: Path) -> None:
+def test_scored_and_best(tmp: Path) -> None:
     db = _fresh_db(tmp)
     con = C.connect(db)
     try:
-        pend = con.execute("SELECT public_score, status FROM experiments WHERE experiment_id='M19_C_FULL_CHAIN_PENDING'").fetchone()
+        m19c = con.execute("SELECT public_score, status FROM experiments WHERE experiment_id='M19_C_FULL_CHAIN_PENDING'").fetchone()
         best = con.execute("SELECT experiment_id, public_score FROM experiments WHERE public_score IS NOT NULL ORDER BY public_score DESC, created_at LIMIT 1").fetchone()
+        n_pending = con.execute("SELECT COUNT(*) FROM experiments WHERE public_score IS NULL").fetchone()[0]
     finally:
         con.close()
-    assert pend[0] is None and pend[1] == "pending", f"M19-C should be pending, got {pend}"
-    assert best[0] == "M19_A_SAFE_DIVISIONS_PRUNE" and abs(best[1] - 0.877) < 1e-9, \
-        f"best should be M19-A @0.877 while M19-C pending, got {best}"
-    print("  ok: pending handled; best == M19-A while M19-C pending")
+    assert m19c[0] is not None and abs(m19c[0] - 0.880) < 1e-9 and m19c[1] == "scored", f"M19-C should be scored 0.880, got {m19c}"
+    assert best[0] == "M19_C_FULL_CHAIN_PENDING" and abs(best[1] - 0.880) < 1e-9, \
+        f"best should be M19-C @0.880, got {best}"
+    assert n_pending == 0, f"no experiments should be pending, got {n_pending}"
+    print("  ok: M19-C scored; best == M19-C @0.880; nothing pending")
 
 
 def test_update_idempotent(tmp: Path) -> None:
@@ -153,7 +155,7 @@ def run_all() -> None:
         tmp = Path(d)
         test_db_initializes_and_seeds(tmp)
         test_reports_generated(tmp)
-        test_pending_and_best(tmp)
+        test_scored_and_best(tmp)
         test_update_idempotent(tmp)
         test_update_pending_score(tmp)
         test_query_experiment(tmp)

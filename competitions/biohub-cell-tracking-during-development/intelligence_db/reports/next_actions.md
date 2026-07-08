@@ -1,28 +1,19 @@
 # Next Actions
 
-_Generated 2026-07-07 22:25 UTC from intelligence.duckdb._
+_Generated 2026-07-08 11:26 UTC from intelligence.duckdb._
 
-**Best scored experiment:** `M19_A_SAFE_DIVISIONS_PRUNE` at **0.8770**.
-**M19-C full_chain:** pending (score pending).
+**Best scored experiment:** `M19_C_FULL_CHAIN_PENDING` at **0.8800**.
+**M19-C full_chain:** scored (score 0.8800).
 
 ## Recommendation
 
-M19-C is **pending**. Do not spend the second remaining submission until its public score is known.
+M19-C **improved** to 0.8800 (> 0.877). Gap recovery + smoothing add value on top of divisions.
 
-- **Hold** the second submission.
-- When M19-C scores, this report auto-updates with the branch below.
-- Interim best to keep as the submitted baseline: `M19_A_SAFE_DIVISIONS_PRUNE` (0.8770).
-
-### Contingency (what each M19-C outcome will trigger)
-- **M19-C > 0.877** → tune `full_chain` gates: widen safe-division sister/parent gates slightly, 
-  and tune gap1/gap2 distance + velocity gates to add more valid synthetic chains without 
-  inflating the node penalty.
-- **M19-C == 0.877** → the gap recovery neither helped nor hurt net; isolate it by running 
-  **M19-B** (gap recovery alone, no divisions) or tune the safe-division gates further, since 
-  divisions are the proven lever.
-- **M19-C < 0.877** → the 1309 synthetic nodes cost more (node over-prediction penalty) than the 
-  recovered edges gained; **revert to M19-A** and tighten or remove gap recovery (drop gap2 first, 
-  then gap1), keeping only safe divisions + isolated prune.
+- **Tune the `full_chain` gates** (risk: medium):
+  - safe divisions: slightly widen sister/parent-child gates to admit more true divisions;
+  - gap1/gap2: sweep the distance and velocity gates to add more metric-valid synthetic chains;
+  - keep an eye on `synthetic_nodes_added` vs score to stay ahead of the node penalty.
+- Next variant: a tuned full_chain (e.g. `M20_A_FULLCHAIN_TUNED`).
 
 ## Recorded decisions (history)
 
@@ -32,3 +23,6 @@ M19-C is **pending**. Do not spend the second remaining submission until its pub
 - **after `M19_A_SAFE_DIVISIONS_PRUNE`** (2026-07-05, risk medium):
   - observation: Safe divisions + isolated prune moved 0.874 -> 0.877 with zero synthetic nodes. Metric-aware post-processing is the correct path.
   - recommendation: Spend the next submission on M19-C full_chain (adds gap recovery + smoothing on the same division core). Gate on valid=True and fallback_used=False before submitting.  → next: `M19_C_FULL_CHAIN_PENDING`
+- **after `M19_C_FULL_CHAIN_PENDING`** (2026-07-08, risk medium):
+  - observation: M19-C full_chain scored 0.880 (> M19-A 0.877). Gap recovery + line-fit smoothing add value on top of divisions, and 1309 synthetic nodes did not trip the node over-prediction penalty. full_chain is the new best.
+  - recommendation: Tune the full_chain gates: slightly widen the safe-division sister/parent-child gates, and sweep the gap1/gap2 distance + velocity gates to admit more metric-valid synthetic chains while watching synthetic_nodes_added vs score to stay ahead of the node penalty.  → next: `M20_A_FULLCHAIN_TUNED`

@@ -1,6 +1,6 @@
 # Lessons Learned
 
-_Generated 2026-07-07 22:25 UTC from intelligence.duckdb._
+_Generated 2026-07-08 11:26 UTC from intelligence.duckdb._
 
 Distilled, evidence-linked findings driving strategy.
 
@@ -15,7 +15,7 @@ Distilled, evidence-linked findings driving strategy.
 - **Confidence:** high
 
 ## metric — `LES_NODE_PENALTY`
-- **Lesson:** The score penalizes node over-prediction (0.1*(T_pred-T_true)/T_true). Adding synthetic nodes (gap recovery) is a risk: they must land close enough to real GT nodes to be matched, or they inflate T_pred for no edge benefit. Prune isolated nodes; add synthetic nodes cautiously.
+- **Lesson:** The score penalizes node over-prediction (0.1*(T_pred-T_true)/T_true), so synthetic nodes are a risk in principle. In practice M19-C's 1309 velocity/distance-gated synthetic gap nodes still improved the score (0.877 -> 0.880), so well-gated synthetic gap recovery pays off; the gates (per-step distance, velocity consistency) are what keep the added nodes matchable. Continue to track synthetic_nodes_added against score.
 - **Evidence:** M19_A_SAFE_DIVISIONS_PRUNE,M19_C_FULL_CHAIN_PENDING
 - **Confidence:** medium
 
