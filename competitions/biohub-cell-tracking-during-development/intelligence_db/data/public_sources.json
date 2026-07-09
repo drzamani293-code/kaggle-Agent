@@ -88,6 +88,17 @@
       "summary": "Cross-notebook analysis of the leading approaches (learned-graph + post-processing vs classical detection). Corroborates that the learned-graph + metric-aware post-processing path dominates the classical path.",
       "extracted_ideas": ["learned-graph + post-processing > classical", "post-processing is the differentiator among top scores", "division and gap handling recur across top notebooks"],
       "relevance_score": 0.7
+    },
+    {
+      "source_id": "ARTIFACT_400EP_SNAPSHOT",
+      "source_type": "artifact",
+      "title": "biohub-tracking-support-pack-400ep-snapshot-v1 (discovered via M23-C guard failure)",
+      "url": "kaggle:/kaggle/input/datasets/pilkwang/biohub-tracking-support-pack-50ep-v1",
+      "repo": "pilkwang/biohub-tracking-support-pack-50ep-v1",
+      "path": "weights/unet_transformer/split_0/edge_predictor_best.pth",
+      "summary": "A 400-epoch snapshot mounted at the pilkwang 50ep-v1 path. weight_sha256=12f6881ee3620a831697ca098ff8f48e687a24225f4e048b538deec3562fe771. RAW base graph 127790 nodes / 115694 edges - much closer to M19-C's true 131797/118992 than pilkwang350's 142193/127563, so it is a cleaner/leaner base worth testing (M24). This is our own discovered artifact, not private data.",
+      "extracted_ideas": ["cleaner 400ep base ~127790/115694", "closer to true M19-C base than pilkwang350", "weight_sha256 12f688..", "test AS-IS with M19-C chain, no node-prune"],
+      "relevance_score": 0.95
     }
   ]
 }

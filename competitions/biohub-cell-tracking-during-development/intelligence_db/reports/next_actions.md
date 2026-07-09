@@ -1,28 +1,26 @@
 # Next Actions
 
-_Generated 2026-07-08 21:03 UTC from intelligence.duckdb._
+_Generated 2026-07-09 01:56 UTC from intelligence.duckdb._
 
 **Best scored experiment:** `M19_C_FULL_CHAIN_PENDING` at **0.8800**.
 **M19-C full_chain:** scored (score 0.8800).
-**Open (pending):** 3 · **blocked:** 5 · **unsafe/superseded:** 2.
+**Open (pending):** 3 · **blocked:** 6 · **unsafe/superseded:** 2.
 
 ## Recommendation
 
-M22 forensic returned **TRUE_M19C_ARTIFACT_NOT_FOUND** (the true 131797/118992 base is
-unrecoverable). So attack the pilkwang350 base's **node over-prediction** directly with the
-**M23 node-penalty repair** pack (pinned to pilkwang350 + weight_sha256 guard). Each variant
-prunes low-value detections (preserving divisions + long tracks) then applies conservative
-post-processing; submit one only if its report says `OK_TO_SUBMIT_EXPERIMENTAL` (artifact
-guard passed, not over-pruned >8%, post-repair node count in 130000-145000, valid, no fallback).
+M23-B scored **0.877** (node-penalty repair on pilkwang350 helped but did not beat 0.880), and
+M23-C's guard failure **revealed a cleaner 400ep artifact** (base 127790/115694 - much closer to
+M19-C's true 131797/118992 than pilkwang350's 142193/127563). Test the lean **400ep base** with
+the proven M19-C post-processing (**M24**, pinned to the 400ep path+name+weight_sha256 12f688..,
+NO node-prune). Submit one only if its report says `OK_TO_SUBMIT_EXPERIMENTAL` (artifact guard
+passed, base & final node count in 120000-135000, synthetic <= 2200, valid, no fallback).
 
 **Submit order recommendation:**
-1. `M23_B_PILKWANG350_NODE_PRUNE_SAFE_DIV_ONLY` (node-penalty reduction, ZERO synthetic nodes - lowest risk)
-2. `M23_C_PILKWANG350_EDGE_NODE_BALANCED` (balanced node+edge repair, gap1 only, no gap2)
-3. `M23_A_PILKWANG350_NODE_PRUNE_LIGHT` (light repair + full_chain, only if B/C fall short)
+1. `M24_A_400EP_FULLCHAIN_M19C_GATES` (clean 400ep base + full M19-C chain - only high-upside candidate)
+2. `M24_B_400EP_GAP1_ONLY` (gap1 only - isolates whether gap2 is risky on the lean base)
+3. `M24_C_400EP_SAFE_DIV_ONLY` (safe-divisions only - zero-synthetic control)
 
-Why this order: M21-A's synthetic-heavy full_chain on pilkwang350 scored only 0.874, so test
-node-penalty reduction WITHOUT synthetic-node risk first.
-**Keep `M19_C_FULL_CHAIN_PENDING` at 0.8800 as final** unless an M23 score beats 0.880.
+**Keep `M19_C_FULL_CHAIN_PENDING` at 0.8800 as final** unless an M24 score beats 0.880.
 
 ## Recorded decisions (history)
 
@@ -47,3 +45,6 @@ node-penalty reduction WITHOUT synthetic-node risk first.
 - **after `M22_ARTIFACT_FORENSIC`** (2026-07-09, risk medium):
   - observation: M22 forensic returned TRUE_M19C_ARTIFACT_NOT_FOUND: the Notebook input had no usable repo/weights and no mounted pack reproduces the true M19-C base (131797/118992). The true artifact is unrecoverable for now.
   - recommendation: Since the true base cannot be recovered, attack the pilkwang350 base's node over-prediction directly: run M23 node-penalty repair (prune low-value detections, preserve divisions+long tracks) then conservative post-processing. Submit order B -> C -> A (test node-penalty reduction with ZERO synthetic nodes first, since M21-A's synthetic-heavy full_chain scored only 0.874). Keep M19-C 0.880 final unless an M23 score beats it.  → next: `M23_B -> M23_C -> M23_A`
+- **after `M23_B_PILKWANG350_NODE_PRUNE_SAFE_DIV_ONLY`** (2026-07-09, risk medium):
+  - observation: M23-B (pilkwang350 node-prune + safe divisions) scored 0.877 - node-penalty reduction helped (0.874->0.877) but did not beat M19-C 0.880. Separately, M23-C's guard failure REVEALED a new 400ep artifact (biohub-tracking-support-pack-400ep-snapshot-v1, weight 12f688..) whose RAW base 127790/115694 is much closer to M19-C's true 131797/118992 than pilkwang350's 142193/127563.
+  - recommendation: Pivot to the cleaner 400ep base. Run M24 (pinned to the 400ep path+name+weight hash, NO node-prune): A full_chain (highest upside), B gap1-only, C safe-div-only. Submit order A -> B -> C. Keep M19-C 0.880 final unless an M24 score beats it.  → next: `M24_A -> M24_B -> M24_C`

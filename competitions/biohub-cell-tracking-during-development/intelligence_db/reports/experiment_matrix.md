@@ -1,6 +1,6 @@
 # Experiment Matrix
 
-_Generated 2026-07-08 21:03 UTC from intelligence.duckdb._
+_Generated 2026-07-09 01:56 UTC from intelligence.duckdb._
 
 Command differences, post-processing ops, submission stats, and score for every variant.
 All variants share ILP weights (edge -1.0, appearance 0.1, disappearance 0.1, division 1.0, --use-ilp);
@@ -23,8 +23,11 @@ only `det_threshold` and the post-processing chain differ.
 | `M22_B_TRUEBASE_LIGHT_GAP` | 0.99 | safe_divisions, gap1, gap2, linefit, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M22_C_TRUEBASE_DIV_PLUS_GAP1_ONLY` | 0.99 | safe_divisions, gap1, linefit, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M23_A_PILKWANG350_NODE_PRUNE_LIGHT` | 0.99 | node_prune_light, safe_divisions, gap1, gap2, linefit, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
-| `M23_B_PILKWANG350_NODE_PRUNE_SAFE_DIV_ONLY` | 0.99 | node_prune_light, safe_divisions, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
-| `M23_C_PILKWANG350_EDGE_NODE_BALANCED` | 0.99 | node_prune_balanced, edge_trim, safe_divisions, gap1, linefit, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M23_B_PILKWANG350_NODE_PRUNE_SAFE_DIV_ONLY` | 0.99 | node_prune_light, safe_divisions, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | 0.8770 |
+| `M23_C_PILKWANG350_EDGE_NODE_BALANCED` | 0.99 | node_prune_balanced, edge_trim, safe_divisions, gap1, linefit, prune_isolated | None | 121393 | 113068 | 406 | 536 | 0 | 536 | 0 | 0 | 1/2 | True | False | pending |
+| `M24_A_400EP_FULLCHAIN_M19C_GATES` | 0.99 | safe_divisions, gap1, gap2, linefit, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M24_B_400EP_GAP1_ONLY` | 0.99 | safe_divisions, gap1, linefit, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M24_C_400EP_SAFE_DIV_ONLY` | 0.99 | safe_divisions, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 
 Legend: div+ = safe divisions added, gap1 = single-frame gaps closed, 
 gap2 = two-frame gaps recovered, synth = synthetic nodes added, prune = isolated nodes pruned, 

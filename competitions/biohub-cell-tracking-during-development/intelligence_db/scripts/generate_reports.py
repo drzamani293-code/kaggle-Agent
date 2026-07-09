@@ -136,7 +136,7 @@ def report_next_actions(con) -> str:
     # Genuinely-open work vs superseded/unsafe/blocked attempts.
     pending = _fetch(con, """
         SELECT experiment_id, created_at FROM experiments
-        WHERE public_score IS NULL AND status NOT IN ('unsafe', 'blocked', 'diagnostic') ORDER BY created_at
+        WHERE public_score IS NULL AND status NOT IN ('unsafe', 'blocked', 'diagnostic', 'wrong_artifact') ORDER BY created_at
     """)
     unsafe = _fetch(con, """
         SELECT e.experiment_id, p.nodes_before, p.edges_before
@@ -180,6 +180,29 @@ def report_next_actions(con) -> str:
             "",
             "Do **NOT** spend submissions on pilkwang350 drift variants: M21-A already scored 0.874 (< 0.880).",
             f"**Keep `{best_id}` at {_fmt_score(best_score)} as final** until a true-base score beats it.",
+        ]
+    elif [e for e in ["M24_A_400EP_FULLCHAIN_M19C_GATES", "M24_B_400EP_GAP1_ONLY",
+                      "M24_C_400EP_SAFE_DIV_ONLY"] if e in pending_ids]:
+        m24_order = [e for e in ["M24_A_400EP_FULLCHAIN_M19C_GATES", "M24_B_400EP_GAP1_ONLY",
+                                 "M24_C_400EP_SAFE_DIV_ONLY"] if e in pending_ids]
+        out += [
+            "M23-B scored **0.877** (node-penalty repair on pilkwang350 helped but did not beat 0.880), and",
+            "M23-C's guard failure **revealed a cleaner 400ep artifact** (base 127790/115694 - much closer to",
+            "M19-C's true 131797/118992 than pilkwang350's 142193/127563). Test the lean **400ep base** with",
+            "the proven M19-C post-processing (**M24**, pinned to the 400ep path+name+weight_sha256 12f688..,",
+            "NO node-prune). Submit one only if its report says `OK_TO_SUBMIT_EXPERIMENTAL` (artifact guard",
+            "passed, base & final node count in 120000-135000, synthetic <= 2200, valid, no fallback).",
+            "",
+            "**Submit order recommendation:**",
+        ]
+        for i, eid in enumerate(m24_order, 1):
+            reason = {1: " (clean 400ep base + full M19-C chain - only high-upside candidate)",
+                      2: " (gap1 only - isolates whether gap2 is risky on the lean base)",
+                      3: " (safe-divisions only - zero-synthetic control)"}.get(i, "")
+            out.append(f"{i}. `{eid}`{reason}")
+        out += [
+            "",
+            f"**Keep `{best_id}` at {_fmt_score(best_score)} as final** unless an M24 score beats 0.880.",
         ]
     elif [e for e in ["M23_B_PILKWANG350_NODE_PRUNE_SAFE_DIV_ONLY", "M23_C_PILKWANG350_EDGE_NODE_BALANCED",
                       "M23_A_PILKWANG350_NODE_PRUNE_LIGHT"] if e in pending_ids]:
