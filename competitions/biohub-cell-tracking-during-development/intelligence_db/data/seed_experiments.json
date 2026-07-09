@@ -1303,6 +1303,213 @@
     "edges_after": null,
     "per_dataset": []
    }
+  },
+  {
+   "experiment_id": "M27_A_PUBLIC_REPRO_EXACT_SAFETY",
+   "milestone": "M27",
+   "variant": "A",
+   "label": "public_repro_exact_safety",
+   "notebook_name": "milestone27_public_notebook_repro_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M27_A_PUBLIC_REPRO_EXACT_SAFETY.txt",
+   "command": {
+    "det_threshold": 0.99,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "motion_relink",
+    "gap_close",
+    "safe_divisions",
+    "edge_policy_veto",
+    "filter_short_tracks_minlen7",
+    "linefit",
+    "final_safety_repair"
+   ],
+   "public_score": null,
+   "status": "pending",
+   "created_at": "2026-07-09",
+   "notes": "PENDING (experimental). Faithful reproduction of the public v4-unet-ilp notebook on the guarded 400ep artifact (name contains 400ep + weight_sha256 12f6881e..) + final safety repair (in<=1/out<=2, all edges t->t+1, no dangling, no NaN, consecutive id; a >2-out source keeps its two best children by edge_prob then repair_policy_score then shorter distance). Expected public diag: node_rows ~119000-121000, edge_rows ~114000-116500, gap_synthetic ~2000-2300, safe_div ~350-430, short_track_nodes_removed ~9000-11000, edges_vetoed ~900-1400, linefit ~118000-121000. SUBMIT FIRST if OK_TO_SUBMIT_EXPERIMENTAL. Keep M19-C 0.880 final unless this beats it.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M27_B_PUBLIC_REPRO_NO_EDGE_VETO",
+   "milestone": "M27",
+   "variant": "B",
+   "label": "public_repro_no_edge_veto",
+   "notebook_name": "milestone27_public_notebook_repro_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M27_B_PUBLIC_REPRO_NO_EDGE_VETO.txt",
+   "command": {
+    "det_threshold": 0.99,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "motion_relink",
+    "gap_close",
+    "safe_divisions",
+    "filter_short_tracks_minlen7",
+    "linefit",
+    "final_safety_repair"
+   ],
+   "public_score": null,
+   "status": "pending",
+   "created_at": "2026-07-09",
+   "notes": "PENDING (experimental). Same as A but the edge-policy VETO is DISABLED - isolates whether the veto helps or hurts. Expected: slightly more edges, maybe more FP. Submit only if valid and counts sane (universal safety gate).",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M27_C_PUBLIC_REPRO_MINLEN5",
+   "milestone": "M27",
+   "variant": "C",
+   "label": "public_repro_minlen5",
+   "notebook_name": "milestone27_public_notebook_repro_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M27_C_PUBLIC_REPRO_MINLEN5.txt",
+   "command": {
+    "det_threshold": 0.99,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "motion_relink",
+    "gap_close",
+    "safe_divisions",
+    "edge_policy_veto",
+    "filter_short_tracks_minlen5",
+    "linefit",
+    "final_safety_repair"
+   ],
+   "public_score": null,
+   "status": "pending",
+   "created_at": "2026-07-09",
+   "notes": "PENDING (experimental). Same as A but output_min_track_len=5 - tests whether minlen 7 over-prunes true short tracks. Expected more nodes/edges than A, still below M24-B. Submit (order #2) if valid and n_node_rows <= 126000.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M27_D_PUBLIC_REPRO_STRICT_PRECISION",
+   "milestone": "M27",
+   "variant": "D",
+   "label": "public_repro_strict_precision",
+   "notebook_name": "milestone27_public_notebook_repro_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M27_D_PUBLIC_REPRO_STRICT_PRECISION.txt",
+   "command": {
+    "det_threshold": 0.99,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "motion_relink",
+    "gap_close",
+    "safe_divisions",
+    "edge_policy_veto",
+    "filter_short_tracks_minlen8_keepdiv",
+    "linefit",
+    "final_safety_repair"
+   ],
+   "public_score": null,
+   "status": "pending",
+   "created_at": "2026-07-09",
+   "notes": "PENDING (experimental). Same as A but stricter short-track filtering (output_min_track_len=8, keep division components) - tests whether an even lower node penalty raises the public score. Submit only if n_node_rows>=112000 and n_edge_rows>=108000.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
   }
  ],
  "decisions": [
@@ -1402,6 +1609,15 @@
    "observation": "Single-model post-processing plateaued at M19-C 0.880; every substitute base (pilkwang350 142193, 400ep 127790, tom99763 161098) scored below 0.880, and the true M19-C artifact is unrecoverable. Post-GEFF tuning on ONE model has run out of signal.",
    "recommendation": "Pivot to MULTI-ARTIFACT ENSEMBLING (M26). Run Stage 1 M26_ARTIFACT_ZOO_DIAGNOSTIC first to confirm >=2 viable artifacts and read their base counts. If >=2, run the ensemble variants in submit order A (2-of-N consensus, zero synthetic) -> B (primary-closest-to-target + consensus edges, micro gap1) -> C (weighted ensemble + light full chain), each only if its report prints OK_TO_SUBMIT_EXPERIMENTAL. Keep M19-C 0.880 as final/best unless an M26 variant beats it.",
    "next_variant": "M26_ARTIFACT_ZOO -> M26_A -> M26_B -> M26_C",
+   "risk_level": "medium",
+   "created_at": "2026-07-09"
+  },
+  {
+   "decision_id": "DEC_M27_PUBLIC_REPRO_PIVOT",
+   "after_experiment_id": "M26_A_CONSENSUS_2OFN_PRECISION",
+   "observation": "A public high-score notebook (biohub-cell-tracking-v4-unet-ilp-reproduction) uses the SAME 400ep artifact we tested in M24 (weight_sha256 12f6881e.., base 127790/115694) but scores much higher by replacing our thin safe_div/gap/linefit postprocess with a richer output pipeline: motion-relink (per-frame Hungarian), gap close with reuse, safe divisions, a conservative logistic edge VETO capped at 1%, short-track-component filtering (keep divisions), and linefit. Its public output is 119763 node rows / 115080 edge rows. M24 (0.872/0.873) failed on 400ep only because our postprocess was too thin.",
+   "recommendation": "Reproduce the public notebook LOGIC hidden-safe as M27 (never submit its static submission.csv). Guard the 400ep artifact (name contains 400ep + exact weight_sha256) and add a final safety repair. Submit order A (exact repro) -> C (min_track_len 5) -> B (no edge veto) -> D (strict min_track_len 8), each only if its report prints OK_TO_SUBMIT_EXPERIMENTAL (or the variant-specific count rule). Keep M19-C 0.880 final unless an M27 variant beats it.",
+   "next_variant": "M27_A -> M27_C -> M27_B -> M27_D",
    "risk_level": "medium",
    "created_at": "2026-07-09"
   }

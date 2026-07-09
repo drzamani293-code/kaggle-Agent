@@ -269,6 +269,39 @@ def report_next_actions(con) -> str:
             "node-penalty reduction WITHOUT synthetic-node risk first.",
             f"**Keep `{best_id}` at {_fmt_score(best_score)} as final** unless an M23 score beats 0.880.",
         ]
+    elif [e for e in ["M27_A_PUBLIC_REPRO_EXACT_SAFETY", "M27_C_PUBLIC_REPRO_MINLEN5",
+                      "M27_B_PUBLIC_REPRO_NO_EDGE_VETO", "M27_D_PUBLIC_REPRO_STRICT_PRECISION"] if e in pending_ids]:
+        m27_order = [e for e in ["M27_A_PUBLIC_REPRO_EXACT_SAFETY", "M27_C_PUBLIC_REPRO_MINLEN5",
+                                 "M27_B_PUBLIC_REPRO_NO_EDGE_VETO", "M27_D_PUBLIC_REPRO_STRICT_PRECISION"] if e in pending_ids]
+        out += [
+            "**Reproduce the public high-score notebook (M27).** A public notebook",
+            "(`biohub-cell-tracking-v4-unet-ilp-reproduction`) runs the SAME 400ep artifact we tested in M24",
+            "(weight_sha256 `12f6881e..`, base 127790/115694) but scores much higher by replacing our thin",
+            "safe_div/gap/linefit post-processing with a richer, evaluator-safe OUTPUT pipeline: motion-relink",
+            "(per-frame Hungarian) -> gap close (reuse-or-insert) -> safe divisions -> a conservative logistic",
+            "edge VETO (capped 1%, skip divisions) -> short-track-component filter (keep divisions) -> linefit.",
+            "M24 (0.872/0.873) underperformed on 400ep only because our postprocess was too thin.",
+            "",
+            "M27 reproduces that LOGIC hidden-safe (never the static submission.csv), guards the 400ep artifact",
+            "(name contains `400ep` AND exact weight_sha256) and adds a final safety repair. Submit each only if",
+            "its report prints `OK_TO_SUBMIT_EXPERIMENTAL` (artifact guard, valid, no fallback,",
+            "final_source=public_notebook_logic_reproduced, in<=1/out<=2, all edges t->t+1, no dangling, no NaN,",
+            "consecutive id, 110000<=node_rows<=130000, 105000<=edge_rows<=122000, synthetic<=2600) plus the",
+            "variant-specific count rule.",
+            "",
+            "**Submit order recommendation:**",
+        ]
+        for i, eid in enumerate(m27_order, 1):
+            reason = {1: " (faithful public reproduction + safety repair - highest-fidelity shot)",
+                      2: " (min_track_len 5 - does minlen 7 over-prune true short tracks? submit if node_rows<=126000)",
+                      3: " (edge-policy veto disabled - isolate whether the veto helps or hurts)",
+                      4: " (strict min_track_len 8, keep divisions - even lower node penalty; node_rows>=112000 & edge_rows>=108000)"}.get(i, "")
+            out.append(f"{i}. `{eid}`{reason}")
+        out += [
+            "",
+            f"**Keep `{best_id}` at {_fmt_score(best_score)} as final** unless an M27 variant beats 0.880.",
+            "The M26 multi-artifact ensemble variants remain pending as a secondary track.",
+        ]
     elif [e for e in ["M26_A_CONSENSUS_2OFN_PRECISION", "M26_B_PRIMARY_M19C_STYLE_PLUS_CONSENSUS_EDGES",
                       "M26_C_WEIGHTED_ENSEMBLE_FULLCHAIN_LIGHT"] if e in pending_ids]:
         m26_order = [e for e in ["M26_A_CONSENSUS_2OFN_PRECISION",

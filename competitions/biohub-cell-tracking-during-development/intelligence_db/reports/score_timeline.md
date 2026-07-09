@@ -1,6 +1,6 @@
 # Score Timeline
 
-_Generated 2026-07-09 15:56 UTC from intelligence.duckdb._
+_Generated 2026-07-09 18:23 UTC from intelligence.duckdb._
 
 Baseline **0.874** · best so far **0.8800**.
 
@@ -32,9 +32,13 @@ Delta = step change vs the previous **scored** experiment (chronological).
 | 22 | 2026-07-09 | `M26_A_CONSENSUS_2OFN_PRECISION` | pending | — | — | pending |
 | 23 | 2026-07-09 | `M26_B_PRIMARY_M19C_STYLE_PLUS_CONSENSUS_EDGES` | pending | — | — | pending |
 | 24 | 2026-07-09 | `M26_C_WEIGHTED_ENSEMBLE_FULLCHAIN_LIGHT` | pending | — | — | pending |
-| 25 | 2026-07-10 | `M25_A_PRUNE_MILD_SAFE_DIV` | pending | — | — | blocked |
-| 26 | 2026-07-10 | `M25_B_PRUNE_STRONG_SAFE_DIV` | pending | — | — | blocked |
-| 27 | 2026-07-10 | `M25_C_PRUNE_M23B_PLUS_MICRO_GAP1` | pending | — | — | blocked |
+| 25 | 2026-07-09 | `M27_A_PUBLIC_REPRO_EXACT_SAFETY` | pending | — | — | pending |
+| 26 | 2026-07-09 | `M27_B_PUBLIC_REPRO_NO_EDGE_VETO` | pending | — | — | pending |
+| 27 | 2026-07-09 | `M27_C_PUBLIC_REPRO_MINLEN5` | pending | — | — | pending |
+| 28 | 2026-07-09 | `M27_D_PUBLIC_REPRO_STRICT_PRECISION` | pending | — | — | pending |
+| 29 | 2026-07-10 | `M25_A_PRUNE_MILD_SAFE_DIV` | pending | — | — | blocked |
+| 30 | 2026-07-10 | `M25_B_PRUNE_STRONG_SAFE_DIV` | pending | — | — | blocked |
+| 31 | 2026-07-10 | `M25_C_PRUNE_M23B_PLUS_MICRO_GAP1` | pending | — | — | blocked |
 
 ## Notes per experiment
 
@@ -62,6 +66,10 @@ Delta = step change vs the previous **scored** experiment (chronological).
 - **M26_A_CONSENSUS_2OFN_PRECISION** (pending, pending): PENDING (experimental). Multi-artifact ensemble: run every viable artifact on the same hidden-safe split, cluster nodes across artifacts by <=7um centroid distance, KEEP only nodes/edges with >=2-artifact support (+ primary long-track preservation). safe_divisions + prune_isolated only; ZERO synthetic nodes (synth_cap 0). Tests whether cross-model consensus fixes node over-prediction. Submit only if report says OK_TO_SUBMIT_EXPERIMENTAL (>=2 artifacts, valid, no fallback, ensemble_graph_postprocessed, 120000<=nodes<=145000, 110000<=edges<=135000, synthetic==0). Keep M19-C 0.880 final unless this beats it.
 - **M26_B_PRIMARY_M19C_STYLE_PLUS_CONSENSUS_EDGES** (pending, pending): PENDING (experimental). Primary artifact = the one whose base node count is closest to the M19-C target 131797/118992; add consensus-supported nodes/edges from the other artifacts. safe_divisions + MICRO gap1 (5.0um/0.0015/90) + linefit + prune (NO gap2). Final nodes ~130000-136000, synthetic <= 600. Submit only if OK_TO_SUBMIT_EXPERIMENTAL (>=2 artifacts, sane counts, synthetic<=600). Keep M19-C 0.880 final unless this beats it.
 - **M26_C_WEIGHTED_ENSEMBLE_FULLCHAIN_LIGHT** (pending, pending): PENDING (experimental). Weighted multi-artifact ensemble (artifact closer to 131797 target -> higher weight; too-many/too-few penalised, floored 0.2). Full chain with a VERY light gap2 (3.6/8.0/-0.05/4.6/0.0015/55; gap2_recovered target <=150). synthetic <= 1000. Submit only if OK_TO_SUBMIT_EXPERIMENTAL (>=2 artifacts, sane counts, synthetic<=1000). Keep M19-C 0.880 final unless this beats it.
+- **M27_A_PUBLIC_REPRO_EXACT_SAFETY** (pending, pending): PENDING (experimental). Faithful reproduction of the public v4-unet-ilp notebook on the guarded 400ep artifact (name contains 400ep + weight_sha256 12f6881e..) + final safety repair (in<=1/out<=2, all edges t->t+1, no dangling, no NaN, consecutive id; a >2-out source keeps its two best children by edge_prob then repair_policy_score then shorter distance). Expected public diag: node_rows ~119000-121000, edge_rows ~114000-116500, gap_synthetic ~2000-2300, safe_div ~350-430, short_track_nodes_removed ~9000-11000, edges_vetoed ~900-1400, linefit ~118000-121000. SUBMIT FIRST if OK_TO_SUBMIT_EXPERIMENTAL. Keep M19-C 0.880 final unless this beats it.
+- **M27_B_PUBLIC_REPRO_NO_EDGE_VETO** (pending, pending): PENDING (experimental). Same as A but the edge-policy VETO is DISABLED - isolates whether the veto helps or hurts. Expected: slightly more edges, maybe more FP. Submit only if valid and counts sane (universal safety gate).
+- **M27_C_PUBLIC_REPRO_MINLEN5** (pending, pending): PENDING (experimental). Same as A but output_min_track_len=5 - tests whether minlen 7 over-prunes true short tracks. Expected more nodes/edges than A, still below M24-B. Submit (order #2) if valid and n_node_rows <= 126000.
+- **M27_D_PUBLIC_REPRO_STRICT_PRECISION** (pending, pending): PENDING (experimental). Same as A but stricter short-track filtering (output_min_track_len=8, keep division components) - tests whether an even lower node penalty raises the public score. Submit only if n_node_rows>=112000 and n_edge_rows>=108000.
 - **M25_A_PRUNE_MILD_SAFE_DIV** (pending, blocked): ABANDONED: the required pilkwang350 350ep artifact is no longer recoverable/attachable. M25-A was attempted but the mounted artifact was the 400ep snapshot (artifact_name biohub-tracking-support-pack-400ep-snapshot-v1, weight_sha256 12f688..) instead of the required 350ep dfb848.., so the artifact guard failed -> DO_NOT_SUBMIT_WRONG_ARTIFACT (artifact_guard_passed=False). Not submitted. Cannot run M25 without the 350ep/dfb848 artifact.
 - **M25_B_PRUNE_STRONG_SAFE_DIV** (pending, blocked): ABANDONED: requires the pilkwang350 350ep/dfb848 artifact, which is no longer recoverable/attachable (the mounted pack is now the 400ep snapshot). Cannot run without the correct artifact.
 - **M25_C_PRUNE_M23B_PLUS_MICRO_GAP1** (pending, blocked): ABANDONED: requires the pilkwang350 350ep/dfb848 artifact, which is no longer recoverable/attachable (the mounted pack is now the 400ep snapshot). Cannot run without the correct artifact.

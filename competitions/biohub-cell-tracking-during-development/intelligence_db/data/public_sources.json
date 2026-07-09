@@ -1,104 +1,162 @@
 {
-  "_comment": "Publicly-readable GitHub resources we inspected for this competition. URLs are public; summaries and extracted_ideas are our own notes. relevance_score in [0,1] = how directly it informs our learned-graph path. No private scraping.",
-  "sources": [
-    {
-      "source_id": "ROYERLAB_METRICS_MD",
-      "source_type": "metric_spec",
-      "title": "Cell-tracking competition metric specification",
-      "url": "https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/metrics.md",
-      "repo": "royerlab/kaggle-cell-tracking-competition",
-      "path": "metrics.md",
-      "summary": "Official scoring formula: final = max(0, edge_jaccard * (1 - 0.1*(T_pred - T_true)/T_true)) + 0.1*division_jaccard. Nodes matched to GT by <=7um centroid bipartite matching; edges are TP only when both endpoints match GT-connected nodes AND span a unit timepoint; divisions are out-degree-2 sources with +/-1 timepoint tolerance; micro-averaged across samples.",
-      "extracted_ideas": ["node over-prediction penalty coeff 0.1 on T_pred excess", "division term weighted 0.1", "only unit-timepoint edges are credited", "7um node-match tolerance"],
-      "relevance_score": 1.0
-    },
-    {
-      "source_id": "ROYERLAB_EVALUATE_PY",
-      "source_type": "code",
-      "title": "evaluate.py scoring entrypoint",
-      "url": "https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/scripts/evaluate.py",
-      "repo": "royerlab/kaggle-cell-tracking-competition",
-      "path": "scripts/evaluate.py",
-      "summary": "Reference scoring driver: loads GT and prediction graphs, runs node matching then edge/division jaccard, applies the node-count penalty, and micro-averages. Confirms the exact order of operations behind metrics.md.",
-      "extracted_ideas": ["node matching precedes edge scoring", "penalty applied to the edge term, not the division term", "micro-average across samples"],
-      "relevance_score": 0.9
-    },
-    {
-      "source_id": "ROYERLAB_METRICS_SRC",
-      "source_type": "code",
-      "title": "tracking_cellmot/metrics.py",
-      "url": "https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/src/tracking_cellmot/metrics.py",
-      "repo": "royerlab/kaggle-cell-tracking-competition",
-      "path": "src/tracking_cellmot/metrics.py",
-      "summary": "Implementation of edge_jaccard and the node-count penalty. Shows edges keyed by matched-GT endpoint pairs and that a non-unit-timepoint edge is not credited.",
-      "extracted_ideas": ["edge TP requires both endpoints matched to GT-connected nodes", "unit-timepoint requirement enforced in code", "penalty term computed from predicted vs true node counts"],
-      "relevance_score": 0.95
-    },
-    {
-      "source_id": "ROYERLAB_DIVISION_METRICS_SRC",
-      "source_type": "code",
-      "title": "tracking_cellmot/division_metrics.py",
-      "url": "https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/src/tracking_cellmot/division_metrics.py",
-      "repo": "royerlab/kaggle-cell-tracking-competition",
-      "path": "src/tracking_cellmot/division_metrics.py",
-      "summary": "Division jaccard implementation: a division is an out-degree-2 source; matched to GT with +/-1 timepoint tolerance. Motivates safe-division recovery as a direct lever on the 0.1-weighted division term.",
-      "extracted_ideas": ["division = out-degree-2 source node", "+/-1 timepoint tolerance for division match", "recovering true divisions raises division_jaccard"],
-      "relevance_score": 0.95
-    },
-    {
-      "source_id": "DALLOLIOGM_LB893_NOTEBOOK",
-      "source_type": "notebook",
-      "title": "lb893 learned-graph tracker with micro-safe divisions",
-      "url": "https://github.com/dalloliogm/kaggle_competitions",
-      "repo": "dalloliogm/kaggle_competitions",
-      "path": "lb893-learned-graph-tracker-micro-safe-divisi.ipynb",
-      "summary": "Public 0.893 solution. Uses the IDENTICAL predict command to our M16 (det 0.99, ilp-edge -1.0, appearance/disappearance 0.1, division 1.0, --use-ilp). The 0.874 -> 0.893 gain is entirely post-GEFF processing: safe divisions, single/two-frame gap recovery with synthetic nodes, line-fit smoothing, isolated-node pruning.",
-      "extracted_ideas": ["ILP weights are NOT the lever (same command as ours)", "safe divisions", "gap recovery with synthetic intermediate nodes", "line-fit smoothing", "isolated-node pruning"],
-      "relevance_score": 1.0
-    },
-    {
-      "source_id": "DALLOLIOGM_GAP2_VELOCITY",
-      "source_type": "notebook",
-      "title": "gap2 velocity ablation",
-      "url": "https://github.com/dalloliogm/kaggle_competitions",
-      "repo": "dalloliogm/kaggle_competitions",
-      "path": "biohub-gap2-velocity-ablation.ipynb",
-      "summary": "Velocity-gated two-frame gap recovery ablation: bridge a tracklet end at t to a start at t+3 with two synthetic nodes, gated on per-step distance and velocity consistency (direction cosine + magnitude). Directly implementable as our gap2 op.",
-      "extracted_ideas": ["two-frame gap = two synthetic nodes at t+1,t+2", "velocity direction cosine gate", "per-step distance budget", "consecutive unit edges only"],
-      "relevance_score": 0.85
-    },
-    {
-      "source_id": "DALLOLIOGM_NMS38",
-      "source_type": "notebook",
-      "title": "nms38 candidate",
-      "url": "https://github.com/dalloliogm/kaggle_competitions",
-      "repo": "dalloliogm/kaggle_competitions",
-      "path": "biohub-nms38-candidate.ipynb",
-      "summary": "Non-max-suppression density technique on the CLASSICAL-detection (non-learned) path, capped around 0.839. NOT applicable to our learned-graph pipeline; kept as a negative/known-ceiling reference.",
-      "extracted_ideas": ["classical detection ceiling ~0.839", "NMS density control", "not applicable to learned-graph path"],
-      "relevance_score": 0.2
-    },
-    {
-      "source_id": "DALLOLIOGM_TOP_NOTEBOOKS_ANALYSIS",
-      "source_type": "analysis",
-      "title": "top notebooks analysis",
-      "url": "https://github.com/dalloliogm/kaggle_competitions",
-      "repo": "dalloliogm/kaggle_competitions",
-      "path": "top-notebooks-analysis.md",
-      "summary": "Cross-notebook analysis of the leading approaches (learned-graph + post-processing vs classical detection). Corroborates that the learned-graph + metric-aware post-processing path dominates the classical path.",
-      "extracted_ideas": ["learned-graph + post-processing > classical", "post-processing is the differentiator among top scores", "division and gap handling recur across top notebooks"],
-      "relevance_score": 0.7
-    },
-    {
-      "source_id": "ARTIFACT_400EP_SNAPSHOT",
-      "source_type": "artifact",
-      "title": "biohub-tracking-support-pack-400ep-snapshot-v1 (discovered via M23-C guard failure)",
-      "url": "kaggle:/kaggle/input/datasets/pilkwang/biohub-tracking-support-pack-50ep-v1",
-      "repo": "pilkwang/biohub-tracking-support-pack-50ep-v1",
-      "path": "weights/unet_transformer/split_0/edge_predictor_best.pth",
-      "summary": "A 400-epoch snapshot mounted at the pilkwang 50ep-v1 path. weight_sha256=12f6881ee3620a831697ca098ff8f48e687a24225f4e048b538deec3562fe771. RAW base graph 127790 nodes / 115694 edges - much closer to M19-C's true 131797/118992 than pilkwang350's 142193/127563, so it is a cleaner/leaner base worth testing (M24). This is our own discovered artifact, not private data.",
-      "extracted_ideas": ["cleaner 400ep base ~127790/115694", "closer to true M19-C base than pilkwang350", "weight_sha256 12f688..", "test AS-IS with M19-C chain, no node-prune"],
-      "relevance_score": 0.95
-    }
-  ]
+ "_comment": "Publicly-readable GitHub resources we inspected for this competition. URLs are public; summaries and extracted_ideas are our own notes. relevance_score in [0,1] = how directly it informs our learned-graph path. No private scraping.",
+ "sources": [
+  {
+   "source_id": "ROYERLAB_METRICS_MD",
+   "source_type": "metric_spec",
+   "title": "Cell-tracking competition metric specification",
+   "url": "https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/metrics.md",
+   "repo": "royerlab/kaggle-cell-tracking-competition",
+   "path": "metrics.md",
+   "summary": "Official scoring formula: final = max(0, edge_jaccard * (1 - 0.1*(T_pred - T_true)/T_true)) + 0.1*division_jaccard. Nodes matched to GT by <=7um centroid bipartite matching; edges are TP only when both endpoints match GT-connected nodes AND span a unit timepoint; divisions are out-degree-2 sources with +/-1 timepoint tolerance; micro-averaged across samples.",
+   "extracted_ideas": [
+    "node over-prediction penalty coeff 0.1 on T_pred excess",
+    "division term weighted 0.1",
+    "only unit-timepoint edges are credited",
+    "7um node-match tolerance"
+   ],
+   "relevance_score": 1.0
+  },
+  {
+   "source_id": "ROYERLAB_EVALUATE_PY",
+   "source_type": "code",
+   "title": "evaluate.py scoring entrypoint",
+   "url": "https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/scripts/evaluate.py",
+   "repo": "royerlab/kaggle-cell-tracking-competition",
+   "path": "scripts/evaluate.py",
+   "summary": "Reference scoring driver: loads GT and prediction graphs, runs node matching then edge/division jaccard, applies the node-count penalty, and micro-averages. Confirms the exact order of operations behind metrics.md.",
+   "extracted_ideas": [
+    "node matching precedes edge scoring",
+    "penalty applied to the edge term, not the division term",
+    "micro-average across samples"
+   ],
+   "relevance_score": 0.9
+  },
+  {
+   "source_id": "ROYERLAB_METRICS_SRC",
+   "source_type": "code",
+   "title": "tracking_cellmot/metrics.py",
+   "url": "https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/src/tracking_cellmot/metrics.py",
+   "repo": "royerlab/kaggle-cell-tracking-competition",
+   "path": "src/tracking_cellmot/metrics.py",
+   "summary": "Implementation of edge_jaccard and the node-count penalty. Shows edges keyed by matched-GT endpoint pairs and that a non-unit-timepoint edge is not credited.",
+   "extracted_ideas": [
+    "edge TP requires both endpoints matched to GT-connected nodes",
+    "unit-timepoint requirement enforced in code",
+    "penalty term computed from predicted vs true node counts"
+   ],
+   "relevance_score": 0.95
+  },
+  {
+   "source_id": "ROYERLAB_DIVISION_METRICS_SRC",
+   "source_type": "code",
+   "title": "tracking_cellmot/division_metrics.py",
+   "url": "https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/src/tracking_cellmot/division_metrics.py",
+   "repo": "royerlab/kaggle-cell-tracking-competition",
+   "path": "src/tracking_cellmot/division_metrics.py",
+   "summary": "Division jaccard implementation: a division is an out-degree-2 source; matched to GT with +/-1 timepoint tolerance. Motivates safe-division recovery as a direct lever on the 0.1-weighted division term.",
+   "extracted_ideas": [
+    "division = out-degree-2 source node",
+    "+/-1 timepoint tolerance for division match",
+    "recovering true divisions raises division_jaccard"
+   ],
+   "relevance_score": 0.95
+  },
+  {
+   "source_id": "DALLOLIOGM_LB893_NOTEBOOK",
+   "source_type": "notebook",
+   "title": "lb893 learned-graph tracker with micro-safe divisions",
+   "url": "https://github.com/dalloliogm/kaggle_competitions",
+   "repo": "dalloliogm/kaggle_competitions",
+   "path": "lb893-learned-graph-tracker-micro-safe-divisi.ipynb",
+   "summary": "Public 0.893 solution. Uses the IDENTICAL predict command to our M16 (det 0.99, ilp-edge -1.0, appearance/disappearance 0.1, division 1.0, --use-ilp). The 0.874 -> 0.893 gain is entirely post-GEFF processing: safe divisions, single/two-frame gap recovery with synthetic nodes, line-fit smoothing, isolated-node pruning.",
+   "extracted_ideas": [
+    "ILP weights are NOT the lever (same command as ours)",
+    "safe divisions",
+    "gap recovery with synthetic intermediate nodes",
+    "line-fit smoothing",
+    "isolated-node pruning"
+   ],
+   "relevance_score": 1.0
+  },
+  {
+   "source_id": "DALLOLIOGM_GAP2_VELOCITY",
+   "source_type": "notebook",
+   "title": "gap2 velocity ablation",
+   "url": "https://github.com/dalloliogm/kaggle_competitions",
+   "repo": "dalloliogm/kaggle_competitions",
+   "path": "biohub-gap2-velocity-ablation.ipynb",
+   "summary": "Velocity-gated two-frame gap recovery ablation: bridge a tracklet end at t to a start at t+3 with two synthetic nodes, gated on per-step distance and velocity consistency (direction cosine + magnitude). Directly implementable as our gap2 op.",
+   "extracted_ideas": [
+    "two-frame gap = two synthetic nodes at t+1,t+2",
+    "velocity direction cosine gate",
+    "per-step distance budget",
+    "consecutive unit edges only"
+   ],
+   "relevance_score": 0.85
+  },
+  {
+   "source_id": "DALLOLIOGM_NMS38",
+   "source_type": "notebook",
+   "title": "nms38 candidate",
+   "url": "https://github.com/dalloliogm/kaggle_competitions",
+   "repo": "dalloliogm/kaggle_competitions",
+   "path": "biohub-nms38-candidate.ipynb",
+   "summary": "Non-max-suppression density technique on the CLASSICAL-detection (non-learned) path, capped around 0.839. NOT applicable to our learned-graph pipeline; kept as a negative/known-ceiling reference.",
+   "extracted_ideas": [
+    "classical detection ceiling ~0.839",
+    "NMS density control",
+    "not applicable to learned-graph path"
+   ],
+   "relevance_score": 0.2
+  },
+  {
+   "source_id": "DALLOLIOGM_TOP_NOTEBOOKS_ANALYSIS",
+   "source_type": "analysis",
+   "title": "top notebooks analysis",
+   "url": "https://github.com/dalloliogm/kaggle_competitions",
+   "repo": "dalloliogm/kaggle_competitions",
+   "path": "top-notebooks-analysis.md",
+   "summary": "Cross-notebook analysis of the leading approaches (learned-graph + post-processing vs classical detection). Corroborates that the learned-graph + metric-aware post-processing path dominates the classical path.",
+   "extracted_ideas": [
+    "learned-graph + post-processing > classical",
+    "post-processing is the differentiator among top scores",
+    "division and gap handling recur across top notebooks"
+   ],
+   "relevance_score": 0.7
+  },
+  {
+   "source_id": "ARTIFACT_400EP_SNAPSHOT",
+   "source_type": "artifact",
+   "title": "biohub-tracking-support-pack-400ep-snapshot-v1 (discovered via M23-C guard failure)",
+   "url": "kaggle:/kaggle/input/datasets/pilkwang/biohub-tracking-support-pack-50ep-v1",
+   "repo": "pilkwang/biohub-tracking-support-pack-50ep-v1",
+   "path": "weights/unet_transformer/split_0/edge_predictor_best.pth",
+   "summary": "A 400-epoch snapshot mounted at the pilkwang 50ep-v1 path. weight_sha256=12f6881ee3620a831697ca098ff8f48e687a24225f4e048b538deec3562fe771. RAW base graph 127790 nodes / 115694 edges - much closer to M19-C's true 131797/118992 than pilkwang350's 142193/127563, so it is a cleaner/leaner base worth testing (M24). This is our own discovered artifact, not private data.",
+   "extracted_ideas": [
+    "cleaner 400ep base ~127790/115694",
+    "closer to true M19-C base than pilkwang350",
+    "weight_sha256 12f688..",
+    "test AS-IS with M19-C chain, no node-prune"
+   ],
+   "relevance_score": 0.95
+  },
+  {
+   "source_id": "PUBLIC_NB_V4_UNET_ILP",
+   "source_type": "notebook",
+   "title": "biohub-cell-tracking-v4-unet-ilp-reproduction (public high-score notebook)",
+   "url": "kaggle:notebook/biohub-cell-tracking-v4-unet-ilp-reproduction",
+   "repo": "biohub-tracking-support-pack-400ep-snapshot-v1",
+   "path": "weights/unet_transformer/split_0/edge_predictor_best.pth",
+   "relevance_score": 0.99,
+   "summary": "Public notebook that runs the SAME 400ep artifact (artifact_name contains '400ep', weight_sha256 12f6881ee3620a831697ca098ff8f48e687a24225f4e048b538deec3562fe771; RAW base 127790 nodes / 115694 edges) we tested in M24, but reaches a much higher public score by REPLACING our thin safe_div/gap/linefit postprocess with a richer evaluator-safe OUTPUT pipeline: motion_relink_edges (per-frame Hungarian on motion-predicted distance + edge_prob bonus) -> close_single_frame_gaps (reuse-or-insert) -> add_safe_divisions_postlink -> apply_edge_policy_veto (embedded logistic edge-only policy, capped 1%, skip divisions) -> filter_short_track_components (min_len 7, keep divisions) -> linefit_smooth. Its public output: final 119763 node rows / 115080 edge rows / 234843 submission rows. We reproduce the LOGIC hidden-safe (never the static submission.csv) as M27.",
+   "extracted_ideas": [
+    "M24 underperformed on 400ep because postprocess was too thin (safe_div/gap/linefit only)",
+    "motion_relink: per-frame Hungarian assignment replaces raw learned edges (in<=1/out<=1 skeleton)",
+    "edge-policy VETO (conservative, capped at 1%, skip division sources) trims false-positive edges",
+    "filter_short_track_components lowers the node penalty; keep components that contain divisions",
+    "gap_close_reuse_existing reduces synthetic-node inflation"
+   ]
+  }
+ ]
 }
