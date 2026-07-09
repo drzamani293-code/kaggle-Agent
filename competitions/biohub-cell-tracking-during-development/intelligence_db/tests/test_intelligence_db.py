@@ -41,15 +41,17 @@ def test_db_initializes_and_seeds(tmp: Path) -> None:
         ids = {r[0] for r in con.execute("SELECT experiment_id FROM experiments").fetchall()}
     finally:
         con.close()
-    assert n_exp == 23, f"expected 23 seed experiments, got {n_exp}"
-    assert n_sub == 23 and n_pp == 23, f"expected stats for all 23 (sub={n_sub}, pp={n_pp})"
+    assert n_exp == 27, f"expected 27 seed experiments, got {n_exp}"
+    assert n_sub == 27 and n_pp == 27, f"expected stats for all 27 (sub={n_sub}, pp={n_pp})"
     assert n_src == 9, f"expected 9 public sources (incl 400ep artifact), got {n_src}"
-    assert n_dec >= 9 and n_les >= 5, f"expected seed decisions/lessons (dec={n_dec}, les={n_les})"
+    assert n_dec >= 10 and n_les >= 5, f"expected seed decisions/lessons (dec={n_dec}, les={n_les})"
     for e in ["M16_BASELINE", "M19_C_FULL_CHAIN_PENDING",
               "M21_A_PILKWANG350_M19C_GATES", "M22_ARTIFACT_FORENSIC",
               "M23_B_PILKWANG350_NODE_PRUNE_SAFE_DIV_ONLY", "M23_C_PILKWANG350_EDGE_NODE_BALANCED",
               "M24_A_400EP_FULLCHAIN_M19C_GATES", "M24_B_400EP_GAP1_ONLY", "M24_C_400EP_SAFE_DIV_ONLY",
-              "M25_A_PRUNE_MILD_SAFE_DIV", "M25_B_PRUNE_STRONG_SAFE_DIV", "M25_C_PRUNE_M23B_PLUS_MICRO_GAP1"]:
+              "M25_A_PRUNE_MILD_SAFE_DIV", "M25_B_PRUNE_STRONG_SAFE_DIV", "M25_C_PRUNE_M23B_PLUS_MICRO_GAP1",
+              "M26_ARTIFACT_ZOO", "M26_A_CONSENSUS_2OFN_PRECISION",
+              "M26_B_PRIMARY_M19C_STYLE_PLUS_CONSENSUS_EDGES", "M26_C_WEIGHTED_ENSEMBLE_FULLCHAIN_LIGHT"]:
         assert e in ids, f"missing seed experiment {e}"
     print("  ok: db initializes and seeds")
 
@@ -71,13 +73,14 @@ def test_reports_generated(tmp: Path) -> None:
     # Timeline must show baseline and the +0.003 steps to M19-A and M19-C.
     timeline = (tmp_reports / "score_timeline.md").read_text()
     assert "0.8740" in timeline and "0.8770" in timeline and "0.8800" in timeline and "+0.003" in timeline
-    # M19-C is the FINAL candidate and nothing is pending -> next_actions is the
-    # terminal "final submission / stop experimental" branch.
+    # M19-C stays final/best @0.880, but the M26 ensemble variants are pending ->
+    # next_actions is the "pivot to multi-artifact ensembling (M26)" branch.
     nxt = (tmp_reports / "next_actions.md").read_text()
     assert "0.880" in nxt and "final" in nxt.lower(), "final score/marker should appear"
-    assert "version 12" in nxt.lower() and "Biohub5-notebook015ca8d31a" in nxt
-    assert "stop experimental" in nxt.lower() and "350ep" in nxt
-    print("  ok: reports generated with FINAL recommendation (M19-C version 12, 0.880)")
+    assert "ensembl" in nxt.lower() and "M26_ARTIFACT_ZOO_DIAGNOSTIC" in nxt
+    assert "M26_A_CONSENSUS_2OFN_PRECISION" in nxt and "OK_TO_SUBMIT_EXPERIMENTAL" in nxt
+    assert ">=2 viable artifacts" in nxt, "must require >=2 artifacts before submitting"
+    print("  ok: reports generated with M26 ensemble-pivot recommendation (M19-C 0.880 kept final)")
 
 
 def test_scored_and_best(tmp: Path) -> None:
@@ -96,8 +99,11 @@ def test_scored_and_best(tmp: Path) -> None:
         f"best should remain M19-C @0.880, got {best}"
     assert n_final == 1, f"exactly one final candidate expected, got {n_final}"
     assert m25a[0] == "blocked", f"M25-A should be blocked/abandoned (350ep artifact unavailable), got {m25a}"
-    assert pending_ids == set(), f"nothing should be pending (M25 abandoned), got {pending_ids}"
-    print("  ok: M19-C FINAL @0.880; M25 abandoned; nothing pending")
+    assert pending_ids == {"M26_A_CONSENSUS_2OFN_PRECISION",
+                           "M26_B_PRIMARY_M19C_STYLE_PLUS_CONSENSUS_EDGES",
+                           "M26_C_WEIGHTED_ENSEMBLE_FULLCHAIN_LIGHT"}, \
+        f"only the three M26 ensemble variants should be pending, got {pending_ids}"
+    print("  ok: M19-C FINAL @0.880; M25 abandoned; M26 A/B/C pending")
 
 
 def test_update_idempotent(tmp: Path) -> None:

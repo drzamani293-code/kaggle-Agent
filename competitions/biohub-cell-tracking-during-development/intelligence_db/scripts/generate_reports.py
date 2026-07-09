@@ -269,6 +269,36 @@ def report_next_actions(con) -> str:
             "node-penalty reduction WITHOUT synthetic-node risk first.",
             f"**Keep `{best_id}` at {_fmt_score(best_score)} as final** unless an M23 score beats 0.880.",
         ]
+    elif [e for e in ["M26_A_CONSENSUS_2OFN_PRECISION", "M26_B_PRIMARY_M19C_STYLE_PLUS_CONSENSUS_EDGES",
+                      "M26_C_WEIGHTED_ENSEMBLE_FULLCHAIN_LIGHT"] if e in pending_ids]:
+        m26_order = [e for e in ["M26_A_CONSENSUS_2OFN_PRECISION",
+                                 "M26_B_PRIMARY_M19C_STYLE_PLUS_CONSENSUS_EDGES",
+                                 "M26_C_WEIGHTED_ENSEMBLE_FULLCHAIN_LIGHT"] if e in pending_ids]
+        out += [
+            "**Pivot to multi-artifact ENSEMBLING (M26).** Single-model post-processing has plateaued at",
+            f"**M19-C 0.880** - every substitute base (pilkwang350 142193, 400ep 127790, tom99763 161098)",
+            "scored below it and the true M19-C artifact is unrecoverable. The remaining source of signal is",
+            "cross-model **consensus**: run several valid artifacts on the same hidden-safe split and combine",
+            "their tracking graphs.",
+            "",
+            "1. **Run Stage 1 first: `M26_ARTIFACT_ZOO_DIAGNOSTIC`** (non-scoring). It enumerates every mounted",
+            "   artifact, records artifact_name + weight_sha256 + known-artifact match, and smoke-runs each to",
+            "   report its base GEFF counts. **Only proceed to a submission if it finds >=2 viable artifacts.**",
+            "2. If >=2 artifacts, run the ensemble variants in submit order, each only if its report prints",
+            "   `OK_TO_SUBMIT_EXPERIMENTAL` (>=2 artifacts, valid, no fallback, ensemble_graph_postprocessed,",
+            "   120000<=nodes<=145000, 110000<=edges<=135000, synthetic within the per-variant cap):",
+        ]
+        for i, eid in enumerate(m26_order, 1):
+            reason = {1: " (2-of-N consensus, ZERO synthetic - tests whether consensus fixes node over-prediction)",
+                      2: " (primary = base closest to 131797/118992 + consensus edges; micro gap1; synthetic<=600)",
+                      3: " (weighted ensemble + full chain with a very light gap2; synthetic<=1000)"}.get(i, "")
+            out.append(f"   {i}. `{eid}`{reason}")
+        out += [
+            "",
+            "Each variant still writes a valid hidden-safe `submission.csv`; if <2 artifacts are found it reports",
+            "`DO_NOT_SUBMIT_NOT_ENOUGH_ARTIFACTS` and must not be submitted.",
+            f"**Keep `{best_id}` at {_fmt_score(best_score)} as final** unless an M26 variant beats 0.880.",
+        ]
     elif pending:
         out += [
             "With up to **5 daily submissions** available, run the controlled **M21** variants on the",

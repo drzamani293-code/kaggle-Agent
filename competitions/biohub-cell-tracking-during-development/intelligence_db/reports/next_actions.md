@@ -1,24 +1,32 @@
 # Next Actions
 
-_Generated 2026-07-09 15:27 UTC from intelligence.duckdb._
+_Generated 2026-07-09 15:56 UTC from intelligence.duckdb._
 
 **Best scored experiment:** `M19_C_FULL_CHAIN_PENDING` at **0.8800**.
 **M19-C full_chain:** final (score 0.8800).
-**Open (pending):** 0 · **blocked:** 10 · **unsafe/superseded:** 2.
+**Open (pending):** 3 · **blocked:** 10 · **unsafe/superseded:** 2.
 
 ## Recommendation
 
-**FINAL — competition entry closed on the experimental track.** `M19_C_FULL_CHAIN_PENDING` at **0.8800** is the
-final recommended submission.
+**Pivot to multi-artifact ENSEMBLING (M26).** Single-model post-processing has plateaued at
+**M19-C 0.880** - every substitute base (pilkwang350 142193, 400ep 127790, tom99763 161098)
+scored below it and the true M19-C artifact is unrecoverable. The remaining source of signal is
+cross-model **consensus**: run several valid artifacts on the same hidden-safe split and combine
+their tracking graphs.
 
-- **Final submission: M19-C — `Biohub5-notebook015ca8d31a` version 12, public score 0.880.**
-- **Stop experimental submissions** unless the exact pilkwang350 **350ep / dfb848** artifact OR the
-  **true M19-C artifact** is recovered - both are currently unavailable/unrecoverable.
+1. **Run Stage 1 first: `M26_ARTIFACT_ZOO_DIAGNOSTIC`** (non-scoring). It enumerates every mounted
+   artifact, records artifact_name + weight_sha256 + known-artifact match, and smoke-runs each to
+   report its base GEFF counts. **Only proceed to a submission if it finds >=2 viable artifacts.**
+2. If >=2 artifacts, run the ensemble variants in submit order, each only if its report prints
+   `OK_TO_SUBMIT_EXPERIMENTAL` (>=2 artifacts, valid, no fallback, ensemble_graph_postprocessed,
+   120000<=nodes<=145000, 110000<=edges<=135000, synthetic within the per-variant cap):
+   1. `M26_A_CONSENSUS_2OFN_PRECISION` (2-of-N consensus, ZERO synthetic - tests whether consensus fixes node over-prediction)
+   2. `M26_B_PRIMARY_M19C_STYLE_PLUS_CONSENSUS_EDGES` (primary = base closest to 131797/118992 + consensus edges; micro gap1; synthetic<=600)
+   3. `M26_C_WEIGHTED_ENSEMBLE_FULLCHAIN_LIGHT` (weighted ensemble + full chain with a very light gap2; synthetic<=1000)
 
-Why: across the full experimental sweep, no path beat M19-C 0.880 -
-M21-A 0.874, M23-B 0.877, M24-A 0.873, M24-B 0.872 - and M25 could not run because the required
-350ep artifact was replaced by the 400ep snapshot (guard failed, DO_NOT_SUBMIT_WRONG_ARTIFACT).
-All M22/M23/M24/M25 experimental variants are blocked/abandoned; nothing is pending.
+Each variant still writes a valid hidden-safe `submission.csv`; if <2 artifacts are found it reports
+`DO_NOT_SUBMIT_NOT_ENOUGH_ARTIFACTS` and must not be submitted.
+**Keep `M19_C_FULL_CHAIN_PENDING` at 0.8800 as final** unless an M26 variant beats 0.880.
 
 ## Recorded decisions (history)
 
@@ -46,6 +54,9 @@ All M22/M23/M24/M25 experimental variants are blocked/abandoned; nothing is pend
 - **after `M23_B_PILKWANG350_NODE_PRUNE_SAFE_DIV_ONLY`** (2026-07-09, risk medium):
   - observation: M23-B (pilkwang350 node-prune + safe divisions) scored 0.877 - node-penalty reduction helped (0.874->0.877) but did not beat M19-C 0.880. Separately, M23-C's guard failure REVEALED a new 400ep artifact (biohub-tracking-support-pack-400ep-snapshot-v1, weight 12f688..) whose RAW base 127790/115694 is much closer to M19-C's true 131797/118992 than pilkwang350's 142193/127563.
   - recommendation: Pivot to the cleaner 400ep base. Run M24 (pinned to the 400ep path+name+weight hash, NO node-prune): A full_chain (highest upside), B gap1-only, C safe-div-only. Submit order A -> B -> C. Keep M19-C 0.880 final unless an M24 score beats it.  → next: `M24_A -> M24_B -> M24_C`
+- **after `M25_A_PRUNE_MILD_SAFE_DIV`** (2026-07-09, risk medium):
+  - observation: Single-model post-processing plateaued at M19-C 0.880; every substitute base (pilkwang350 142193, 400ep 127790, tom99763 161098) scored below 0.880, and the true M19-C artifact is unrecoverable. Post-GEFF tuning on ONE model has run out of signal.
+  - recommendation: Pivot to MULTI-ARTIFACT ENSEMBLING (M26). Run Stage 1 M26_ARTIFACT_ZOO_DIAGNOSTIC first to confirm >=2 viable artifacts and read their base counts. If >=2, run the ensemble variants in submit order A (2-of-N consensus, zero synthetic) -> B (primary-closest-to-target + consensus edges, micro gap1) -> C (weighted ensemble + light full chain), each only if its report prints OK_TO_SUBMIT_EXPERIMENTAL. Keep M19-C 0.880 as final/best unless an M26 variant beats it.  → next: `M26_ARTIFACT_ZOO -> M26_A -> M26_B -> M26_C`
 - **after `M24_A_400EP_FULLCHAIN_M19C_GATES`** (2026-07-10, risk medium):
   - observation: The 400ep path FAILED: M24-A 0.873, M24-B 0.872 - both below M19-C 0.880 and below M21-A 0.874. The cleaner 400ep base did not translate into a better score. The strongest experimental path remains M23-B (pilkwang350 node-prune + safe-div, 0.877), only 0.003 behind M19-C.
   - recommendation: Deprioritize 400ep. Tune around M23-B on the pinned pilkwang350 base (M25): A milder prune, B stronger prune (both safe-div-only, zero synthetic), C M23-B repair + a very-light gap1. Submit order A -> B -> C. Keep M19-C 0.880 final unless an M25 score beats it.  → next: `M25_A -> M25_B -> M25_C`

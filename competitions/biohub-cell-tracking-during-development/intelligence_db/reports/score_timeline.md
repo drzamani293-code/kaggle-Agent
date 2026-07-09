@@ -1,6 +1,6 @@
 # Score Timeline
 
-_Generated 2026-07-09 15:27 UTC from intelligence.duckdb._
+_Generated 2026-07-09 15:56 UTC from intelligence.duckdb._
 
 Baseline **0.874** · best so far **0.8800**.
 
@@ -28,9 +28,13 @@ Delta = step change vs the previous **scored** experiment (chronological).
 | 18 | 2026-07-09 | `M24_A_400EP_FULLCHAIN_M19C_GATES` | 0.8730 | -0.004 | -0.001 | scored |
 | 19 | 2026-07-09 | `M24_B_400EP_GAP1_ONLY` | 0.8720 | -0.001 | -0.002 | scored |
 | 20 | 2026-07-09 | `M24_C_400EP_SAFE_DIV_ONLY` | pending | — | — | blocked |
-| 21 | 2026-07-10 | `M25_A_PRUNE_MILD_SAFE_DIV` | pending | — | — | blocked |
-| 22 | 2026-07-10 | `M25_B_PRUNE_STRONG_SAFE_DIV` | pending | — | — | blocked |
-| 23 | 2026-07-10 | `M25_C_PRUNE_M23B_PLUS_MICRO_GAP1` | pending | — | — | blocked |
+| 21 | 2026-07-09 | `M26_ARTIFACT_ZOO` | pending | — | — | diagnostic |
+| 22 | 2026-07-09 | `M26_A_CONSENSUS_2OFN_PRECISION` | pending | — | — | pending |
+| 23 | 2026-07-09 | `M26_B_PRIMARY_M19C_STYLE_PLUS_CONSENSUS_EDGES` | pending | — | — | pending |
+| 24 | 2026-07-09 | `M26_C_WEIGHTED_ENSEMBLE_FULLCHAIN_LIGHT` | pending | — | — | pending |
+| 25 | 2026-07-10 | `M25_A_PRUNE_MILD_SAFE_DIV` | pending | — | — | blocked |
+| 26 | 2026-07-10 | `M25_B_PRUNE_STRONG_SAFE_DIV` | pending | — | — | blocked |
+| 27 | 2026-07-10 | `M25_C_PRUNE_M23B_PLUS_MICRO_GAP1` | pending | — | — | blocked |
 
 ## Notes per experiment
 
@@ -54,6 +58,10 @@ Delta = step change vs the previous **scored** experiment (chronological).
 - **M24_A_400EP_FULLCHAIN_M19C_GATES** (0.8730, scored): SCORED 0.873 on the clean 400ep base + M19-C full_chain - FAILED to beat M19-C 0.880 and below M21-A's 0.874. The 400ep path did not deliver; the cleaner base did not translate into a better score. 400ep path deprioritized.
 - **M24_B_400EP_GAP1_ONLY** (0.8720, scored): SCORED 0.872 on the 400ep base (gap1-only) - below M24-A (0.873) and well below M19-C 0.880. Confirms the 400ep path is inferior; gap1 did not help on this base. 400ep path deprioritized.
 - **M24_C_400EP_SAFE_DIV_ONLY** (pending, blocked): BLOCKED / deprioritized: the 400ep path failed (M24-A 0.873, M24-B 0.872, both below M19-C 0.880). Not worth the zero-synthetic control submission. Pursue M25 (pilkwang350 prune-tuning around M23-B 0.877) instead.
+- **M26_ARTIFACT_ZOO** (pending, diagnostic): STAGE 1 (non-scoring). Enumerates every mounted artifact root (datasets AND notebooks, 1-3 levels deep), records candidate_path/artifact_name/weight_sha256/repo+weights presence/manifest+config summary/known-artifact match, then smoke-runs each viable artifact with the EXACT reference predict command and reports its raw base GEFF counts per dataset (n_nodes_before/n_edges_before, degrees, has_edge_prob/edge_dist/node_score). Writes m26_artifact_zoo_report.json + m26_artifact_zoo_table.csv. Run FIRST to confirm >=2 viable artifacts before any M26 ensemble submission. No submission.
+- **M26_A_CONSENSUS_2OFN_PRECISION** (pending, pending): PENDING (experimental). Multi-artifact ensemble: run every viable artifact on the same hidden-safe split, cluster nodes across artifacts by <=7um centroid distance, KEEP only nodes/edges with >=2-artifact support (+ primary long-track preservation). safe_divisions + prune_isolated only; ZERO synthetic nodes (synth_cap 0). Tests whether cross-model consensus fixes node over-prediction. Submit only if report says OK_TO_SUBMIT_EXPERIMENTAL (>=2 artifacts, valid, no fallback, ensemble_graph_postprocessed, 120000<=nodes<=145000, 110000<=edges<=135000, synthetic==0). Keep M19-C 0.880 final unless this beats it.
+- **M26_B_PRIMARY_M19C_STYLE_PLUS_CONSENSUS_EDGES** (pending, pending): PENDING (experimental). Primary artifact = the one whose base node count is closest to the M19-C target 131797/118992; add consensus-supported nodes/edges from the other artifacts. safe_divisions + MICRO gap1 (5.0um/0.0015/90) + linefit + prune (NO gap2). Final nodes ~130000-136000, synthetic <= 600. Submit only if OK_TO_SUBMIT_EXPERIMENTAL (>=2 artifacts, sane counts, synthetic<=600). Keep M19-C 0.880 final unless this beats it.
+- **M26_C_WEIGHTED_ENSEMBLE_FULLCHAIN_LIGHT** (pending, pending): PENDING (experimental). Weighted multi-artifact ensemble (artifact closer to 131797 target -> higher weight; too-many/too-few penalised, floored 0.2). Full chain with a VERY light gap2 (3.6/8.0/-0.05/4.6/0.0015/55; gap2_recovered target <=150). synthetic <= 1000. Submit only if OK_TO_SUBMIT_EXPERIMENTAL (>=2 artifacts, sane counts, synthetic<=1000). Keep M19-C 0.880 final unless this beats it.
 - **M25_A_PRUNE_MILD_SAFE_DIV** (pending, blocked): ABANDONED: the required pilkwang350 350ep artifact is no longer recoverable/attachable. M25-A was attempted but the mounted artifact was the 400ep snapshot (artifact_name biohub-tracking-support-pack-400ep-snapshot-v1, weight_sha256 12f688..) instead of the required 350ep dfb848.., so the artifact guard failed -> DO_NOT_SUBMIT_WRONG_ARTIFACT (artifact_guard_passed=False). Not submitted. Cannot run M25 without the 350ep/dfb848 artifact.
 - **M25_B_PRUNE_STRONG_SAFE_DIV** (pending, blocked): ABANDONED: requires the pilkwang350 350ep/dfb848 artifact, which is no longer recoverable/attachable (the mounted pack is now the 400ep snapshot). Cannot run without the correct artifact.
 - **M25_C_PRUNE_M23B_PLUS_MICRO_GAP1** (pending, blocked): ABANDONED: requires the pilkwang350 350ep/dfb848 artifact, which is no longer recoverable/attachable (the mounted pack is now the 400ep snapshot). Cannot run without the correct artifact.
