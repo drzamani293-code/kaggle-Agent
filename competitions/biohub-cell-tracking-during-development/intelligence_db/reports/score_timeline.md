@@ -1,6 +1,6 @@
 # Score Timeline
 
-_Generated 2026-07-09 01:56 UTC from intelligence.duckdb._
+_Generated 2026-07-09 14:37 UTC from intelligence.duckdb._
 
 Baseline **0.874** · best so far **0.8800**.
 
@@ -25,9 +25,12 @@ Delta = step change vs the previous **scored** experiment (chronological).
 | 15 | 2026-07-09 | `M23_A_PILKWANG350_NODE_PRUNE_LIGHT` | pending | — | — | blocked |
 | 16 | 2026-07-09 | `M23_B_PILKWANG350_NODE_PRUNE_SAFE_DIV_ONLY` | 0.8770 | +0.003 | +0.003 | scored |
 | 17 | 2026-07-09 | `M23_C_PILKWANG350_EDGE_NODE_BALANCED` | pending | — | — | wrong_artifact |
-| 18 | 2026-07-09 | `M24_A_400EP_FULLCHAIN_M19C_GATES` | pending | — | — | pending |
-| 19 | 2026-07-09 | `M24_B_400EP_GAP1_ONLY` | pending | — | — | pending |
-| 20 | 2026-07-09 | `M24_C_400EP_SAFE_DIV_ONLY` | pending | — | — | pending |
+| 18 | 2026-07-09 | `M24_A_400EP_FULLCHAIN_M19C_GATES` | 0.8730 | -0.004 | -0.001 | scored |
+| 19 | 2026-07-09 | `M24_B_400EP_GAP1_ONLY` | 0.8720 | -0.001 | -0.002 | scored |
+| 20 | 2026-07-09 | `M24_C_400EP_SAFE_DIV_ONLY` | pending | — | — | blocked |
+| 21 | 2026-07-10 | `M25_A_PRUNE_MILD_SAFE_DIV` | pending | — | — | pending |
+| 22 | 2026-07-10 | `M25_B_PRUNE_STRONG_SAFE_DIV` | pending | — | — | pending |
+| 23 | 2026-07-10 | `M25_C_PRUNE_M23B_PLUS_MICRO_GAP1` | pending | — | — | pending |
 
 ## Notes per experiment
 
@@ -48,6 +51,9 @@ Delta = step change vs the previous **scored** experiment (chronological).
 - **M23_A_PILKWANG350_NODE_PRUNE_LIGHT** (pending, blocked): SUPERSEDED by M24. The M23 node-prune approach on pilkwang350 only reached 0.877 (M23-B), below M19-C 0.880, and M23-C revealed a cleaner 400ep base - so pursue M24 (400ep, no prune) instead. Not submitted.
 - **M23_B_PILKWANG350_NODE_PRUNE_SAFE_DIV_ONLY** (0.8770, scored): SCORED 0.877 on the pilkwang350 node-pruned base - node-penalty repair + safe divisions recovered from M21-A's 0.874 to 0.877 (matching M19-A), but did NOT beat M19-C 0.880. Confirms node-penalty reduction helps but the pilkwang350 base is still not as good as the true M19-C base. Zero synthetic nodes.
 - **M23_C_PILKWANG350_EDGE_NODE_BALANCED** (pending, wrong_artifact): NOT SUBMITTED - M23 artifact guard failed (a NEW artifact was mounted at the pilkwang path). This accidentally REVEALED the 400ep snapshot: artifact_name biohub-tracking-support-pack-400ep-snapshot-v1, weight_sha256 12f6881ee3620a831697ca098ff8f48e687a24225f4e048b538deec3562fe771, RAW base 127790/115694 (much closer to M19-C's 131797/118992 than pilkwang350). Its M23 over-repair dropped base 127790->121369 (too aggressive; wrong guard). Redirected to M24 (400ep as-is, no prune).
-- **M24_A_400EP_FULLCHAIN_M19C_GATES** (pending, pending): EXPERIMENTAL on the CLEAN 400ep base (127790/115694, no prune) + M19-C full_chain gates. Highest-upside: lean base close to M19-C's true 131797/118992 + the chain that scored 0.880. Pinned to 400ep (path + artifact_name 400ep + weight 12f688..). Sanity: base/final node count in 120000-135000, synthetic<=2200. Expected final ~129000-131000, synthetic ~1000-1600. SUBMIT ORDER 1 of 3 (only high-upside candidate).
-- **M24_B_400EP_GAP1_ONLY** (pending, pending): EXPERIMENTAL on the CLEAN 400ep base (no prune). safe_divisions + gap1 + linefit + prune, NO gap2 - tests whether gap2 is risky on the lean base. Expected synthetic ~400-800 (safer than A). Pinned 400ep. SUBMIT ORDER 2 of 3.
-- **M24_C_400EP_SAFE_DIV_ONLY** (pending, pending): EXPERIMENTAL on the CLEAN 400ep base (no prune). safe_divisions + prune only - ZERO synthetic nodes; the zero-synthetic control on the clean base. Expected safe_divisions ~350-500. Pinned 400ep. SUBMIT ORDER 3 of 3.
+- **M24_A_400EP_FULLCHAIN_M19C_GATES** (0.8730, scored): SCORED 0.873 on the clean 400ep base + M19-C full_chain - FAILED to beat M19-C 0.880 and below M21-A's 0.874. The 400ep path did not deliver; the cleaner base did not translate into a better score. 400ep path deprioritized.
+- **M24_B_400EP_GAP1_ONLY** (0.8720, scored): SCORED 0.872 on the 400ep base (gap1-only) - below M24-A (0.873) and well below M19-C 0.880. Confirms the 400ep path is inferior; gap1 did not help on this base. 400ep path deprioritized.
+- **M24_C_400EP_SAFE_DIV_ONLY** (pending, blocked): BLOCKED / deprioritized: the 400ep path failed (M24-A 0.873, M24-B 0.872, both below M19-C 0.880). Not worth the zero-synthetic control submission. Pursue M25 (pilkwang350 prune-tuning around M23-B 0.877) instead.
+- **M25_A_PRUNE_MILD_SAFE_DIV** (pending, pending): EXPERIMENTAL: tune around M23-B (0.877) on pinned pilkwang350 (350ep + weight dfb848..). MILDER prune (cap frac ~0.022 vs M23-B's 0.0316) + safe_divisions + prune, ZERO synthetic. Tests whether M23-B removed too many real nodes; preserve more while keeping false-detection reduction. Sanity: 132000<=n_node_rows<=142500, prune<=0.07, synthetic<=400. SUBMIT ORDER 1 of 3.
+- **M25_B_PRUNE_STRONG_SAFE_DIV** (pending, pending): EXPERIMENTAL: STRONGER prune (cap frac ~0.052, short_max 3, still under the 0.07 safety cap) + safe_divisions + prune, ZERO synthetic. Tests whether more node-penalty reduction pushes 0.877 toward/above 0.880. Won't drop below ~134800 final nodes; sanity gate 132000-142500 catches over-prune. SUBMIT ORDER 2 of 3.
+- **M25_C_PRUNE_M23B_PLUS_MICRO_GAP1** (pending, pending): EXPERIMENTAL: EXACT M23-B repair (frac 0.045) + safe_divisions + VERY-LIGHT gap1 (max_total 5.0, cap_frac 0.0015, cap_abs 90 - much stricter than M19-C/M24-B) + linefit + prune, NO gap2. Tests whether a tiny gap1 edge gain (synthetic target 150-350) improves on M23-B's zero-synthetic 0.877. Sanity synthetic<=400. SUBMIT ORDER 3 of 3.

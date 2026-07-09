@@ -181,6 +181,29 @@ def report_next_actions(con) -> str:
             "Do **NOT** spend submissions on pilkwang350 drift variants: M21-A already scored 0.874 (< 0.880).",
             f"**Keep `{best_id}` at {_fmt_score(best_score)} as final** until a true-base score beats it.",
         ]
+    elif [e for e in ["M25_A_PRUNE_MILD_SAFE_DIV", "M25_B_PRUNE_STRONG_SAFE_DIV",
+                      "M25_C_PRUNE_M23B_PLUS_MICRO_GAP1"] if e in pending_ids]:
+        m25_order = [e for e in ["M25_A_PRUNE_MILD_SAFE_DIV", "M25_B_PRUNE_STRONG_SAFE_DIV",
+                                 "M25_C_PRUNE_M23B_PLUS_MICRO_GAP1"] if e in pending_ids]
+        out += [
+            "The 400ep path **failed** (M24-A 0.873, M24-B 0.872, below M19-C 0.880). The strongest",
+            "experimental path is **M23-B** (pilkwang350 node-prune + safe-divisions, **0.877**, only 0.003",
+            "behind M19-C). Tune the prune / safe-division balance around it with **M25** (pinned pilkwang350",
+            "+ 350ep name + weight_sha256 dfb848.., NOT 400ep). Submit one only if its report says",
+            "`OK_TO_SUBMIT_EXPERIMENTAL` (guard passed, 132000<=n_node_rows<=142500, prune<=0.07,",
+            "synthetic<=400, valid, no fallback).",
+            "",
+            "**Submit order recommendation:**",
+        ]
+        for i, eid in enumerate(m25_order, 1):
+            reason = {1: " (milder prune - preserve more real nodes than M23-B; zero synthetic)",
+                      2: " (stronger prune - more node-penalty reduction; zero synthetic)",
+                      3: " (M23-B repair + a very-light gap1 - tiny edge gain, synthetic ~150-350)"}.get(i, "")
+            out.append(f"{i}. `{eid}`{reason}")
+        out += [
+            "",
+            f"**Keep `{best_id}` at {_fmt_score(best_score)} as final** unless an M25 score beats 0.880.",
+        ]
     elif [e for e in ["M24_A_400EP_FULLCHAIN_M19C_GATES", "M24_B_400EP_GAP1_ONLY",
                       "M24_C_400EP_SAFE_DIV_ONLY"] if e in pending_ids]:
         m24_order = [e for e in ["M24_A_400EP_FULLCHAIN_M19C_GATES", "M24_B_400EP_GAP1_ONLY",
