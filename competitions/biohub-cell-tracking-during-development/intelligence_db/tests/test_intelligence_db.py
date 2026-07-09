@@ -71,16 +71,13 @@ def test_reports_generated(tmp: Path) -> None:
     # Timeline must show baseline and the +0.003 steps to M19-A and M19-C.
     timeline = (tmp_reports / "score_timeline.md").read_text()
     assert "0.8740" in timeline and "0.8770" in timeline and "0.8800" in timeline and "+0.003" in timeline
-    # M25 pilkwang350 prune-tuning variants are pending -> next_actions is the
-    # M25 branch with submit order A -> B -> C; M19-C stays the standing best.
+    # M19-C is the FINAL candidate and nothing is pending -> next_actions is the
+    # terminal "final submission / stop experimental" branch.
     nxt = (tmp_reports / "next_actions.md").read_text()
-    assert "0.880" in nxt, "best score should appear in next_actions"
-    assert "prune" in nxt.lower() and "m23-b" in nxt.lower() and "submit order" in nxt.lower()
-    idx_a = nxt.find("M25_A_PRUNE_MILD_SAFE_DIV")
-    idx_b = nxt.find("M25_B_PRUNE_STRONG_SAFE_DIV")
-    idx_c = nxt.find("M25_C_PRUNE_M23B_PLUS_MICRO_GAP1")
-    assert 0 <= idx_a < idx_b < idx_c, "M25 submit order must be A then B then C"
-    print("  ok: reports generated with M25 prune-tuning recommendation (A->B->C)")
+    assert "0.880" in nxt and "final" in nxt.lower(), "final score/marker should appear"
+    assert "version 12" in nxt.lower() and "Biohub5-notebook015ca8d31a" in nxt
+    assert "stop experimental" in nxt.lower() and "350ep" in nxt
+    print("  ok: reports generated with FINAL recommendation (M19-C version 12, 0.880)")
 
 
 def test_scored_and_best(tmp: Path) -> None:
@@ -88,22 +85,19 @@ def test_scored_and_best(tmp: Path) -> None:
     con = C.connect(db)
     try:
         m19c = con.execute("SELECT public_score, status FROM experiments WHERE experiment_id='M19_C_FULL_CHAIN_PENDING'").fetchone()
-        m24a = con.execute("SELECT public_score, status FROM experiments WHERE experiment_id='M24_A_400EP_FULLCHAIN_M19C_GATES'").fetchone()
-        m24b = con.execute("SELECT public_score, status FROM experiments WHERE experiment_id='M24_B_400EP_GAP1_ONLY'").fetchone()
-        m25a = con.execute("SELECT public_score, status FROM experiments WHERE experiment_id='M25_A_PRUNE_MILD_SAFE_DIV'").fetchone()
+        m25a = con.execute("SELECT status FROM experiments WHERE experiment_id='M25_A_PRUNE_MILD_SAFE_DIV'").fetchone()
         best = con.execute("SELECT experiment_id, public_score FROM experiments WHERE public_score IS NOT NULL ORDER BY public_score DESC, created_at LIMIT 1").fetchone()
         pending_ids = {r[0] for r in con.execute("SELECT experiment_id FROM experiments WHERE public_score IS NULL AND status NOT IN ('unsafe','blocked','diagnostic','wrong_artifact')").fetchall()}
+        n_final = con.execute("SELECT COUNT(*) FROM experiments WHERE status='final'").fetchone()[0]
     finally:
         con.close()
-    assert m19c[0] is not None and abs(m19c[0] - 0.880) < 1e-9 and m19c[1] == "scored", f"M19-C should be scored 0.880, got {m19c}"
+    assert m19c[0] is not None and abs(m19c[0] - 0.880) < 1e-9 and m19c[1] == "final", f"M19-C should be the FINAL candidate @0.880, got {m19c}"
     assert best[0] == "M19_C_FULL_CHAIN_PENDING" and abs(best[1] - 0.880) < 1e-9, \
         f"best should remain M19-C @0.880, got {best}"
-    assert m24a[0] is not None and abs(m24a[0] - 0.873) < 1e-9 and m24a[1] == "scored", f"M24-A should be scored 0.873, got {m24a}"
-    assert m24b[0] is not None and abs(m24b[0] - 0.872) < 1e-9 and m24b[1] == "scored", f"M24-B should be scored 0.872, got {m24b}"
-    assert m25a[1] == "pending", f"M25-A should be pending, got {m25a}"
-    assert pending_ids == {"M25_A_PRUNE_MILD_SAFE_DIV", "M25_B_PRUNE_STRONG_SAFE_DIV",
-                           "M25_C_PRUNE_M23B_PLUS_MICRO_GAP1"}, f"only M25 A/B/C should be pending, got {pending_ids}"
-    print("  ok: M19-C best @0.880; M24-A 0.873 / M24-B 0.872 scored; M25 A/B/C pending")
+    assert n_final == 1, f"exactly one final candidate expected, got {n_final}"
+    assert m25a[0] == "blocked", f"M25-A should be blocked/abandoned (350ep artifact unavailable), got {m25a}"
+    assert pending_ids == set(), f"nothing should be pending (M25 abandoned), got {pending_ids}"
+    print("  ok: M19-C FINAL @0.880; M25 abandoned; nothing pending")
 
 
 def test_update_idempotent(tmp: Path) -> None:

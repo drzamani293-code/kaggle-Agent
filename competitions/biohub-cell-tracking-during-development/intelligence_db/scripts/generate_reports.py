@@ -145,6 +145,7 @@ def report_next_actions(con) -> str:
     """)
     blocked = _fetch(con, "SELECT experiment_id FROM experiments WHERE status = 'blocked' ORDER BY created_at")
     blocked_m22 = [r[0] for r in blocked if r[0].startswith("M22_")]
+    final_row = _fetch(con, "SELECT experiment_id, public_score FROM experiments WHERE status = 'final' ORDER BY public_score DESC LIMIT 1")
 
     out = ["# Next Actions", "",
            f"_Generated {_now()} from intelligence.duckdb._", "",
@@ -159,7 +160,22 @@ def report_next_actions(con) -> str:
     m22_order = [e for e in ["M22_A_TRUEBASE_SAFE_DIV_TUNE", "M22_B_TRUEBASE_LIGHT_GAP",
                              "M22_C_TRUEBASE_DIV_PLUS_GAP1_ONLY"] if e in blocked_m22]
 
-    if blocked_m22 and not pending:
+    if final_row and not pending:
+        fid, fscore = final_row[0][0], final_row[0][1]
+        out += [
+            f"**FINAL — competition entry closed on the experimental track.** `{fid}` at **{_fmt_score(fscore)}** is the",
+            "final recommended submission.",
+            "",
+            "- **Final submission: M19-C — `Biohub5-notebook015ca8d31a` version 12, public score 0.880.**",
+            "- **Stop experimental submissions** unless the exact pilkwang350 **350ep / dfb848** artifact OR the",
+            "  **true M19-C artifact** is recovered - both are currently unavailable/unrecoverable.",
+            "",
+            "Why: across the full experimental sweep, no path beat M19-C 0.880 -",
+            "M21-A 0.874, M23-B 0.877, M24-A 0.873, M24-B 0.872 - and M25 could not run because the required",
+            "350ep artifact was replaced by the 400ep snapshot (guard failed, DO_NOT_SUBMIT_WRONG_ARTIFACT).",
+            "All M22/M23/M24/M25 experimental variants are blocked/abandoned; nothing is pending.",
+        ]
+    elif blocked_m22 and not pending:
         out += [
             "**Primary next action: recover the TRUE M19-C artifact** (base `n_nodes_before=131797`,",
             "`n_edges_before=118992`). It is likely a **NOTEBOOK input** from the original M19-C run",

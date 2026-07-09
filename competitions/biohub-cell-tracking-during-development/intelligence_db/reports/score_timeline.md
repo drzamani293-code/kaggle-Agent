@@ -1,6 +1,6 @@
 # Score Timeline
 
-_Generated 2026-07-09 14:37 UTC from intelligence.duckdb._
+_Generated 2026-07-09 15:27 UTC from intelligence.duckdb._
 
 Baseline **0.874** · best so far **0.8800**.
 
@@ -12,7 +12,7 @@ Delta = step change vs the previous **scored** experiment (chronological).
 | 2 | 2026-06-28 | `M17_C_DET_0985` | 0.8740 | +0.000 | +0.000 | scored |
 | 3 | 2026-07-01 | `M18_C_EDGE_PRUNE` | 0.8740 | +0.000 | +0.000 | scored |
 | 4 | 2026-07-04 | `M19_A_SAFE_DIVISIONS_PRUNE` | 0.8770 | +0.003 | +0.003 | scored |
-| 5 | 2026-07-07 | `M19_C_FULL_CHAIN_PENDING` | 0.8800 | +0.003 | +0.006 | scored |
+| 5 | 2026-07-07 | `M19_C_FULL_CHAIN_PENDING` | 0.8800 | +0.003 | +0.006 | final |
 | 6 | 2026-07-08 | `M20_A_FULLCHAIN_TUNED` | pending | — | — | unsafe |
 | 7 | 2026-07-08 | `M20_A_FULLCHAIN_TUNED_FIXED` | pending | — | — | unsafe |
 | 8 | 2026-07-08 | `M21_A_PILKWANG350_M19C_GATES` | 0.8740 | -0.006 | +0.000 | scored |
@@ -28,9 +28,9 @@ Delta = step change vs the previous **scored** experiment (chronological).
 | 18 | 2026-07-09 | `M24_A_400EP_FULLCHAIN_M19C_GATES` | 0.8730 | -0.004 | -0.001 | scored |
 | 19 | 2026-07-09 | `M24_B_400EP_GAP1_ONLY` | 0.8720 | -0.001 | -0.002 | scored |
 | 20 | 2026-07-09 | `M24_C_400EP_SAFE_DIV_ONLY` | pending | — | — | blocked |
-| 21 | 2026-07-10 | `M25_A_PRUNE_MILD_SAFE_DIV` | pending | — | — | pending |
-| 22 | 2026-07-10 | `M25_B_PRUNE_STRONG_SAFE_DIV` | pending | — | — | pending |
-| 23 | 2026-07-10 | `M25_C_PRUNE_M23B_PLUS_MICRO_GAP1` | pending | — | — | pending |
+| 21 | 2026-07-10 | `M25_A_PRUNE_MILD_SAFE_DIV` | pending | — | — | blocked |
+| 22 | 2026-07-10 | `M25_B_PRUNE_STRONG_SAFE_DIV` | pending | — | — | blocked |
+| 23 | 2026-07-10 | `M25_C_PRUNE_M23B_PLUS_MICRO_GAP1` | pending | — | — | blocked |
 
 ## Notes per experiment
 
@@ -38,7 +38,7 @@ Delta = step change vs the previous **scored** experiment (chronological).
 - **M17_C_DET_0985** (0.8740, scored): Lower det-threshold admits more detections but the ILP re-optimizes to essentially the same graph. Score identical to baseline.
 - **M18_C_EDGE_PRUNE** (0.8740, scored): Post-ILP AND-gate prune (long AND low-prob) removed 54 edges. Too small to move the metric; score identical to baseline.
 - **M19_A_SAFE_DIVISIONS_PRUNE** (0.8770, scored): First metric-aware post-processing. +466 safe division edges, zero synthetic nodes. Moved the score for the first time: 0.874 -> 0.877. Confirms the division term (0.1 weight) is a live lever.
-- **M19_C_FULL_CHAIN_PENDING** (0.8800, scored): Full lb893-style chain on top of the M19-A division core: single-frame + velocity-gated two-frame gap recovery (1309 synthetic nodes) + line-fit smoothing. Scored 0.880 (+0.003 over M19-A, +0.006 over baseline): gap recovery + smoothing add value ON TOP of divisions, and the 1309 synthetic nodes paid off rather than costing the node penalty. New best.
+- **M19_C_FULL_CHAIN_PENDING** (0.8800, final): FINAL RECOMMENDED SUBMISSION. Kaggle submission/version: Biohub5-notebook015ca8d31a - version 12, public score 0.880. Full lb893-style chain on top of the M19-A division core: single-frame + velocity-gated two-frame gap recovery (1309 synthetic nodes) + line-fit smoothing. +0.003 over M19-A, +0.006 over baseline. After M21/M23/M24 experiments and the failure to recover the 350ep artifact for M25, this remains the strongest and safest final candidate.
 - **M20_A_FULLCHAIN_TUNED** (pending, unsafe): UNSAFE - BASELINE MISMATCH: DO NOT SUBMIT. The run's pre-postprocess base learned graph changed vs M19-C (n_nodes_before 131797->142193, n_edges_before 118992->127563) despite an identical predict command - a different support-pack/weights artifact (alternate/TTA/other-epoch) was selected on Kaggle. Gate tuning on a different base is not a controlled experiment. Superseded by M20_A_FULLCHAIN_TUNED_FIXED, which adds a hard baseline guard. Original intent: widen full_chain gates (div 4.7/6.85/7.45->5.1/7.4/7.9, gap1 6.2->7.0, gap2 4.4/10.2->4.7/11.0).
 - **M20_A_FULLCHAIN_TUNED_FIXED** (pending, unsafe): UNSAFE - BASELINE MISMATCH: DO NOT SUBMIT. The baseline guard worked as designed: with support pack tom99763/biohub-tracking-support-pack-50ep-v1 (artifact_name biohub-tracking-support-pack-5090-50ep-v1) the pre-postprocess base was n_nodes_before=161098 / n_edges_before=137520 vs M19-C's 131797/118992, so baseline_guard_passed=False and submission_recommendation=DO_NOT_SUBMIT_BASELINE_MISMATCH. Both available 50ep packs now fail the guard (pilkwang -> 142193/127563, tom99763 -> 161098/137520); neither reproduces the M19-C base. valid=True, fallback_used=False, final_source=reference_learned_graph_postprocessed, but NOT submitted. Keep M19-C (0.880). Recover the true M19-C baseline artifact before retrying.
 - **M21_A_PILKWANG350_M19C_GATES** (0.8740, scored): SCORED 0.874 on the pilkwang drift base - FAILED to beat M19-C (0.880), and equal to the M16 baseline. Proves the newer/larger pilkwang350 base (142193 nodes) is NOT automatically better; post-processing on a drifted base does not help. Confirms the need to recover the TRUE M19-C base (131797/118992). Full_chain with ORIGINAL M19-C gates on the pilkwang base.
@@ -54,6 +54,6 @@ Delta = step change vs the previous **scored** experiment (chronological).
 - **M24_A_400EP_FULLCHAIN_M19C_GATES** (0.8730, scored): SCORED 0.873 on the clean 400ep base + M19-C full_chain - FAILED to beat M19-C 0.880 and below M21-A's 0.874. The 400ep path did not deliver; the cleaner base did not translate into a better score. 400ep path deprioritized.
 - **M24_B_400EP_GAP1_ONLY** (0.8720, scored): SCORED 0.872 on the 400ep base (gap1-only) - below M24-A (0.873) and well below M19-C 0.880. Confirms the 400ep path is inferior; gap1 did not help on this base. 400ep path deprioritized.
 - **M24_C_400EP_SAFE_DIV_ONLY** (pending, blocked): BLOCKED / deprioritized: the 400ep path failed (M24-A 0.873, M24-B 0.872, both below M19-C 0.880). Not worth the zero-synthetic control submission. Pursue M25 (pilkwang350 prune-tuning around M23-B 0.877) instead.
-- **M25_A_PRUNE_MILD_SAFE_DIV** (pending, pending): EXPERIMENTAL: tune around M23-B (0.877) on pinned pilkwang350 (350ep + weight dfb848..). MILDER prune (cap frac ~0.022 vs M23-B's 0.0316) + safe_divisions + prune, ZERO synthetic. Tests whether M23-B removed too many real nodes; preserve more while keeping false-detection reduction. Sanity: 132000<=n_node_rows<=142500, prune<=0.07, synthetic<=400. SUBMIT ORDER 1 of 3.
-- **M25_B_PRUNE_STRONG_SAFE_DIV** (pending, pending): EXPERIMENTAL: STRONGER prune (cap frac ~0.052, short_max 3, still under the 0.07 safety cap) + safe_divisions + prune, ZERO synthetic. Tests whether more node-penalty reduction pushes 0.877 toward/above 0.880. Won't drop below ~134800 final nodes; sanity gate 132000-142500 catches over-prune. SUBMIT ORDER 2 of 3.
-- **M25_C_PRUNE_M23B_PLUS_MICRO_GAP1** (pending, pending): EXPERIMENTAL: EXACT M23-B repair (frac 0.045) + safe_divisions + VERY-LIGHT gap1 (max_total 5.0, cap_frac 0.0015, cap_abs 90 - much stricter than M19-C/M24-B) + linefit + prune, NO gap2. Tests whether a tiny gap1 edge gain (synthetic target 150-350) improves on M23-B's zero-synthetic 0.877. Sanity synthetic<=400. SUBMIT ORDER 3 of 3.
+- **M25_A_PRUNE_MILD_SAFE_DIV** (pending, blocked): ABANDONED: the required pilkwang350 350ep artifact is no longer recoverable/attachable. M25-A was attempted but the mounted artifact was the 400ep snapshot (artifact_name biohub-tracking-support-pack-400ep-snapshot-v1, weight_sha256 12f688..) instead of the required 350ep dfb848.., so the artifact guard failed -> DO_NOT_SUBMIT_WRONG_ARTIFACT (artifact_guard_passed=False). Not submitted. Cannot run M25 without the 350ep/dfb848 artifact.
+- **M25_B_PRUNE_STRONG_SAFE_DIV** (pending, blocked): ABANDONED: requires the pilkwang350 350ep/dfb848 artifact, which is no longer recoverable/attachable (the mounted pack is now the 400ep snapshot). Cannot run without the correct artifact.
+- **M25_C_PRUNE_M23B_PLUS_MICRO_GAP1** (pending, blocked): ABANDONED: requires the pilkwang350 350ep/dfb848 artifact, which is no longer recoverable/attachable (the mounted pack is now the 400ep snapshot). Cannot run without the correct artifact.

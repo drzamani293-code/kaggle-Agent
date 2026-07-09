@@ -64,7 +64,8 @@ def cmd_pending(con) -> int:
         ORDER BY created_at
     """).fetchall()
     if not rows:
-        print("No pending experiments (see 'blocked' M22 true-base variants awaiting artifact recovery).")
+        print("No pending experiments. Final candidate: M19-C @ 0.880 (see next_actions.md); "
+              "experimental variants are blocked/abandoned pending artifact recovery.")
         return 0
     print("Pending (awaiting public score):")
     for exp_id, created, status in rows:

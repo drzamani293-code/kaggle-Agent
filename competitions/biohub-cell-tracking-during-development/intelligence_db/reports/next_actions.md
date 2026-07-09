@@ -1,26 +1,24 @@
 # Next Actions
 
-_Generated 2026-07-09 14:37 UTC from intelligence.duckdb._
+_Generated 2026-07-09 15:27 UTC from intelligence.duckdb._
 
 **Best scored experiment:** `M19_C_FULL_CHAIN_PENDING` at **0.8800**.
-**M19-C full_chain:** scored (score 0.8800).
-**Open (pending):** 3 · **blocked:** 7 · **unsafe/superseded:** 2.
+**M19-C full_chain:** final (score 0.8800).
+**Open (pending):** 0 · **blocked:** 10 · **unsafe/superseded:** 2.
 
 ## Recommendation
 
-The 400ep path **failed** (M24-A 0.873, M24-B 0.872, below M19-C 0.880). The strongest
-experimental path is **M23-B** (pilkwang350 node-prune + safe-divisions, **0.877**, only 0.003
-behind M19-C). Tune the prune / safe-division balance around it with **M25** (pinned pilkwang350
-+ 350ep name + weight_sha256 dfb848.., NOT 400ep). Submit one only if its report says
-`OK_TO_SUBMIT_EXPERIMENTAL` (guard passed, 132000<=n_node_rows<=142500, prune<=0.07,
-synthetic<=400, valid, no fallback).
+**FINAL — competition entry closed on the experimental track.** `M19_C_FULL_CHAIN_PENDING` at **0.8800** is the
+final recommended submission.
 
-**Submit order recommendation:**
-1. `M25_A_PRUNE_MILD_SAFE_DIV` (milder prune - preserve more real nodes than M23-B; zero synthetic)
-2. `M25_B_PRUNE_STRONG_SAFE_DIV` (stronger prune - more node-penalty reduction; zero synthetic)
-3. `M25_C_PRUNE_M23B_PLUS_MICRO_GAP1` (M23-B repair + a very-light gap1 - tiny edge gain, synthetic ~150-350)
+- **Final submission: M19-C — `Biohub5-notebook015ca8d31a` version 12, public score 0.880.**
+- **Stop experimental submissions** unless the exact pilkwang350 **350ep / dfb848** artifact OR the
+  **true M19-C artifact** is recovered - both are currently unavailable/unrecoverable.
 
-**Keep `M19_C_FULL_CHAIN_PENDING` at 0.8800 as final** unless an M25 score beats 0.880.
+Why: across the full experimental sweep, no path beat M19-C 0.880 -
+M21-A 0.874, M23-B 0.877, M24-A 0.873, M24-B 0.872 - and M25 could not run because the required
+350ep artifact was replaced by the 400ep snapshot (guard failed, DO_NOT_SUBMIT_WRONG_ARTIFACT).
+All M22/M23/M24/M25 experimental variants are blocked/abandoned; nothing is pending.
 
 ## Recorded decisions (history)
 
@@ -51,3 +49,6 @@ synthetic<=400, valid, no fallback).
 - **after `M24_A_400EP_FULLCHAIN_M19C_GATES`** (2026-07-10, risk medium):
   - observation: The 400ep path FAILED: M24-A 0.873, M24-B 0.872 - both below M19-C 0.880 and below M21-A 0.874. The cleaner 400ep base did not translate into a better score. The strongest experimental path remains M23-B (pilkwang350 node-prune + safe-div, 0.877), only 0.003 behind M19-C.
   - recommendation: Deprioritize 400ep. Tune around M23-B on the pinned pilkwang350 base (M25): A milder prune, B stronger prune (both safe-div-only, zero synthetic), C M23-B repair + a very-light gap1. Submit order A -> B -> C. Keep M19-C 0.880 final unless an M25 score beats it.  → next: `M25_A -> M25_B -> M25_C`
+- **after `M25_A_PRUNE_MILD_SAFE_DIV`** (2026-07-10, risk low):
+  - observation: M25 could not run: the required pilkwang350 350ep artifact (artifact_name biohub-tracking-support-pack-350ep-snapshot-v1, weight_sha256 dfb848..) is no longer recoverable/attachable - the mounted pack is now the 400ep snapshot (12f688..), so the M25 artifact guard failed (DO_NOT_SUBMIT_WRONG_ARTIFACT). Across M21 (0.874), M23 (0.877), M24 (0.873/0.872), no experimental path beat M19-C 0.880, and the true M19-C artifact is unrecoverable.
+  - recommendation: FINAL: stop experimental submissions unless the exact 350ep/dfb848 artifact OR the true M19-C artifact is recovered. The final recommended submission is M19-C version 12 (Biohub5-notebook015ca8d31a - version 12), public score 0.880 - the strongest and safest final candidate.  → next: `KEEP_M19_C_FINAL_0880`
