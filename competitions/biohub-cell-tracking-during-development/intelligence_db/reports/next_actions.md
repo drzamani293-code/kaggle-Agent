@@ -1,36 +1,38 @@
 # Next Actions
 
-_Generated 2026-07-10 14:19 UTC from intelligence.duckdb._
+_Generated 2026-07-10 16:58 UTC from intelligence.duckdb._
 
 **Best scored experiment:** `M19_C_FULL_CHAIN_PENDING` at **0.8800**.
 **M19-C full_chain:** final (score 0.8800).
-**Open (pending):** 8 · **blocked:** 13 · **unsafe/superseded:** 2.
+**Open (pending):** 13 · **blocked:** 13 · **unsafe/superseded:** 2.
 
 ## Recommendation
 
-**Pivot back to M19-C and EXPAND RECALL (M28).** M27-A (public-notebook reproduction) scored
-**0.859 < 0.880** - its pruning-heavy output pipeline over-prunes / lowers node recall on our
-base, so the pruning path is deprioritized. The uploaded winning strategy argues the opposite
-for M19-C: our post-processing is too **conservative** (gap caps too small, division cap too
-small, det-threshold 0.99 possibly too high), and recall-oriented gap/division recovery is the
-path beyond 0.880.
+**Integrate the full uploaded WINNING ENGINE (M29).** M28 was only a partial recall expansion
+(M28-A: nodes=132166, gap1=1604, gap2=1386, synthetic=4376). The uploaded engine
+(winning_postprocess.py) is a fuller recall recovery - motion relink + slot-Hungarian division
+rescue + per-timepoint Hungarian gap 1/2/3 stitching (constant velocity) + optional linefit +
+prune - profiling (submission(3).csv) to nodes=139418, edges=132871, divisions~2382, all invariants
+clean. It is EMBEDDED self-contained so each M29 runner is a standalone Kaggle cell (no external
+utility-dataset import). The uploaded submission(3).csv is never submitted.
 
-M28 keeps the exact M19-C predict command + metric-aware chain and OPENS one recall lever per
-variant (every recovered edge stays unit-timepoint t->t+1; in<=1/out<=2). Submit each only if its
-report prints `OK_TO_SUBMIT_EXPERIMENTAL` (valid, no fallback, no NaN, consecutive id, no dangling,
-all edges t->t+1, in<=1/out<=2, node/edge counts sane, synthetic within the per-variant cap,
-final_source=reference_learned_graph_postprocessed) plus the per-variant explosion guard.
+Submit each only if its report prints `OK_TO_SUBMIT_EXPERIMENTAL` (valid, no fallback, no NaN,
+consecutive id, no dangling, all edges t->t+1, in<=1/out<=2, 125000<=node_rows<=165000,
+110000<=edge_rows<=155000, synthetic<=12000 [E 18000], divisions_total<=4000,
+final_source=winning_postprocess_engine_reproduced).
 
 **Submit order recommendation:**
-1. `M28_A_M19C_GAP_CAPS_OPEN` (gap caps open - the strategy's strongest claim; node_rows 132000-140000, synthetic<=4500)
-2. `M28_C_DIVISION_CAP_OPEN` (division caps open only - isolate the division lever; DO_NOT_SUBMIT_DIVISION_EXPLOSION if divisions>2500)
-3. `M28_D_GAP_OPEN_PLUS_DIV_OPEN_NO_LINEFIT` (gaps + divisions open, linefit disabled - aggressive recall without smoothing; synthetic<=5000)
-4. `M28_B_M19C_GAP3_ADDED` (adds strict-velocity gap3 = 3-frame recovery; higher upside, synthetic<=6500)
-5. `M28_E_DET095_M19C_SAFE` (det-threshold 0.95, a SAFE first det-sweep step; DO_NOT_SUBMIT_NODE_EXPLOSION if node_rows>155000)
+1. `M29_A_WINNING_ENGINE_DEFAULT` (full engine default - PRIMARY; soft-WARN vs the 139418/132871/2382 profile)
+2. `M29_B_ENGINE_GAP12_ONLY` (gaps 1,2 only - isolate whether gap3 over-adds synthetic/FP)
+3. `M29_C_ENGINE_LINEFIT_ON` (default + linefit window 2 weight 0.75 - compare with M19-C)
+4. `M29_D_ENGINE_RELINK_ON` (default + motion relink 7.0/4.5 - RISKY; reports n_relinked/fails)
+5. `M29_E_ENGINE_DET095_SAFE` (det 0.95 - cautious detection sweep; DO_NOT_SUBMIT_NODE_EXPLOSION guard)
 
-**Keep `M19_C_FULL_CHAIN_PENDING` at 0.8800 as final** unless an M28 variant beats 0.880.
-Do NOT build det 0.90/0.80 until the M28-E 0.95 result lands. The M26 ensemble variants remain a
-secondary pending track.
+**Decision rules:** if M29-A > 0.880, make it the new candidate and continue B/C; if A in
+[0.875, 0.880) test B and C; if A < 0.875 test B only, then **PAUSE and run the non-submit local-CV
+harness** (`M29_LOCAL_CV_HARNESS_INTEGRATION_NOT_SUBMIT`) before more submits.
+**Keep `M19_C_FULL_CHAIN_PENDING` at 0.8800 as final** unless an M29 variant beats 0.880.
+Do NOT build det 0.90/0.80 until M29-E (0.95) lands. M28/M26 variants remain secondary pending tracks.
 
 ## Recorded decisions (history)
 
@@ -73,3 +75,6 @@ secondary pending track.
 - **after `M27_A_PUBLIC_REPRO_EXACT_SAFETY`** (2026-07-10, risk medium):
   - observation: M27-A (public-notebook reproduction) scored 0.859 < M19-C 0.880 - its pruning-heavy output pipeline (short-track filtering + edge veto) over-prunes / lowers node recall on our base. The uploaded winning strategy argues the opposite problem for M19-C: our post-processing is too CONSERVATIVE (gap caps too small, division cap too small, det-threshold 0.99 possibly too high) and recall-oriented recovery is the path beyond 0.880.
   - recommendation: Stop the pruning-heavy M27 path. Pivot back to the proven M19-C full_chain and OPEN recall levers one at a time (M28): A gap caps open, C division caps open, D both + no linefit, B add strict gap3, E det 0.95. Submit order A -> C -> D -> B -> E, each only if its report prints OK_TO_SUBMIT_EXPERIMENTAL. Keep M19-C 0.880 final unless an M28 variant beats it. Build a local CV before deeper LB tuning.  → next: `M28_A -> M28_C -> M28_D -> M28_B -> M28_E`
+- **after `M28_A_M19C_GAP_CAPS_OPEN`** (2026-07-10, risk medium):
+  - observation: M28 was only a PARTIAL recall expansion (M28-A: nodes=132166, gap1=1604, gap2=1386, synthetic=4376). The uploaded winning-engine package (winning_postprocess.py / integration_cell.py) is a FULLER recall engine: motion relink + slot-Hungarian division rescue + per-timepoint Hungarian gap 1/2/3 stitching (constant velocity) + optional linefit + prune. Its submission(3).csv profiles to nodes=139418, edges=132871, divisions~2382, all invariants clean. M27 pruning path already failed (0.859).
+  - recommendation: Integrate the full engine as M29, EMBEDDED self-contained (no external utility-dataset import) so each runner is a standalone Kaggle cell. Submit order A (default) -> B (gap12 only) -> C (linefit) -> D (relink) -> E (det 0.95), each only if its report prints OK_TO_SUBMIT_EXPERIMENTAL. If A>0.880 make it the new candidate and continue B/C; if A in [0.875,0.880) test B and C; if A<0.875 test B only, then PAUSE and run the local-CV harness before more submits. Keep M19-C version 12 0.880 final until beaten. Do not submit the uploaded submission(3).csv.  → next: `M29_A -> M29_B -> M29_C -> M29_D -> M29_E (then local_cv_harness)`

@@ -269,6 +269,41 @@ def report_next_actions(con) -> str:
             "node-penalty reduction WITHOUT synthetic-node risk first.",
             f"**Keep `{best_id}` at {_fmt_score(best_score)} as final** unless an M23 score beats 0.880.",
         ]
+    elif [e for e in ["M29_A_WINNING_ENGINE_DEFAULT", "M29_B_ENGINE_GAP12_ONLY", "M29_C_ENGINE_LINEFIT_ON",
+                      "M29_D_ENGINE_RELINK_ON", "M29_E_ENGINE_DET095_SAFE"] if e in pending_ids]:
+        m29_order = [e for e in ["M29_A_WINNING_ENGINE_DEFAULT", "M29_B_ENGINE_GAP12_ONLY", "M29_C_ENGINE_LINEFIT_ON",
+                                 "M29_D_ENGINE_RELINK_ON", "M29_E_ENGINE_DET095_SAFE"] if e in pending_ids]
+        out += [
+            "**Integrate the full uploaded WINNING ENGINE (M29).** M28 was only a partial recall expansion",
+            "(M28-A: nodes=132166, gap1=1604, gap2=1386, synthetic=4376). The uploaded engine",
+            "(winning_postprocess.py) is a fuller recall recovery - motion relink + slot-Hungarian division",
+            "rescue + per-timepoint Hungarian gap 1/2/3 stitching (constant velocity) + optional linefit +",
+            "prune - profiling (submission(3).csv) to nodes=139418, edges=132871, divisions~2382, all invariants",
+            "clean. It is EMBEDDED self-contained so each M29 runner is a standalone Kaggle cell (no external",
+            "utility-dataset import). The uploaded submission(3).csv is never submitted.",
+            "",
+            "Submit each only if its report prints `OK_TO_SUBMIT_EXPERIMENTAL` (valid, no fallback, no NaN,",
+            "consecutive id, no dangling, all edges t->t+1, in<=1/out<=2, 125000<=node_rows<=165000,",
+            "110000<=edge_rows<=155000, synthetic<=12000 [E 18000], divisions_total<=4000,",
+            "final_source=winning_postprocess_engine_reproduced).",
+            "",
+            "**Submit order recommendation:**",
+        ]
+        for i, eid in enumerate(m29_order, 1):
+            reason = {1: " (full engine default - PRIMARY; soft-WARN vs the 139418/132871/2382 profile)",
+                      2: " (gaps 1,2 only - isolate whether gap3 over-adds synthetic/FP)",
+                      3: " (default + linefit window 2 weight 0.75 - compare with M19-C)",
+                      4: " (default + motion relink 7.0/4.5 - RISKY; reports n_relinked/fails)",
+                      5: " (det 0.95 - cautious detection sweep; DO_NOT_SUBMIT_NODE_EXPLOSION guard)"}.get(i, "")
+            out.append(f"{i}. `{eid}`{reason}")
+        out += [
+            "",
+            "**Decision rules:** if M29-A > 0.880, make it the new candidate and continue B/C; if A in",
+            "[0.875, 0.880) test B and C; if A < 0.875 test B only, then **PAUSE and run the non-submit local-CV",
+            "harness** (`M29_LOCAL_CV_HARNESS_INTEGRATION_NOT_SUBMIT`) before more submits.",
+            f"**Keep `{best_id}` at {_fmt_score(best_score)} as final** unless an M29 variant beats 0.880.",
+            "Do NOT build det 0.90/0.80 until M29-E (0.95) lands. M28/M26 variants remain secondary pending tracks.",
+        ]
     elif [e for e in ["M28_A_M19C_GAP_CAPS_OPEN", "M28_C_DIVISION_CAP_OPEN",
                       "M28_D_GAP_OPEN_PLUS_DIV_OPEN_NO_LINEFIT", "M28_B_M19C_GAP3_ADDED",
                       "M28_E_DET095_M19C_SAFE"] if e in pending_ids]:

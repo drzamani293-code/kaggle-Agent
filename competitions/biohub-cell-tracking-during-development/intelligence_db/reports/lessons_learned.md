@@ -1,6 +1,6 @@
 # Lessons Learned
 
-_Generated 2026-07-10 14:19 UTC from intelligence.duckdb._
+_Generated 2026-07-10 16:58 UTC from intelligence.duckdb._
 
 Distilled, evidence-linked findings driving strategy.
 
@@ -39,6 +39,12 @@ Distilled, evidence-linked findings driving strategy.
 - [1.00] Cell-tracking competition metric specification — https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/metrics.md
 - [1.00] lb893 learned-graph tracker with micro-safe divisions — https://github.com/dalloliogm/kaggle_competitions
 - [0.99] biohub-cell-tracking-v4-unet-ilp-reproduction (public high-score notebook) — kaggle:notebook/biohub-cell-tracking-v4-unet-ilp-reproduction
+- [0.99] biohub_winning_strategy(1).md (uploaded) — upload:biohub_winning_strategy(1).md
+- [0.99] winning_postprocess.py (uploaded engine) — upload:winning_postprocess.py
+- [0.99] integration_cell.py (uploaded) — upload:integration_cell.py
+- [0.99] local_cv_harness.py (uploaded) — upload:local_cv_harness.py
+- [0.99] README_engine.md (uploaded) — upload:README_engine.md
+- [0.99] submission(3).csv sanity profile (uploaded) — upload:submission(3).csv
 - [0.97] biohub_winning_strategy.md (uploaded) — upload:biohub_winning_strategy.md
 - [0.95] tracking_cellmot/metrics.py — https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/src/tracking_cellmot/metrics.py
 - [0.95] tracking_cellmot/division_metrics.py — https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/src/tracking_cellmot/division_metrics.py

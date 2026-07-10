@@ -1,6 +1,6 @@
 # Experiment Matrix
 
-_Generated 2026-07-10 14:19 UTC from intelligence.duckdb._
+_Generated 2026-07-10 16:58 UTC from intelligence.duckdb._
 
 Command differences, post-processing ops, submission stats, and score for every variant.
 All variants share ILP weights (edge -1.0, appearance 0.1, disappearance 0.1, division 1.0, --use-ilp);
@@ -44,6 +44,11 @@ only `det_threshold` and the post-processing chain differ.
 | `M28_C_DIVISION_CAP_OPEN` | 0.99 | safe_divisions, gap1, gap2, linefit, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M28_D_GAP_OPEN_PLUS_DIV_OPEN_NO_LINEFIT` | 0.99 | safe_divisions, gap1, gap2, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M28_E_DET095_M19C_SAFE` | 0.95 | safe_divisions, gap1, gap2, linefit, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M29_A_WINNING_ENGINE_DEFAULT` | 0.99 | build_base_graph, rescue_divisions, stitch_gaps_1_2_3, prune_isolated, relabel | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M29_B_ENGINE_GAP12_ONLY` | 0.99 | build_base_graph, rescue_divisions, stitch_gaps_1_2, prune_isolated, relabel | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M29_C_ENGINE_LINEFIT_ON` | 0.99 | build_base_graph, rescue_divisions, stitch_gaps_1_2_3, linefit, prune_isolated, relabel | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M29_D_ENGINE_RELINK_ON` | 0.99 | build_base_graph, motion_relink, rescue_divisions, stitch_gaps_1_2_3, prune_isolated, relabel | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M29_E_ENGINE_DET095_SAFE` | 0.95 | build_base_graph, rescue_divisions, stitch_gaps_1_2_3, prune_isolated, relabel | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 
 Legend: div+ = safe divisions added, gap1 = single-frame gaps closed, 
 gap2 = two-frame gaps recovered, synth = synthetic nodes added, prune = isolated nodes pruned, 

@@ -41,10 +41,10 @@ def test_db_initializes_and_seeds(tmp: Path) -> None:
         ids = {r[0] for r in con.execute("SELECT experiment_id FROM experiments").fetchall()}
     finally:
         con.close()
-    assert n_exp == 36, f"expected 36 seed experiments, got {n_exp}"
-    assert n_sub == 36 and n_pp == 36, f"expected stats for all 36 (sub={n_sub}, pp={n_pp})"
-    assert n_src == 11, f"expected 11 public sources (incl the winning-strategy doc), got {n_src}"
-    assert n_dec >= 12 and n_les >= 5, f"expected seed decisions/lessons (dec={n_dec}, les={n_les})"
+    assert n_exp == 41, f"expected 41 seed experiments, got {n_exp}"
+    assert n_sub == 41 and n_pp == 41, f"expected stats for all 41 (sub={n_sub}, pp={n_pp})"
+    assert n_src == 17, f"expected 17 public sources (incl the winning-engine package), got {n_src}"
+    assert n_dec >= 13 and n_les >= 5, f"expected seed decisions/lessons (dec={n_dec}, les={n_les})"
     for e in ["M16_BASELINE", "M19_C_FULL_CHAIN_PENDING",
               "M21_A_PILKWANG350_M19C_GATES", "M22_ARTIFACT_FORENSIC",
               "M23_B_PILKWANG350_NODE_PRUNE_SAFE_DIV_ONLY", "M23_C_PILKWANG350_EDGE_NODE_BALANCED",
@@ -55,7 +55,9 @@ def test_db_initializes_and_seeds(tmp: Path) -> None:
               "M27_A_PUBLIC_REPRO_EXACT_SAFETY", "M27_B_PUBLIC_REPRO_NO_EDGE_VETO",
               "M27_C_PUBLIC_REPRO_MINLEN5", "M27_D_PUBLIC_REPRO_STRICT_PRECISION",
               "M28_A_M19C_GAP_CAPS_OPEN", "M28_B_M19C_GAP3_ADDED", "M28_C_DIVISION_CAP_OPEN",
-              "M28_D_GAP_OPEN_PLUS_DIV_OPEN_NO_LINEFIT", "M28_E_DET095_M19C_SAFE"]:
+              "M28_D_GAP_OPEN_PLUS_DIV_OPEN_NO_LINEFIT", "M28_E_DET095_M19C_SAFE",
+              "M29_A_WINNING_ENGINE_DEFAULT", "M29_B_ENGINE_GAP12_ONLY", "M29_C_ENGINE_LINEFIT_ON",
+              "M29_D_ENGINE_RELINK_ON", "M29_E_ENGINE_DET095_SAFE"]:
         assert e in ids, f"missing seed experiment {e}"
     print("  ok: db initializes and seeds")
 
@@ -77,13 +79,13 @@ def test_reports_generated(tmp: Path) -> None:
     # Timeline must show baseline and the +0.003 steps to M19-A and M19-C.
     timeline = (tmp_reports / "score_timeline.md").read_text()
     assert "0.8740" in timeline and "0.8770" in timeline and "0.8800" in timeline and "+0.003" in timeline
-    # M19-C stays final/best @0.880; M27 pruning path is deprioritized (M27-A 0.859)
-    # and M28 recall-expansion variants are pending -> next_actions is the M28 branch.
+    # M19-C stays final/best @0.880; the M29 winning-engine variants are pending ->
+    # next_actions is the "integrate the full winning engine (M29)" branch.
     nxt = (tmp_reports / "next_actions.md").read_text()
     assert "0.880" in nxt and "final" in nxt.lower(), "final score/marker should appear"
-    assert "M28_A_M19C_GAP_CAPS_OPEN" in nxt and "OK_TO_SUBMIT_EXPERIMENTAL" in nxt
-    assert "recall" in nxt.lower() and "0.859" in nxt and "reference_learned_graph_postprocessed" in nxt
-    print("  ok: reports generated with M28 recall-expansion recommendation (M19-C 0.880 kept final)")
+    assert "M29_A_WINNING_ENGINE_DEFAULT" in nxt and "OK_TO_SUBMIT_EXPERIMENTAL" in nxt
+    assert "engine" in nxt.lower() and "winning_postprocess_engine_reproduced" in nxt and "local-CV" in nxt
+    print("  ok: reports generated with M29 winning-engine recommendation (M19-C 0.880 kept final)")
 
 
 def test_scored_and_best(tmp: Path) -> None:
@@ -108,9 +110,11 @@ def test_scored_and_best(tmp: Path) -> None:
                            "M26_B_PRIMARY_M19C_STYLE_PLUS_CONSENSUS_EDGES",
                            "M26_C_WEIGHTED_ENSEMBLE_FULLCHAIN_LIGHT",
                            "M28_A_M19C_GAP_CAPS_OPEN", "M28_B_M19C_GAP3_ADDED", "M28_C_DIVISION_CAP_OPEN",
-                           "M28_D_GAP_OPEN_PLUS_DIV_OPEN_NO_LINEFIT", "M28_E_DET095_M19C_SAFE"}, \
-        f"the M26 ensemble + M28 recall variants should be pending (M27 deprioritized), got {pending_ids}"
-    print("  ok: M19-C FINAL @0.880; M27-A scored 0.859 (deprioritized); M26 + M28 variants pending")
+                           "M28_D_GAP_OPEN_PLUS_DIV_OPEN_NO_LINEFIT", "M28_E_DET095_M19C_SAFE",
+                           "M29_A_WINNING_ENGINE_DEFAULT", "M29_B_ENGINE_GAP12_ONLY", "M29_C_ENGINE_LINEFIT_ON",
+                           "M29_D_ENGINE_RELINK_ON", "M29_E_ENGINE_DET095_SAFE"}, \
+        f"the M26 + M28 + M29 variants should be pending (M27 deprioritized), got {pending_ids}"
+    print("  ok: M19-C FINAL @0.880; M27-A scored 0.859 (deprioritized); M26 + M28 + M29 variants pending")
 
 
 def test_update_idempotent(tmp: Path) -> None:

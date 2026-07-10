@@ -1,6 +1,6 @@
 # Score Timeline
 
-_Generated 2026-07-10 14:19 UTC from intelligence.duckdb._
+_Generated 2026-07-10 16:58 UTC from intelligence.duckdb._
 
 Baseline **0.874** · best so far **0.8800**.
 
@@ -44,6 +44,11 @@ Delta = step change vs the previous **scored** experiment (chronological).
 | 34 | 2026-07-10 | `M28_C_DIVISION_CAP_OPEN` | pending | — | — | pending |
 | 35 | 2026-07-10 | `M28_D_GAP_OPEN_PLUS_DIV_OPEN_NO_LINEFIT` | pending | — | — | pending |
 | 36 | 2026-07-10 | `M28_E_DET095_M19C_SAFE` | pending | — | — | pending |
+| 37 | 2026-07-10 | `M29_A_WINNING_ENGINE_DEFAULT` | pending | — | — | pending |
+| 38 | 2026-07-10 | `M29_B_ENGINE_GAP12_ONLY` | pending | — | — | pending |
+| 39 | 2026-07-10 | `M29_C_ENGINE_LINEFIT_ON` | pending | — | — | pending |
+| 40 | 2026-07-10 | `M29_D_ENGINE_RELINK_ON` | pending | — | — | pending |
+| 41 | 2026-07-10 | `M29_E_ENGINE_DET095_SAFE` | pending | — | — | pending |
 
 ## Notes per experiment
 
@@ -83,3 +88,8 @@ Delta = step change vs the previous **scored** experiment (chronological).
 - **M28_C_DIVISION_CAP_OPEN** (pending, pending): PENDING (experimental). M19-C EXACT gap settings, open ONLY the division caps (parent_child 6.5, sister 9.0, frame_cap_frac 0.030, global_cap_frac 0.020). Isolates whether the division term is underused. Safety: divisions_added<=2500 (else DO_NOT_SUBMIT_DIVISION_EXPLOSION), max_out<=2.
 - **M28_D_GAP_OPEN_PLUS_DIV_OPEN_NO_LINEFIT** (pending, pending): PENDING (experimental). A + C combined (gaps open AND divisions open) with linefit DISABLED (strategy warns smoothing may hurt curved motion). Safety: synthetic<=5000, n_node_rows<=142500, valid degrees.
 - **M28_E_DET095_M19C_SAFE** (pending, pending): PENDING (experimental). M19-C postprocess settings, det-threshold lowered 0.99 -> 0.95 - a single SAFE step of a detection-recall sweep. Safety: n_node_rows<=155000, n_edge_rows<=145000 (else DO_NOT_SUBMIT_NODE_EXPLOSION). Do NOT build det 0.90/0.80 until the 0.95 result lands.
+- **M29_A_WINNING_ENGINE_DEFAULT** (pending, pending): PENDING (experimental, SUBMIT FIRST). Full uploaded winning engine default (PPConfig defaults: gaps 1/2/3, gap_max_step 4.6, gap_max_total {1:6.5,2:10.5,3:14.5}, div 6.5/9.0/frame 0.030/global 0.020, div_allow_bare_end, no relink, no linefit, prune). Slot-Hungarian division rescue + per-timepoint Hungarian gap stitching (constant velocity). Expected ~ submission(3).csv profile: node_rows 137000-142000, edge_rows 129000-135000, divisions 1800-2800, multiframe=0, in<=1/out<=2. final_source=winning_postprocess_engine_reproduced. PRIMARY candidate; keep M19-C 0.880 final unless this beats it.
+- **M29_B_ENGINE_GAP12_ONLY** (pending, pending): PENDING (experimental). Same engine as A but gap_sizes=(1,2) (no gap3) - isolate whether gap3 over-adds synthetic/FP. Expected fewer nodes/edges/divisions than A. Submit if A valid but lower than expected, or if A counts look too high.
+- **M29_C_ENGINE_LINEFIT_ON** (pending, pending): PENDING (experimental). A + linefit (window 2, weight 0.75) - compare with M19-C where linefit may have helped. Submit after A unless diagnostics indicate A malformed.
+- **M29_D_ENGINE_RELINK_ON** (pending, pending): PENDING (experimental, RISKY). A + motion relink (min 7.0um, alt 4.5um): replace long learned edges with a closer per-frame Hungarian assignment. Reports n_relinked + fails. Submit after A/B/C only if diagnostics sane.
+- **M29_E_ENGINE_DET095_SAFE** (pending, pending): PENDING (experimental). A but det-threshold 0.95 - cautious detection-recall sweep. Safety: n_node_rows<=165000, n_edge_rows<=155000 else DO_NOT_SUBMIT_NODE_EXPLOSION; synthetic cap 18000. Do NOT build det 0.90/0.80 until 0.95 lands.

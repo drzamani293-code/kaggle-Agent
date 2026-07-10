@@ -175,6 +175,72 @@
     "linefit smoothing may hurt curved motion - test disabling it",
     "build local CV before blind LB tuning"
    ]
+  },
+  {
+   "source_id": "WINNING_ENGINE_STRATEGY_V1",
+   "source_type": "strategy_doc",
+   "title": "biohub_winning_strategy(1).md (uploaded)",
+   "url": "upload:biohub_winning_strategy(1).md",
+   "repo": null,
+   "path": null,
+   "relevance_score": 0.99,
+   "summary": "Updated winning-strategy writeup accompanying the full post-processing engine package. Argues for a complete recall-recovery engine (motion relink + slot-Hungarian division rescue + per-timepoint Hungarian gap 1/2/3 stitching with a constant-velocity model + optional linefit + prune) plus a local CV harness before blind LB tuning.",
+   "extracted_ideas": []
+  },
+  {
+   "source_id": "WINNING_ENGINE_POSTPROCESS_PY",
+   "source_type": "code",
+   "title": "winning_postprocess.py (uploaded engine)",
+   "url": "upload:winning_postprocess.py",
+   "repo": null,
+   "path": null,
+   "relevance_score": 0.99,
+   "summary": "The engine implementation (PPConfig-driven): build_base_graph (M16-identical) -> motion_relink -> rescue_divisions (slot-Hungarian orphan adoption) -> stitch_gaps 1/2/3 (per-timepoint Hungarian + constant-velocity) -> linefit -> prune -> relabel. Reimplemented in-line (self-contained) as the M29 engine.",
+   "extracted_ideas": []
+  },
+  {
+   "source_id": "WINNING_ENGINE_INTEGRATION_CELL",
+   "source_type": "code",
+   "title": "integration_cell.py (uploaded)",
+   "url": "upload:integration_cell.py",
+   "repo": null,
+   "path": null,
+   "relevance_score": 0.99,
+   "summary": "The one-cell integration harness that runs the reference predict then applies winning_postprocess with PPConfig defaults (gaps 1/2/3, divisions 6.5/9.0/frame 0.030/global 0.020, no relink, no linefit). Basis for M29-A defaults.",
+   "extracted_ideas": []
+  },
+  {
+   "source_id": "WINNING_ENGINE_LOCAL_CV",
+   "source_type": "code",
+   "title": "local_cv_harness.py (uploaded)",
+   "url": "upload:local_cv_harness.py",
+   "repo": null,
+   "path": null,
+   "relevance_score": 0.99,
+   "summary": "A local cross-validation harness idea (score the engine on train GT before LB submits). Wired hidden-safe as the M29 non-submit local-CV harness, which reports the official-metric wiring status honestly (no faked CV).",
+   "extracted_ideas": []
+  },
+  {
+   "source_id": "WINNING_ENGINE_README",
+   "source_type": "doc",
+   "title": "README_engine.md (uploaded)",
+   "url": "upload:README_engine.md",
+   "repo": null,
+   "path": null,
+   "relevance_score": 0.99,
+   "summary": "Engine README describing PPConfig fields and the pipeline order used to build the M29 integration.",
+   "extracted_ideas": []
+  },
+  {
+   "source_id": "WINNING_ENGINE_SUBMISSION3_PROFILE",
+   "source_type": "artifact_profile",
+   "title": "submission(3).csv sanity profile (uploaded)",
+   "url": "upload:submission(3).csv",
+   "repo": null,
+   "path": null,
+   "relevance_score": 0.99,
+   "summary": "Sanity profile ONLY (never submitted/hardcoded): the uploaded engine's output on the current 400ep base - rows=272289, nodes=139418, edges=132871, max_in=1, max_out=2, multiframe=0, dangling=0, id_consecutive=True, no_nan=True, divisions~2382. Used as the M29-A soft-WARN target window.",
+   "extracted_ideas": []
   }
  ]
 }

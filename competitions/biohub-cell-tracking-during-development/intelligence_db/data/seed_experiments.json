@@ -1760,6 +1760,258 @@
     "edges_after": null,
     "per_dataset": []
    }
+  },
+  {
+   "experiment_id": "M29_A_WINNING_ENGINE_DEFAULT",
+   "milestone": "M29",
+   "variant": "A",
+   "label": "winning_engine_default",
+   "notebook_name": "milestone29_winning_engine_integration_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M29_A_WINNING_ENGINE_DEFAULT.txt",
+   "command": {
+    "det_threshold": 0.99,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "build_base_graph",
+    "rescue_divisions",
+    "stitch_gaps_1_2_3",
+    "prune_isolated",
+    "relabel"
+   ],
+   "public_score": null,
+   "status": "pending",
+   "created_at": "2026-07-10",
+   "notes": "PENDING (experimental, SUBMIT FIRST). Full uploaded winning engine default (PPConfig defaults: gaps 1/2/3, gap_max_step 4.6, gap_max_total {1:6.5,2:10.5,3:14.5}, div 6.5/9.0/frame 0.030/global 0.020, div_allow_bare_end, no relink, no linefit, prune). Slot-Hungarian division rescue + per-timepoint Hungarian gap stitching (constant velocity). Expected ~ submission(3).csv profile: node_rows 137000-142000, edge_rows 129000-135000, divisions 1800-2800, multiframe=0, in<=1/out<=2. final_source=winning_postprocess_engine_reproduced. PRIMARY candidate; keep M19-C 0.880 final unless this beats it.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M29_B_ENGINE_GAP12_ONLY",
+   "milestone": "M29",
+   "variant": "B",
+   "label": "engine_gap12_only",
+   "notebook_name": "milestone29_winning_engine_integration_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M29_B_ENGINE_GAP12_ONLY.txt",
+   "command": {
+    "det_threshold": 0.99,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "build_base_graph",
+    "rescue_divisions",
+    "stitch_gaps_1_2",
+    "prune_isolated",
+    "relabel"
+   ],
+   "public_score": null,
+   "status": "pending",
+   "created_at": "2026-07-10",
+   "notes": "PENDING (experimental). Same engine as A but gap_sizes=(1,2) (no gap3) - isolate whether gap3 over-adds synthetic/FP. Expected fewer nodes/edges/divisions than A. Submit if A valid but lower than expected, or if A counts look too high.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M29_C_ENGINE_LINEFIT_ON",
+   "milestone": "M29",
+   "variant": "C",
+   "label": "engine_linefit_on",
+   "notebook_name": "milestone29_winning_engine_integration_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M29_C_ENGINE_LINEFIT_ON.txt",
+   "command": {
+    "det_threshold": 0.99,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "build_base_graph",
+    "rescue_divisions",
+    "stitch_gaps_1_2_3",
+    "linefit",
+    "prune_isolated",
+    "relabel"
+   ],
+   "public_score": null,
+   "status": "pending",
+   "created_at": "2026-07-10",
+   "notes": "PENDING (experimental). A + linefit (window 2, weight 0.75) - compare with M19-C where linefit may have helped. Submit after A unless diagnostics indicate A malformed.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M29_D_ENGINE_RELINK_ON",
+   "milestone": "M29",
+   "variant": "D",
+   "label": "engine_relink_on",
+   "notebook_name": "milestone29_winning_engine_integration_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M29_D_ENGINE_RELINK_ON.txt",
+   "command": {
+    "det_threshold": 0.99,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "build_base_graph",
+    "motion_relink",
+    "rescue_divisions",
+    "stitch_gaps_1_2_3",
+    "prune_isolated",
+    "relabel"
+   ],
+   "public_score": null,
+   "status": "pending",
+   "created_at": "2026-07-10",
+   "notes": "PENDING (experimental, RISKY). A + motion relink (min 7.0um, alt 4.5um): replace long learned edges with a closer per-frame Hungarian assignment. Reports n_relinked + fails. Submit after A/B/C only if diagnostics sane.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M29_E_ENGINE_DET095_SAFE",
+   "milestone": "M29",
+   "variant": "E",
+   "label": "engine_det095_safe",
+   "notebook_name": "milestone29_winning_engine_integration_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M29_E_ENGINE_DET095_SAFE.txt",
+   "command": {
+    "det_threshold": 0.95,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "build_base_graph",
+    "rescue_divisions",
+    "stitch_gaps_1_2_3",
+    "prune_isolated",
+    "relabel"
+   ],
+   "public_score": null,
+   "status": "pending",
+   "created_at": "2026-07-10",
+   "notes": "PENDING (experimental). A but det-threshold 0.95 - cautious detection-recall sweep. Safety: n_node_rows<=165000, n_edge_rows<=155000 else DO_NOT_SUBMIT_NODE_EXPLOSION; synthetic cap 18000. Do NOT build det 0.90/0.80 until 0.95 lands.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
   }
  ],
  "decisions": [
@@ -1877,6 +2129,15 @@
    "observation": "M27-A (public-notebook reproduction) scored 0.859 < M19-C 0.880 - its pruning-heavy output pipeline (short-track filtering + edge veto) over-prunes / lowers node recall on our base. The uploaded winning strategy argues the opposite problem for M19-C: our post-processing is too CONSERVATIVE (gap caps too small, division cap too small, det-threshold 0.99 possibly too high) and recall-oriented recovery is the path beyond 0.880.",
    "recommendation": "Stop the pruning-heavy M27 path. Pivot back to the proven M19-C full_chain and OPEN recall levers one at a time (M28): A gap caps open, C division caps open, D both + no linefit, B add strict gap3, E det 0.95. Submit order A -> C -> D -> B -> E, each only if its report prints OK_TO_SUBMIT_EXPERIMENTAL. Keep M19-C 0.880 final unless an M28 variant beats it. Build a local CV before deeper LB tuning.",
    "next_variant": "M28_A -> M28_C -> M28_D -> M28_B -> M28_E",
+   "risk_level": "medium",
+   "created_at": "2026-07-10"
+  },
+  {
+   "decision_id": "DEC_M29_WINNING_ENGINE_INTEGRATION",
+   "after_experiment_id": "M28_A_M19C_GAP_CAPS_OPEN",
+   "observation": "M28 was only a PARTIAL recall expansion (M28-A: nodes=132166, gap1=1604, gap2=1386, synthetic=4376). The uploaded winning-engine package (winning_postprocess.py / integration_cell.py) is a FULLER recall engine: motion relink + slot-Hungarian division rescue + per-timepoint Hungarian gap 1/2/3 stitching (constant velocity) + optional linefit + prune. Its submission(3).csv profiles to nodes=139418, edges=132871, divisions~2382, all invariants clean. M27 pruning path already failed (0.859).",
+   "recommendation": "Integrate the full engine as M29, EMBEDDED self-contained (no external utility-dataset import) so each runner is a standalone Kaggle cell. Submit order A (default) -> B (gap12 only) -> C (linefit) -> D (relink) -> E (det 0.95), each only if its report prints OK_TO_SUBMIT_EXPERIMENTAL. If A>0.880 make it the new candidate and continue B/C; if A in [0.875,0.880) test B and C; if A<0.875 test B only, then PAUSE and run the local-CV harness before more submits. Keep M19-C version 12 0.880 final until beaten. Do not submit the uploaded submission(3).csv.",
+   "next_variant": "M29_A -> M29_B -> M29_C -> M29_D -> M29_E (then local_cv_harness)",
    "risk_level": "medium",
    "created_at": "2026-07-10"
   }

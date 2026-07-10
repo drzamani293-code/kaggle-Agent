@@ -1,0 +1,3027 @@
+"""
+Biohub - Cell Tracking During Development
+Milestone 29 - WINNING ENGINE integration pack (self-contained, hidden-safe).
+
+An uploaded winning-strategy package (biohub_winning_strategy(1).md,
+winning_postprocess.py, integration_cell.py, local_cv_harness.py,
+README_engine.md, submission(3).csv) ships a richer post-processing ENGINE than
+our thin M28 recall expansion. M28-A was only a partial recall expansion
+(nodes=132166, gap1=1604, gap2=1386, synthetic=4376); the uploaded engine's
+submission(3).csv sanity-profiles to nodes=139418, edges=132871, divisions~2382,
+max_in=1, max_out=2, multiframe=0, dangling=0 - a fuller recall recovery.
+
+This pack EMBEDS the engine (copied in-line, NOT imported from an external Kaggle
+utility dataset) so every M29 runner is a standalone one-cell Kaggle file needing
+only the competition dataset + the mounted support pack. The engine pipeline is:
+  build_base_graph (M16-identical from raw GEFF) -> optional motion_relink ->
+  rescue_divisions (slot-Hungarian orphan adoption) -> stitch_gaps for gap 1/2/3
+  (per-timepoint Hungarian + constant-velocity model) -> optional linefit ->
+  prune isolated -> relabel positive-consecutive -> validate.
+Every produced edge is UNIT-timepoint (t->t+1); in_degree<=1 / out_degree<=2 are
+enforced; a direct multi-frame edge is never created. M19-C 0.880 stays best/final
+unless an M29 variant beats it.
+
+Five submit-capable variants (submit order A -> B -> C -> D -> E):
+  - A winning_engine_default : the full engine default (PPConfig defaults;
+       gaps 1/2/3, divisions, no relink, no linefit). PRIMARY candidate.
+  - B engine_gap12_only      : gaps (1,2) only - isolate whether gap3 over-adds.
+  - C engine_linefit_on      : A + linefit (window 2, weight 0.75).
+  - D engine_relink_on       : A + motion relink (min 7.0um, alt 4.5um). Risky.
+  - E engine_det095_safe     : A but det-threshold 0.95 (cautious detection sweep;
+       node-explosion guarded). Do NOT build det 0.90/0.80 until 0.95 lands.
+
+Plus a NON-SUBMIT local-CV harness (run_milestone29_local_cv): it locates train
+GT GEFF, smoke-runs the engine, and HONESTLY reports whether the official metric
+is wired - it never fabricates CV numbers and never writes a competition
+submission (only m29_local_cv_report.json).
+
+OK_TO_SUBMIT_EXPERIMENTAL requires: valid, no fallback, no NaN, consecutive id,
+no dangling, all edges t->t+1, max_in<=1 / max_out<=2, all expected dynamic test
+datasets present, no dataset emptied, 125000<=n_node_rows<=165000,
+110000<=n_edge_rows<=155000, synthetic_nodes_added<=12000 (E:18000),
+divisions_total<=4000, final_source=winning_postprocess_engine_reproduced.
+Otherwise a specific DO_NOT_SUBMIT_* is reported (VALIDATION_FAILED /
+UNSANE_NODE_COUNT / UNSANE_EDGE_COUNT / SYNTHETIC_EXPLOSION / DIVISION_EXPLOSION /
+NODE_EXPLOSION for E / MISSING_OR_EMPTY_DATASET) and a valid hidden-safe fallback
+submission is still written. A soft WARN (never a gate) flags M29-A drifting from
+the submission(3).csv profile (139418/132871/2382).
+
+M29 runs whatever reference support pack is mounted (like M19-C), reporting its
+artifact_name + weight_sha256; it does NOT pin a specific artifact. All outputs
+are generated from mounted Kaggle inputs at runtime; the uploaded submission(3).csv
+is NEVER submitted or hardcoded; no Kaggle-API submit; off Kaggle it is a clean
+self-test-only dry run. No prior milestone file is modified.
+"""
+
+from __future__ import annotations
+
+import itertools
+import json
+import math
+import os
+import shutil
+import subprocess
+import sys
+import traceback
+from pathlib import Path
+from typing import Sequence
+
+import numpy as np
+import pandas as pd
+
+try:
+    import blosc2
+except ImportError:
+    blosc2 = None
+
+try:
+    import zstandard
+except ImportError:
+    zstandard = None
+
+
+# --------------------------------------------------------------------------- #
+# 0. Constants: artifact locations, competition paths, hidden-name guard
+# --------------------------------------------------------------------------- #
+KAGGLE_COMPETITION_INPUT_DIR = "/kaggle/input/competitions/biohub-cell-tracking-during-development"
+KAGGLE_WORKING_DIR = "/kaggle/working"
+TRACKING_REPO_DIR = "/kaggle/working/tracking_repo"
+
+# Candidate mount points for the uploaded support-pack artifact, in
+# preference order. The resolver requires the manifest + predict script +
+# weights + wheels to be present before accepting a candidate.
+ARTIFACT_CANDIDATE_DIRS = [
+    "/kaggle/input/datasets/pilkwang/biohub-tracking-support-pack-50ep-v1",
+    "/kaggle/input/datasets/tom99763/biohub-tracking-support-pack-50ep-v1",
+    "/kaggle/input/datasets/pilkwang/biohub-tracking-support-pack-v1",
+    # Broader fallbacks for other Kaggle mount layouts (dataset slug only).
+    "/kaggle/input/biohub-tracking-support-pack-50ep-v1",
+    "/kaggle/input/biohub-tracking-support-pack-v1",
+]
+
+ARTIFACT_REQUIRED_ENTRIES = [
+    "ARTIFACT_MANIFEST.json",
+    "repo/scripts/predict_unet_transformer.py",
+    "weights/unet_transformer/split_0/edge_predictor_best.pth",
+    "wheels",
+]
+
+# Core scientific packages pip must NEVER replace when installing the
+# artifact's bundled wheels (Kaggle's preinstalled builds are ABI-matched
+# to its CUDA/BLAS stack; letting a wheel swap them breaks torch/numba).
+PROTECTED_PACKAGES = ["numpy", "scipy", "numba", "llvmlite", "torch", "pandas"]
+
+# Two-phase offline install order (polars first so the Float16 shim below
+# is importable before anything that depends on it).
+WHEEL_INSTALL_PHASES = [
+    ["polars"],
+    ["tracksdata", "zarr", "pyscipopt", "geff", "geff-spec", "ilpy", "imagecodecs",
+     "rustworkx", "numcodecs", "donfig", "bidict"],
+]
+
+# Fresh-subprocess import smoke test after install.
+IMPORT_CHECK_MODULES = ["zarr", "tracksdata", "geff", "polars", "numcodecs", "rustworkx", "biohub_tracking"]
+
+# Extra sys.path entries every subprocess needs (the reference repo layout).
+SUBPROCESS_PATH_ENTRIES = [
+    "/kaggle/working/tracking_repo/src",
+    "/kaggle/working/tracking_repo",
+    "/kaggle/working",
+]
+
+# Public dataset names that MUST NOT appear hardcoded in any submitted
+# output - used only by a self-test that asserts we never emit them.
+PUBLIC_TEST_DATASET_NAMES = ["44b6_0113de3b", "44b6_0b24845f", "6bba_05b6850b", "6bba_05db0fb1"]
+
+SUBMISSION_COLUMNS = ["id", "dataset", "row_type", "node_id", "t", "z", "y", "x", "source_id", "target_id"]
+
+# The polars Float16 compatibility shim written into sitecustomize.py at
+# several locations so every subprocess picks it up on interpreter start.
+SITECUSTOMIZE_CONTENT = (
+    "try:\n"
+    "    import polars as pl\n"
+    "    if not hasattr(pl, \"Float16\"):\n"
+    "        pl.Float16 = pl.Float32\n"
+    "except Exception:\n"
+    "    pass\n"
+)
+
+# --------------------------------------------------------------------------- #
+# 1. Manual zarr v3 reader (copied from Milestone 15 - reads GEFF prediction
+#    arrays without depending on a particular installed zarr version)
+# --------------------------------------------------------------------------- #
+DTYPE_CODES = {
+    "bool": "b1",
+    "int8": "i1", "int16": "i2", "int32": "i4", "int64": "i8",
+    "uint8": "u1", "uint16": "u2", "uint32": "u4", "uint64": "u8",
+    "float16": "f2", "float32": "f4", "float64": "f8",
+}
+
+NODE_PROP_NAMES = ("t", "z", "y", "x")
+
+# Physical voxel scale for this competition's volumes (µm/voxel).
+VOXEL_SIZE_UM = {"z": 1.625, "y": 0.40625, "x": 0.40625}
+_VOXEL_SCALE = np.array([VOXEL_SIZE_UM["z"], VOXEL_SIZE_UM["y"], VOXEL_SIZE_UM["x"]])
+
+
+# --------------------------------------------------------------------------- #
+# 1. zarr.json metadata parsing (manual offline reader, no zarr/numcodecs)
+# --------------------------------------------------------------------------- #
+def read_json(path: Path) -> dict:
+    with open(path, "r") as f:
+        return json.load(f)
+
+
+def parse_array_metadata(array_dir: Path) -> dict:
+    """Parse a zarr v3 array's `zarr.json` into shape/dtype/chunking/codecs."""
+    meta_path = array_dir / "zarr.json"
+    doc = read_json(meta_path)
+
+    if doc.get("zarr_format") != 3:
+        raise ValueError(f"{meta_path}: only zarr v3 is supported, got zarr_format={doc.get('zarr_format')!r}")
+    if doc.get("node_type") != "array":
+        raise ValueError(f"{meta_path}: not a zarr array (node_type={doc.get('node_type')!r})")
+
+    shape = tuple(int(s) for s in doc["shape"])
+
+    data_type = doc["data_type"]
+    if isinstance(data_type, dict):  # some writers nest it as {"name": "uint16"}
+        data_type = data_type.get("name")
+    code = DTYPE_CODES.get(data_type)
+    if code is None:
+        raise ValueError(f"{meta_path}: unsupported data_type {data_type!r}")
+
+    codecs = doc.get("codecs", [])
+    endian = "little"
+    for codec in codecs:
+        if codec.get("name") in ("bytes", "endian"):
+            endian = codec.get("configuration", {}).get("endian", "little")
+            break
+    dtype = np.dtype("bool") if code == "b1" else np.dtype(("<" if endian == "little" else ">") + code)
+
+    chunk_grid = doc.get("chunk_grid", {})
+    if chunk_grid.get("name", "regular") != "regular":
+        raise NotImplementedError(f"{meta_path}: unsupported chunk_grid {chunk_grid.get('name')!r}")
+    chunk_shape = tuple(int(c) for c in chunk_grid.get("configuration", {}).get("chunk_shape", shape))
+
+    chunk_key_encoding = doc.get(
+        "chunk_key_encoding", {"name": "default", "configuration": {"separator": "/"}}
+    )
+    fill_value = doc.get("fill_value", 0) or 0
+
+    return {
+        "path": array_dir,
+        "shape": shape,
+        "dtype": dtype,
+        "chunk_shape": chunk_shape,
+        "codecs": codecs,
+        "chunk_key_encoding": chunk_key_encoding,
+        "fill_value": fill_value,
+    }
+
+
+# --------------------------------------------------------------------------- #
+# 2. Chunk key construction + codec decoding
+# --------------------------------------------------------------------------- #
+def build_chunk_path(array_dir: Path, index: Sequence[int], chunk_key_encoding: dict) -> Path:
+    """Build the on-disk chunk file path for a given chunk index tuple."""
+    name = chunk_key_encoding.get("name", "default")
+    separator = chunk_key_encoding.get("configuration", {}).get("separator", "/")
+    index_strs = [str(i) for i in index]
+
+    if name == "v2":
+        key = separator.join(index_strs) if index_strs else "0"
+    else:
+        key = separator.join(["c", *index_strs]) if index_strs else "c"
+
+    if separator == "/":
+        return array_dir.joinpath(*key.split("/"))
+    return array_dir / key
+
+
+def decode_bytes_codecs(raw: bytes, codecs: list[dict], expected_nbytes: int) -> bytes:
+    """Reverse the bytes->bytes compressor chain, then hand back raw array bytes.
+
+    `codecs[0]` is the array->bytes codec (must be "bytes"/"endian" - a plain
+    passthrough once endianness is known); `codecs[1:]` are bytes->bytes
+    compressors applied in encode order, so they're undone in reverse order.
+    """
+    if not codecs:
+        return raw
+
+    array_bytes_codec = codecs[0]
+    if array_bytes_codec.get("name") not in ("bytes", "endian"):
+        raise NotImplementedError(
+            f"unsupported array->bytes codec: {array_bytes_codec.get('name')!r} "
+            "(only the plain 'bytes' codec is supported - no sharding)"
+        )
+
+    data = raw
+    for codec in reversed(codecs[1:]):
+        codec_name = codec.get("name")
+        if codec_name == "blosc":
+            if blosc2 is None:
+                raise RuntimeError("chunk uses the 'blosc' codec but the blosc2 package is not installed")
+            data = blosc2.decompress(data)
+        elif codec_name == "zstd":
+            if zstandard is None:
+                raise RuntimeError("chunk uses the 'zstd' codec but the zstandard package is not installed")
+            data = zstandard.ZstdDecompressor().decompress(data, max_output_size=expected_nbytes)
+        else:
+            raise NotImplementedError(f"unsupported bytes->bytes codec: {codec_name!r}")
+
+    return data
+
+
+def decode_chunk_bytes(raw: bytes, codecs: list[dict], dtype: np.dtype, chunk_shape: tuple[int, ...]) -> np.ndarray:
+    count = int(np.prod(chunk_shape)) if chunk_shape else 1
+    expected_nbytes = count * dtype.itemsize
+    decoded = decode_bytes_codecs(raw, codecs, expected_nbytes)
+    arr = np.frombuffer(decoded, dtype=dtype, count=count)
+    return arr.reshape(chunk_shape)
+
+
+def read_chunk_at(meta: dict, index: Sequence[int]) -> np.ndarray:
+    """Read+decode a single chunk. Missing chunk files are sparse and decode
+    to an array filled with the array's fill_value (never raises for that case).
+    """
+    chunk_path = build_chunk_path(meta["path"], index, meta["chunk_key_encoding"])
+    chunk_shape = meta["chunk_shape"]
+    if not chunk_path.exists():
+        return np.full(chunk_shape, meta["fill_value"], dtype=meta["dtype"])
+    raw = chunk_path.read_bytes()
+    return decode_chunk_bytes(raw, meta["codecs"], meta["dtype"], chunk_shape)
+
+
+def read_full_zarr_array(array_dir: Path) -> np.ndarray:
+    """Read an entire zarr v3 array (stitching together every chunk)."""
+    meta = parse_array_metadata(array_dir)
+    shape, chunk_shape = meta["shape"], meta["chunk_shape"]
+
+    if not shape:  # 0-d array
+        return read_chunk_at(meta, ())
+
+    n_chunks = [math.ceil(shape[d] / chunk_shape[d]) if shape[d] else 0 for d in range(len(shape))]
+    full = np.full(shape, meta["fill_value"], dtype=meta["dtype"])
+    for index in itertools.product(*(range(n) for n in n_chunks)):
+        chunk = read_chunk_at(meta, index)
+        starts = [index[d] * chunk_shape[d] for d in range(len(shape))]
+        ends = [min(starts[d] + chunk_shape[d], shape[d]) for d in range(len(shape))]
+        dst = tuple(slice(s, e) for s, e in zip(starts, ends))
+        src = tuple(slice(0, e - s) for s, e in zip(starts, ends))
+        full[dst] = chunk[src]
+    return full
+
+# --------------------------------------------------------------------------- #
+# 2. Environment detection + artifact resolution + repo materialization
+# --------------------------------------------------------------------------- #
+def is_kaggle_env() -> bool:
+    """True only when the definitive Kaggle marker `/kaggle/input` exists.
+    Deliberately NOT keyed on `/kaggle/working` - a local dry run can
+    create that directory, and keying on it would flip an off-Kaggle
+    execution into attempting a real (impossible) artifact run, breaking
+    clean notebook execution off-Kaggle.
+    """
+    return Path("/kaggle/input").exists()
+
+
+def _artifact_entry_status(artifact_dir: Path) -> dict:
+    return {entry: (artifact_dir / entry).exists() for entry in ARTIFACT_REQUIRED_ENTRIES}
+
+
+def resolve_artifact(candidate_dirs: Sequence[str] = ARTIFACT_CANDIDATE_DIRS) -> dict:
+    """Returns the first candidate artifact mount that contains every
+    required entry (manifest, predict script, weights, wheels). Never
+    assumes availability - records which candidates were checked and why
+    each was rejected, so a hidden rerun with a differently-named mount
+    is diagnosable.
+    """
+    checked = []
+    for candidate in candidate_dirs:
+        artifact_dir = Path(candidate)
+        if not artifact_dir.exists():
+            checked.append({"path": candidate, "exists": False, "entries": {}})
+            continue
+        status = _artifact_entry_status(artifact_dir)
+        checked.append({"path": candidate, "exists": True, "entries": status})
+        if all(status.values()):
+            return {"resolved": True, "artifact_dir": str(artifact_dir), "checked": checked}
+    return {"resolved": False, "artifact_dir": None, "checked": checked}
+
+
+def materialize_repo(artifact_dir: Path, working_dir: Path = Path(KAGGLE_WORKING_DIR)) -> dict:
+    """Copies the artifact's `repo/` to `/kaggle/working/tracking_repo` and
+    places the weights under `tracking_repo/weights` (symlink preferred,
+    copy fallback). Idempotent: a re-run replaces an existing tracking_repo
+    rather than erroring.
+    """
+    repo_src = artifact_dir / "repo"
+    repo_dst = working_dir / "tracking_repo"
+    if repo_dst.exists():
+        shutil.rmtree(repo_dst)
+    shutil.copytree(repo_src, repo_dst)
+
+    weights_src = artifact_dir / "weights"
+    weights_dst = repo_dst / "weights"
+    weights_mode = None
+    if weights_dst.exists() or weights_dst.is_symlink():
+        if weights_dst.is_symlink() or weights_dst.is_file():
+            weights_dst.unlink()
+        else:
+            shutil.rmtree(weights_dst)
+    try:
+        weights_dst.symlink_to(weights_src, target_is_directory=True)
+        weights_mode = "symlink"
+    except OSError:
+        shutil.copytree(weights_src, weights_dst)
+        weights_mode = "copy"
+
+    return {
+        "repo_src": str(repo_src), "repo_dst": str(repo_dst),
+        "weights_src": str(weights_src), "weights_dst": str(weights_dst), "weights_mode": weights_mode,
+    }
+
+
+def write_sitecustomize(locations: Sequence[Path] | None = None) -> list[str]:
+    """Writes the polars Float16 compatibility shim as sitecustomize.py at
+    each location so every subprocess launched with these dirs on its path
+    applies the patch on interpreter start.
+    """
+    if locations is None:
+        locations = [Path(KAGGLE_WORKING_DIR), Path(TRACKING_REPO_DIR), Path(TRACKING_REPO_DIR) / "src"]
+    written = []
+    for loc in locations:
+        loc.mkdir(parents=True, exist_ok=True)
+        target = loc / "sitecustomize.py"
+        target.write_text(SITECUSTOMIZE_CONTENT)
+        written.append(str(target))
+    return written
+
+
+def build_subprocess_env(base_env: dict | None = None, path_entries: Sequence[str] = SUBPROCESS_PATH_ENTRIES) -> dict:
+    """Returns an environment dict whose PYTHONPATH is prefixed with the
+    reference repo's three required roots (preserving any existing
+    PYTHONPATH), for every subprocess this runner launches.
+    """
+    env = dict(os.environ if base_env is None else base_env)
+    existing = env.get("PYTHONPATH", "")
+    parts = list(path_entries) + ([existing] if existing else [])
+    env["PYTHONPATH"] = os.pathsep.join(parts)
+    return env
+
+# --------------------------------------------------------------------------- #
+# 3. Dependency installation (offline wheels only) + import verification
+# --------------------------------------------------------------------------- #
+def build_pip_install_command(packages: Sequence[str], wheels_dir: Path) -> list[str]:
+    """A single offline pip install command: `--no-index --find-links
+    <wheels>` (only the bundled wheels are ever considered) and ALWAYS
+    `--no-deps` (pip may never pull or resolve a replacement for a
+    protected core package - or anything else - from an index).
+    """
+    return [
+        sys.executable, "-m", "pip", "install", "--no-index",
+        "--find-links", str(wheels_dir), "--no-deps", *packages,
+    ]
+
+
+def install_dependencies(wheels_dir: Path, env: dict, phases: Sequence[Sequence[str]] = WHEEL_INSTALL_PHASES) -> dict:
+    """Runs the two-phase offline install (polars first, then the rest).
+    Every command is `--no-index --find-links <wheels> --no-deps`, so no
+    protected core package (numpy/scipy/numba/llvmlite/torch/pandas) can
+    ever be swapped by dependency resolution. Records each phase's command
+    + return code + captured output for the dependency report.
+    """
+    phase_results = []
+    all_ok = True
+    for i, packages in enumerate(phases):
+        cmd = build_pip_install_command(packages, wheels_dir)
+        proc = subprocess.run(cmd, env=env, capture_output=True, text=True)
+        ok = proc.returncode == 0
+        all_ok = all_ok and ok
+        phase_results.append({
+            "phase": i, "packages": list(packages), "command": cmd, "returncode": proc.returncode,
+            "ok": ok, "stdout_tail": proc.stdout[-4000:], "stderr_tail": proc.stderr[-4000:],
+        })
+        print(f"  [install phase {i}] {' '.join(packages)} -> rc={proc.returncode}")
+        if not ok:
+            print(f"  [install phase {i}] FAILED:\n{proc.stderr[-2000:]}")
+    return {
+        "wheels_dir": str(wheels_dir), "protected_packages": PROTECTED_PACKAGES,
+        "phases": phase_results, "all_ok": all_ok,
+    }
+
+
+def verify_imports(env: dict, modules: Sequence[str] = IMPORT_CHECK_MODULES) -> dict:
+    """Runs a FRESH subprocess (so it picks up sitecustomize + the newly-
+    installed wheels + PYTHONPATH) that imports every required module,
+    printing OK/FAIL per module. Returns the parsed per-module result.
+    """
+    check_src = (
+        "import importlib, json\n"
+        f"mods = {list(modules)!r}\n"
+        "res = {}\n"
+        "for m in mods:\n"
+        "    try:\n"
+        "        importlib.import_module(m)\n"
+        "        res[m] = True\n"
+        "    except Exception as e:\n"
+        "        res[m] = f'ERROR: {type(e).__name__}: {e}'\n"
+        "print('IMPORT_CHECK_JSON=' + json.dumps(res))\n"
+    )
+    proc = subprocess.run([sys.executable, "-c", check_src], env=env, capture_output=True, text=True)
+    parsed = {}
+    for line in proc.stdout.splitlines():
+        if line.startswith("IMPORT_CHECK_JSON="):
+            parsed = json.loads(line[len("IMPORT_CHECK_JSON="):])
+            break
+    all_ok = bool(parsed) and all(v is True for v in parsed.values())
+    return {"returncode": proc.returncode, "modules": parsed, "all_ok": all_ok,
+            "stderr_tail": proc.stderr[-2000:]}
+
+# --------------------------------------------------------------------------- #
+# 4. Dynamic split generation (hidden-rerun safe - never hardcodes public
+#    dataset names)
+# --------------------------------------------------------------------------- #
+def _strip_zarr(name: str) -> str:
+    return name[:-5] if name.endswith(".zarr") else name
+
+
+def discover_test_datasets_from_dir(test_dir: Path) -> list[str]:
+    """Discovers currently-mounted test dataset names from the test dir -
+    either `<name>.zarr` stores or `<name>/` dataset directories - with
+    the `.zarr` suffix stripped. Returns a sorted, de-duplicated list.
+    """
+    if not test_dir.exists():
+        return []
+    names = set()
+    for child in test_dir.iterdir():
+        if child.name.startswith("."):
+            continue
+        if child.is_dir():
+            names.add(_strip_zarr(child.name))
+    return sorted(names)
+
+
+def discover_test_datasets_from_sample_submission(sample_submission_path: Path) -> list[str]:
+    """Discovers test dataset names from the mounted sample_submission.csv's
+    `dataset` column (the competition's own source of truth), `.zarr`
+    stripped. Returns a sorted, de-duplicated list.
+    """
+    if not sample_submission_path.exists():
+        return []
+    df = pd.read_csv(sample_submission_path)
+    if "dataset" not in df.columns:
+        return []
+    return sorted({_strip_zarr(str(d)) for d in df["dataset"].dropna().unique()})
+
+
+def discover_test_datasets(test_dir: Path, sample_submission_path: Path) -> dict:
+    """Prefers sample_submission's dataset column (competition source of
+    truth); falls back to the mounted test dir. Returns both sources plus
+    the chosen list, so the choice is auditable in the diagnostic.
+    """
+    from_submission = discover_test_datasets_from_sample_submission(sample_submission_path)
+    from_dir = discover_test_datasets_from_dir(test_dir)
+    if from_submission:
+        chosen, source = from_submission, "sample_submission"
+    elif from_dir:
+        chosen, source = from_dir, "test_dir"
+    else:
+        chosen, source = [], "none"
+    return {"chosen": chosen, "source": source, "from_sample_submission": from_submission, "from_test_dir": from_dir}
+
+
+def build_canonical_splits(dataset_names: Sequence[str]) -> list:
+    """The canonical splits schema the predict script accepts: a LIST whose
+    element 0 is the fold-0 dict with `test` set to the discovered dataset
+    names. predict_unet_transformer.py does `folds[fold]["test"]` with an
+    INTEGER `fold` (0), so the top-level JSON MUST be a list - a
+    `{"0": {...}}` dict would json.load into STRING keys and raise
+    `KeyError: 0` at predict time.
+    """
+    return [{"test": list(dataset_names), "train": [], "val": []}]
+
+
+def rewrite_template_splits(template, dataset_names: Sequence[str]) -> list | None:
+    """Rewrites a template into a LIST whose element 0's `test` is the
+    discovered names (predict indexes `folds[0]` with an integer). Handles:
+      - list template:          [{"test": [...]}, ...]
+      - splits-list template:   {"splits": [{"test": [...]}, ...]}
+      - numbered-dict template: {"0": {"test": [...]}, "1": {...}}
+    Fold 0's other keys (train/val) are preserved where present. Returns
+    None for an unrecognized shape so the caller rebuilds canonically. The
+    result is ALWAYS a list - never a `{"0": ...}` dict.
+    """
+    names = list(dataset_names)
+    if isinstance(template, list) and template and isinstance(template[0], dict):
+        new = [dict(e) if isinstance(e, dict) else e for e in template]
+        new[0] = dict(new[0])
+        new[0]["test"] = names
+        return new
+    if isinstance(template, dict) and isinstance(template.get("splits"), list) and template["splits"] and isinstance(template["splits"][0], dict):
+        new = [dict(e) if isinstance(e, dict) else e for e in template["splits"]]
+        new[0] = dict(new[0])
+        new[0]["test"] = names
+        return new
+    if isinstance(template, dict) and isinstance(template.get("0"), dict):
+        split0 = dict(template["0"])
+        split0["test"] = names
+        return [split0]
+    return None
+
+
+def _dataset_present_in_test_dir(test_dir: Path, name: str) -> bool:
+    return (test_dir / name).exists() or (test_dir / f"{name}.zarr").exists()
+
+
+def prepare_splits(
+    test_dir: Path, sample_submission_path: Path, template_path: Path | None,
+    out_splits_path: Path, diagnostic_path: Path,
+) -> dict:
+    """Builds a splits file for the CURRENTLY MOUNTED test data:
+      1. discover the mounted dataset names,
+      2. rewrite a template's split-0 test list with them (or build
+         canonically if there's no template / an unrecognized shape),
+      3. VERIFY every split-0 name actually exists in the test dir -
+         rebuild canonically from only the verified-present names if not,
+      4. write the splits file the predict script will read, plus a
+         diagnostic recording exactly what was discovered and written.
+    Public dataset names are never hardcoded; the file only ever contains
+    names that exist on disk right now.
+    """
+    discovery = discover_test_datasets(test_dir, sample_submission_path)
+    names = discovery["chosen"]
+
+    template = None
+    template_used = False
+    if template_path is not None and template_path.exists():
+        try:
+            template = json.loads(template_path.read_text())
+        except Exception as exc:
+            print(f"  [splits] could not parse template {template_path}: {exc!r} - building canonically")
+
+    splits = None
+    if template is not None:
+        splits = rewrite_template_splits(template, names)
+        template_used = splits is not None
+    if splits is None:
+        splits = build_canonical_splits(names)
+
+    # `splits` is ALWAYS a list now - fold 0 is `splits[0]` (predict indexes
+    # folds[0] with an integer). Verify split-0 test names exist on disk; if
+    # any is missing (e.g. a template nested names somewhere we didn't
+    # rewrite), rebuild canonically from only the verified-present names.
+    split0 = splits[0] if isinstance(splits, list) and splits and isinstance(splits[0], dict) else {}
+    split0_test = list(split0.get("test", []))
+
+    verified_present = [n for n in split0_test if _dataset_present_in_test_dir(test_dir, n)]
+    missing = [n for n in split0_test if not _dataset_present_in_test_dir(test_dir, n)]
+    rebuilt_canonical = False
+    if missing or not split0_test:
+        present_names = [n for n in names if _dataset_present_in_test_dir(test_dir, n)] or names
+        splits = build_canonical_splits(present_names)
+        rebuilt_canonical = True
+        template_used = False
+        split0_test = present_names
+        verified_present = [n for n in present_names if _dataset_present_in_test_dir(test_dir, n)]
+        missing = [n for n in present_names if not _dataset_present_in_test_dir(test_dir, n)]
+
+    out_splits_path.parent.mkdir(parents=True, exist_ok=True)
+    out_splits_path.write_text(json.dumps(splits, indent=2))
+
+    # Verify the WRITTEN file matches EXACTLY how predict_unet_transformer.py
+    # reads it: `folds = json.load(f); test_names = folds[fold]["test"]` with
+    # `fold == 0` (an integer). The file MUST be a list and folds[0]["test"]
+    # MUST equal the discovered names - the exact regression the KeyError: 0
+    # fallback surfaced (a {"0": ...} dict json.loads to string keys).
+    with open(out_splits_path) as f:
+        folds = json.load(f)
+    assert isinstance(folds, list), "splits file must be a JSON list (predict indexes folds[0] with an integer)"
+    assert len(folds) > 0, "splits list must be non-empty"
+    assert isinstance(folds[0], dict), "splits[0] must be a dict"
+    assert folds[0]["test"] == split0_test, "folds[0]['test'] must equal the discovered test names"
+
+    diagnostic = {
+        "discovered": discovery, "template_path": str(template_path) if template_path else None,
+        "template_used": template_used, "rebuilt_canonical": rebuilt_canonical,
+        "split0_test_names": split0_test, "verified_present": verified_present, "missing": missing,
+        "out_splits_path": str(out_splits_path),
+        "final_schema": "list", "predict_index_check": "folds[0]['test'] OK",
+    }
+    diagnostic_path.parent.mkdir(parents=True, exist_ok=True)
+    diagnostic_path.write_text(json.dumps(diagnostic, indent=2))
+    print(f"  [splits] wrote {out_splits_path} (list schema) with {len(split0_test)} test dataset(s): {split0_test}")
+    return {"splits": splits, "split0_test_names": split0_test, "diagnostic": diagnostic}
+
+# --------------------------------------------------------------------------- #
+# 5. Prediction command builder + runner
+# --------------------------------------------------------------------------- #
+PREDICT_SCRIPT_REL = "scripts/predict_unet_transformer.py"
+WEIGHTS_REL = "weights/unet_transformer/split_0/edge_predictor_best.pth"
+SPLITS_FILENAME = "kaggle_test_splits_50ep.json"
+
+PREDICT_HYPERPARAMS = {
+    "unet_batch_size": "4", "det_threshold": "0.99", "ilp_edge_weight": "-1.0",
+    "ilp_appearance_weight": "0.1", "ilp_disappearance_weight": "0.1", "ilp_division_weight": "1.0",
+}
+
+
+def build_predict_command(
+    data_dir: str = f"{KAGGLE_COMPETITION_INPUT_DIR}/test", splits_filename: str = SPLITS_FILENAME,
+    split: str = "0", weights_rel: str = WEIGHTS_REL, hyperparams: dict = PREDICT_HYPERPARAMS,
+) -> list[str]:
+    """Builds the exact GPU predict command (run with cwd=tracking_repo),
+    mirroring the successful manual public run. `--use-ilp` is a bare flag.
+    """
+    return [
+        sys.executable, PREDICT_SCRIPT_REL,
+        "--data-dir", data_dir,
+        "--splits", splits_filename,
+        "--split", split,
+        "--weights", weights_rel,
+        "--unet-batch-size", hyperparams["unet_batch_size"],
+        "--det-threshold", hyperparams["det_threshold"],
+        "--ilp-edge-weight", hyperparams["ilp_edge_weight"],
+        "--ilp-appearance-weight", hyperparams["ilp_appearance_weight"],
+        "--ilp-disappearance-weight", hyperparams["ilp_disappearance_weight"],
+        "--ilp-division-weight", hyperparams["ilp_division_weight"],
+        "--use-ilp",
+    ]
+
+
+def run_prediction(command: Sequence[str], cwd: Path, env: dict) -> dict:
+    """Runs the predict command from `cwd` (tracking_repo). Streams nothing
+    but captures stdout/stderr tails and the return code for the execute
+    report. Does not raise on a nonzero return code - the caller decides
+    whether that is fatal (the top-level fallback handles it).
+    """
+    proc = subprocess.run(list(command), cwd=str(cwd), env=env, capture_output=True, text=True)
+    result = {
+        "command": list(command), "cwd": str(cwd), "returncode": proc.returncode,
+        "ok": proc.returncode == 0, "stdout_tail": proc.stdout[-8000:], "stderr_tail": proc.stderr[-8000:],
+    }
+    print(f"  [predict] rc={proc.returncode}")
+    if proc.returncode != 0:
+        print(f"  [predict] stderr tail:\n{proc.stderr[-2000:]}")
+    return result
+
+# --------------------------------------------------------------------------- #
+# 6. GEFF -> submission conversion
+# --------------------------------------------------------------------------- #
+def _read_geff_array(geff_root: Path, rel_path: str):
+    """Reads one GEFF array (e.g. "nodes/ids", "nodes/props/t/values") if
+    present, else returns None. Uses the version-independent manual zarr
+    reader first; falls back to the installed `zarr` package (guaranteed
+    present on Kaggle from the artifact wheels) if a chunk codec the manual
+    reader lacks was used to write the predictions.
+    """
+    array_dir = geff_root / Path(rel_path)
+    if not (array_dir / "zarr.json").exists():
+        return None
+    try:
+        return read_full_zarr_array(array_dir)
+    except Exception:
+        try:
+            import zarr  # noqa: F401
+            return zarr.open(store=str(geff_root), path=rel_path, mode="r")[:]
+        except Exception as exc:
+            print(f"  [geff] could not read {rel_path} under {geff_root}: {exc!r}")
+            return None
+
+
+def _geff_root_of(candidate: Path) -> Path | None:
+    """Returns `candidate` if it is itself a GEFF store, else searches one
+    level down for a nested GEFF store (some writers emit `<name>/tracks`).
+    """
+    if (candidate / "nodes" / "ids" / "zarr.json").exists():
+        return candidate
+    if candidate.is_dir():
+        for child in candidate.iterdir():
+            if child.is_dir() and (child / "nodes" / "ids" / "zarr.json").exists():
+                return child
+    return None
+
+
+def read_geff_graph(geff_root: Path) -> dict:
+    """Reads a GEFF prediction store into plain arrays: node ids + t/z/y/x,
+    optional node `solution` mask (keep only selected nodes), edge id pairs,
+    optional edge `solution` mask (keep only selected edges), and optional
+    `edge_prob` / `edge_dist` used only for deterministic tie-breaking when
+    enforcing degree constraints.
+    """
+    node_ids = _read_geff_array(geff_root, "nodes/ids")
+    if node_ids is None:
+        raise ValueError(f"{geff_root}: no nodes/ids array")
+    node_ids = np.asarray(node_ids).reshape(-1)
+    t = _read_geff_array(geff_root, "nodes/props/t/values")
+    z = _read_geff_array(geff_root, "nodes/props/z/values")
+    y = _read_geff_array(geff_root, "nodes/props/y/values")
+    x = _read_geff_array(geff_root, "nodes/props/x/values")
+    node_solution = _read_geff_array(geff_root, "nodes/props/solution/values")
+
+    edge_ids = _read_geff_array(geff_root, "edges/ids")
+    edge_solution = _read_geff_array(geff_root, "edges/props/solution/values")
+    edge_prob = _read_geff_array(geff_root, "edges/props/edge_prob/values")
+    edge_dist = _read_geff_array(geff_root, "edges/props/edge_dist/values")
+
+    def _col(arr, n):
+        return np.asarray(arr).reshape(-1) if arr is not None else np.zeros(n, dtype=float)
+
+    n_nodes = len(node_ids)
+    nodes = pd.DataFrame({
+        "raw_id": node_ids.astype(np.int64),
+        "t": _col(t, n_nodes), "z": _col(z, n_nodes), "y": _col(y, n_nodes), "x": _col(x, n_nodes),
+    })
+    if node_solution is not None:
+        mask = np.asarray(node_solution).reshape(-1).astype(bool)
+        nodes = nodes[mask].reset_index(drop=True)
+
+    if edge_ids is None or np.asarray(edge_ids).size == 0:
+        edges = pd.DataFrame(columns=["raw_source", "raw_target", "edge_prob", "edge_dist"])
+    else:
+        edge_ids = np.asarray(edge_ids)
+        if edge_ids.ndim == 1:
+            edge_ids = edge_ids.reshape(-1, 2)
+        n_edges = edge_ids.shape[0]
+        edges = pd.DataFrame({
+            "raw_source": edge_ids[:, 0].astype(np.int64), "raw_target": edge_ids[:, 1].astype(np.int64),
+            "edge_prob": _col(edge_prob, n_edges), "edge_dist": _col(edge_dist, n_edges),
+        })
+        if edge_solution is not None:
+            emask = np.asarray(edge_solution).reshape(-1).astype(bool)
+            edges = edges[emask].reset_index(drop=True)
+
+    return {"nodes": nodes, "edges": edges,
+            "has_edge_prob": edge_prob is not None, "has_edge_dist": edge_dist is not None}
+
+
+def convert_geff_graph_to_rows(
+    geff_graph: dict, dataset_name: str, next_id: int, next_node_id: int,
+) -> tuple[list[dict], int, int, dict]:
+    """Converts one GEFF graph into submission node/edge rows, threading
+    global-consecutive `id` and globally-unique `node_id` counters across
+    datasets. Remaps raw GEFF node ids to positive consecutive Kaggle
+    node_ids (per dataset); keeps only edges whose BOTH endpoints survived
+    node selection; requires target_t > source_t; drops duplicate directed
+    edges; enforces in_degree <= 1 and out_degree <= 2, breaking ties by
+    higher edge_prob then lower edge_dist then stable order.
+    """
+    nodes = geff_graph["nodes"].copy()
+    edges = geff_graph["edges"].copy()
+
+    # Remap raw -> consecutive Kaggle node_id (globally unique via next_node_id).
+    raw_to_kaggle: dict[int, int] = {}
+    node_rows = []
+    node_t = {}
+    kid = next_node_id
+    for row in nodes.itertuples():
+        raw_to_kaggle[int(row.raw_id)] = kid
+        node_t[kid] = int(row.t)
+        node_rows.append({"kaggle_node_id": kid, "t": int(row.t), "z": float(row.z), "y": float(row.y), "x": float(row.x)})
+        kid += 1
+    next_node_id_out = kid
+
+    stats = {
+        "dataset": dataset_name, "n_geff_nodes": len(nodes), "n_geff_edges": len(edges),
+        "n_edges_dangling_dropped": 0, "n_edges_time_order_dropped": 0,
+        "n_edges_duplicate_dropped": 0, "n_edges_indegree_dropped": 0, "n_edges_outdegree_dropped": 0,
+    }
+
+    kept_edges = []
+    for row in edges.itertuples():
+        s_raw, t_raw = int(row.raw_source), int(row.raw_target)
+        if s_raw not in raw_to_kaggle or t_raw not in raw_to_kaggle:
+            stats["n_edges_dangling_dropped"] += 1
+            continue
+        s_kid, t_kid = raw_to_kaggle[s_raw], raw_to_kaggle[t_raw]
+        if not (node_t[t_kid] > node_t[s_kid]):
+            stats["n_edges_time_order_dropped"] += 1
+            continue
+        kept_edges.append({
+            "source_id": s_kid, "target_id": t_kid,
+            "edge_prob": float(row.edge_prob), "edge_dist": float(row.edge_dist),
+        })
+
+    edges_df = pd.DataFrame(kept_edges, columns=["source_id", "target_id", "edge_prob", "edge_dist"])
+
+    if len(edges_df):
+        before = len(edges_df)
+        edges_df = edges_df.drop_duplicates(subset=["source_id", "target_id"], keep="first")
+        stats["n_edges_duplicate_dropped"] = before - len(edges_df)
+
+        # Rank edges best-first: higher edge_prob, then lower edge_dist, then
+        # stable order - so degree pruning keeps the most-confident edges.
+        edges_df = edges_df.assign(_order=np.arange(len(edges_df)))
+        edges_df = edges_df.sort_values(
+            ["edge_prob", "edge_dist", "_order"], ascending=[False, True, True]
+        ).reset_index(drop=True)
+
+        # in_degree <= 1: each target keeps only its single best incoming edge.
+        before = len(edges_df)
+        edges_df = edges_df.drop_duplicates(subset=["target_id"], keep="first")
+        stats["n_edges_indegree_dropped"] = before - len(edges_df)
+
+        # out_degree <= 2: each source keeps at most its 2 best outgoing edges.
+        before = len(edges_df)
+        edges_df = edges_df.groupby("source_id", sort=False, group_keys=False).head(2)
+        stats["n_edges_outdegree_dropped"] = before - len(edges_df)
+
+    rows = []
+    cur_id = next_id
+    for nr in node_rows:
+        rows.append({
+            "id": cur_id, "dataset": dataset_name, "row_type": "node", "node_id": nr["kaggle_node_id"],
+            "t": nr["t"], "z": nr["z"], "y": nr["y"], "x": nr["x"], "source_id": -1, "target_id": -1,
+        })
+        cur_id += 1
+    for er in edges_df.itertuples() if len(edges_df) else []:
+        rows.append({
+            "id": cur_id, "dataset": dataset_name, "row_type": "edge", "node_id": -1,
+            "t": -1, "z": -1, "y": -1, "x": -1, "source_id": int(er.source_id), "target_id": int(er.target_id),
+        })
+        cur_id += 1
+
+    stats["n_submission_nodes"] = len(node_rows)
+    stats["n_submission_edges"] = int(len(edges_df))
+    return rows, cur_id, next_node_id_out, stats
+
+
+def find_prediction_geff_stores(predictions_dir: Path) -> list[tuple[str, Path]]:
+    """Finds each dataset's GEFF prediction store under `predictions_dir`,
+    returning (dataset_name, geff_root) pairs. The dataset name is the store
+    directory's stem with any `.geff`/`.zarr` suffix stripped.
+    """
+    results = []
+    if not predictions_dir.exists():
+        return results
+    for child in sorted(predictions_dir.iterdir()):
+        if child.name.startswith("."):
+            continue
+        geff_root = _geff_root_of(child)
+        if geff_root is not None:
+            name = _strip_zarr(child.name)
+            if name.endswith(".geff"):
+                name = name[:-5]
+            results.append((name, geff_root))
+    return results
+
+
+def convert_predictions_to_submission(predictions_dir: Path, expected_datasets: Sequence[str]) -> tuple[pd.DataFrame, dict]:
+    """Converts every GEFF prediction store under `predictions_dir` into one
+    combined submission dataframe with globally-consecutive `id` and
+    globally-unique `node_id`. Records per-dataset conversion stats.
+    """
+    stores = find_prediction_geff_stores(predictions_dir)
+    all_rows = []
+    per_dataset = []
+    next_id, next_node_id = 0, 0
+    for dataset_name, geff_root in stores:
+        graph = read_geff_graph(geff_root)
+        rows, next_id, next_node_id, stats = convert_geff_graph_to_rows(graph, dataset_name, next_id, next_node_id)
+        all_rows.extend(rows)
+        per_dataset.append(stats)
+        print(f"  [geff] {dataset_name}: {stats['n_submission_nodes']} node(s), {stats['n_submission_edges']} edge(s)")
+
+    submission_df = pd.DataFrame(all_rows, columns=SUBMISSION_COLUMNS)
+    conversion = {
+        "predictions_dir": str(predictions_dir),
+        "n_stores_found": len(stores), "found_datasets": [n for n, _ in stores],
+        "expected_datasets": list(expected_datasets), "per_dataset": per_dataset,
+    }
+    return submission_df, conversion
+
+# --------------------------------------------------------------------------- #
+# 7. Validation (hidden-safe) + fallback writer + diagnostics
+# --------------------------------------------------------------------------- #
+def _per_dataset_degree_extremes(nodes: pd.DataFrame, edges: pd.DataFrame) -> tuple[int, int, int, int]:
+    """Returns (max_in_degree, max_out_degree, n_dangling, n_duplicate)
+    across all datasets, scoping node-id lookups per dataset (a foreign
+    submission's node_id is only unique WITHIN a dataset).
+    """
+    max_in, max_out, dangling, duplicate = 0, 0, 0, 0
+    for dataset, e in edges.groupby("dataset"):
+        valid_ids = set(nodes.loc[nodes["dataset"] == dataset, "node_id"])
+        good = e[e["source_id"].isin(valid_ids) & e["target_id"].isin(valid_ids)]
+        dangling += len(e) - len(good)
+        deduped = good.drop_duplicates(subset=["source_id", "target_id"])
+        duplicate += len(good) - len(deduped)
+        if len(deduped):
+            max_out = max(max_out, int(deduped.groupby("source_id").size().max()))
+            max_in = max(max_in, int(deduped.groupby("target_id").size().max()))
+    return max_in, max_out, dangling, duplicate
+
+
+def validate_reference_submission(df: pd.DataFrame, expected_datasets: Sequence[str]) -> tuple[bool, str, dict]:
+    """Hidden-safe structural + topology validation. The expected dataset
+    set comes from the caller (mounted sample_submission / test data), never
+    a hardcoded public set. Allows out_degree up to 2 (divisions) but
+    forbids in_degree > 1 (multi-parent), dangling edges, and duplicate
+    directed edges. Returns (all_passed, report, stats).
+    """
+    checks = []
+
+    def check(name, passed, detail=""):
+        checks.append({"name": name, "passed": bool(passed), "detail": detail})
+
+    check("columns match required schema", list(df.columns) == SUBMISSION_COLUMNS, f"got {list(df.columns)}")
+    na_cols = df.columns[df.isna().any()].tolist() if len(df) else []
+    check("no missing values", not na_cols, f"NaN columns: {na_cols}")
+    check("id consecutive from 0", df["id"].tolist() == list(range(len(df))))
+
+    present = set(df["dataset"].unique()) if len(df) else set()
+    expected = set(expected_datasets)
+    check("every expected dataset present", not (expected - present), f"missing: {sorted(expected - present)}")
+    check("no foreign/hardcoded-public datasets", not (present - expected), f"foreign: {sorted(present - expected)}")
+    check("row_type only node/edge", set(df["row_type"].unique()) <= {"node", "edge"} if len(df) else True)
+
+    nodes = df[df["row_type"] == "node"]
+    edges = df[df["row_type"] == "edge"]
+    node_id_unique_per_dataset = all(g["node_id"].is_unique for _, g in nodes.groupby("dataset")) if len(nodes) else True
+    check("node_id unique per dataset", node_id_unique_per_dataset)
+
+    max_in, max_out, dangling, duplicate = _per_dataset_degree_extremes(nodes, edges)
+    check("no dangling edges", dangling == 0, f"{dangling} dangling")
+    check("no duplicate directed edges", duplicate == 0, f"{duplicate} duplicate")
+    check("no in_degree > 1", max_in <= 1, f"max_in_degree={max_in}")
+    check("no out_degree > 2", max_out <= 2, f"max_out_degree={max_out}")
+
+    lines = ["Reference submission validation:"]
+    all_passed = True
+    for c in checks:
+        mark = "PASS" if c["passed"] else "FAIL"
+        if not c["passed"]:
+            all_passed = False
+        line = f"  [{mark}] {c['name']}"
+        if c["detail"] and not c["passed"]:
+            line += f"  -- {c['detail']}"
+        lines.append(line)
+    stats = {"n_node_rows": len(nodes), "n_edge_rows": len(edges), "max_in_degree": max_in,
+             "max_out_degree": max_out, "dangling": dangling, "duplicate": duplicate,
+             "datasets": sorted(present)}
+    return all_passed, "\n".join(lines), stats
+
+
+def compute_edge_distance_summary(df: pd.DataFrame) -> dict:
+    """Physical (µm) edge-length percentiles over all valid edges, using
+    the competition's per-axis voxel scale.
+    """
+    nodes = df[df["row_type"] == "node"]
+    edges = df[df["row_type"] == "edge"]
+    if len(edges) == 0 or len(nodes) == 0:
+        return {}
+    coord = {}
+    for row in nodes.itertuples():
+        coord[(row.dataset, int(row.node_id))] = (float(row.z), float(row.y), float(row.x))
+    dists = []
+    for row in edges.itertuples():
+        s = coord.get((row.dataset, int(row.source_id)))
+        t = coord.get((row.dataset, int(row.target_id)))
+        if s is None or t is None:
+            continue
+        dz = (t[0] - s[0]) * VOXEL_SIZE_UM["z"]
+        dy = (t[1] - s[1]) * VOXEL_SIZE_UM["y"]
+        dx = (t[2] - s[2]) * VOXEL_SIZE_UM["x"]
+        dists.append(float(np.sqrt(dz * dz + dy * dy + dx * dx)))
+    if not dists:
+        return {}
+    s = pd.Series(dists)
+    return {"mean": float(s.mean()), "median": float(s.median()), "p90": float(s.quantile(0.90)),
+            "p95": float(s.quantile(0.95)), "p99": float(s.quantile(0.99)), "max": float(s.max())}
+
+
+def write_fallback_submission(sample_submission_path: Path, out_path: Path) -> dict:
+    """Writes a VALID (if low-scoring) submission.csv derived from the
+    mounted sample_submission.csv: exact columns, no missing values (node
+    rows get source/target = -1; edge rows get node/t/z/y/x = -1; any
+    remaining NaN -> -1), id renumbered consecutively from 0. Used only
+    when the learned pipeline failed and no submission.csv exists, so a
+    hidden failure still produces a scorable file instead of an exception.
+    """
+    df = pd.read_csv(sample_submission_path)
+    for col in SUBMISSION_COLUMNS:
+        if col not in df.columns:
+            df[col] = -1
+    df = df[SUBMISSION_COLUMNS].copy()
+    if "row_type" in df.columns and len(df):
+        is_node = df["row_type"] == "node"
+        is_edge = df["row_type"] == "edge"
+        for col in ("source_id", "target_id"):
+            df.loc[is_node, col] = df.loc[is_node, col].fillna(-1)
+        for col in ("node_id", "t", "z", "y", "x"):
+            df.loc[is_edge, col] = df.loc[is_edge, col].fillna(-1)
+    df = df.fillna(-1)
+    df["id"] = range(len(df))
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(out_path, index=False)
+    return {"source": str(sample_submission_path), "out_path": str(out_path), "shape": list(df.shape)}
+
+
+def write_reference_diagnostics(df: pd.DataFrame, valid: bool, stats: dict, out_dir: Path) -> None:
+    """Writes the variant-counts, topology-validation, and edge-distance
+    diagnostic CSVs for the reference submission.
+    """
+    n_nodes = int((df["row_type"] == "node").sum()) if len(df) else 0
+    n_edges = int((df["row_type"] == "edge").sum()) if len(df) else 0
+    pd.DataFrame([{"variant": "reference_learned_graph", "valid": valid, "total_rows": len(df),
+                   "n_node_rows": n_nodes, "n_edge_rows": n_edges}]).to_csv(
+        out_dir / "milestone16_reference_variant_counts.csv", index=False)
+    pd.DataFrame([{"variant": "reference_learned_graph", "max_in_degree": stats.get("max_in_degree"),
+                   "max_out_degree": stats.get("max_out_degree"), "dangling": stats.get("dangling"),
+                   "duplicate": stats.get("duplicate")}]).to_csv(
+        out_dir / "milestone16_reference_topology_validation.csv", index=False)
+    edge_summary = compute_edge_distance_summary(df)
+    pd.DataFrame([{"variant": "reference_learned_graph", **edge_summary}]).to_csv(
+        out_dir / "milestone16_reference_edge_distance_stats.csv", index=False)
+
+# --------------------------------------------------------------------------- #
+# 8. Orchestration + top-level graceful fallback
+# --------------------------------------------------------------------------- #
+_RUN_LOG: list[str] = []
+
+
+def log(msg: str) -> None:
+    print(msg)
+    _RUN_LOG.append(str(msg))
+
+
+def _write_log(out_dir: Path) -> None:
+    try:
+        (out_dir / "milestone16_reference_runner.log").write_text("\n".join(_RUN_LOG) + "\n")
+    except Exception as exc:
+        print(f"[warn] could not write runner log: {exc!r}")
+
+
+def run_pipeline(working_dir: str = KAGGLE_WORKING_DIR, competition_dir: str = KAGGLE_COMPETITION_INPUT_DIR) -> dict:
+    """The full learned-graph flow: resolve artifact -> materialize repo ->
+    sitecustomize -> offline wheel install -> import check -> DYNAMIC splits
+    -> GPU predict -> GEFF->submission conversion -> validation -> write
+    submission.csv. Raises on any fatal step so the top-level fallback can
+    guarantee a valid submission.csv still exists.
+    """
+    out_dir = Path(working_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    comp = Path(competition_dir)
+    test_dir = comp / "test"
+    sample_submission_path = comp / "sample_submission.csv"
+
+    log("=== Milestone 16: reference learned-graph runner ===")
+
+    artifact = resolve_artifact()
+    (out_dir / "milestone16_artifact_selection.json").write_text(json.dumps(artifact, indent=2))
+    if not artifact["resolved"]:
+        raise RuntimeError("support-pack artifact not found at any candidate mount (see milestone16_artifact_selection.json)")
+    artifact_dir = Path(artifact["artifact_dir"])
+    log(f"Artifact resolved: {artifact_dir}")
+
+    materialize = materialize_repo(artifact_dir, out_dir)
+    log(f"Repo materialized to {materialize['repo_dst']} (weights: {materialize['weights_mode']})")
+    write_sitecustomize()
+    env = build_subprocess_env()
+
+    dep_report = install_dependencies(artifact_dir / "wheels", env)
+    (out_dir / "milestone16_dependency_report.json").write_text(json.dumps(dep_report, indent=2))
+    if not dep_report["all_ok"]:
+        raise RuntimeError("offline wheel install failed (see milestone16_dependency_report.json)")
+
+    import_report = verify_imports(env)
+    if not import_report["all_ok"]:
+        raise RuntimeError(f"post-install import check failed: {import_report['modules']}")
+    log(f"Imports OK: {list(import_report['modules'].keys())}")
+
+    repo_dst = Path(materialize["repo_dst"])
+    shipped_template = repo_dst / SPLITS_FILENAME
+    splits_result = prepare_splits(
+        test_dir=test_dir, sample_submission_path=sample_submission_path,
+        template_path=shipped_template if shipped_template.exists() else None,
+        out_splits_path=repo_dst / SPLITS_FILENAME, diagnostic_path=out_dir / "milestone16_splits.json",
+    )
+
+    command = build_predict_command()
+    (out_dir / "milestone16_run_command.json").write_text(json.dumps({"command": command, "cwd": str(repo_dst)}, indent=2))
+    log(f"Predict command: {' '.join(command)}")
+
+    exec_result = run_prediction(command, cwd=repo_dst, env=env)
+    (out_dir / "milestone16_execute_result.json").write_text(json.dumps(exec_result, indent=2))
+    if not exec_result["ok"]:
+        raise RuntimeError("predict script returned nonzero (see milestone16_execute_result.json)")
+
+    predictions_dir = repo_dst / "predictions" / "unknown" / "unet_transformer" / "split_0"
+    expected_datasets = discover_test_datasets(test_dir, sample_submission_path)["chosen"]
+    submission_df, conversion = convert_predictions_to_submission(predictions_dir, expected_datasets)
+    (out_dir / "milestone16_geff_conversion.json").write_text(json.dumps(conversion, indent=2, default=str))
+
+    valid, report, stats = validate_reference_submission(submission_df, expected_datasets)
+    log(report)
+    if not valid:
+        raise RuntimeError("converted reference submission FAILED validation (falling back)")
+
+    submission_path = out_dir / "submission.csv"
+    submission_df.to_csv(submission_path, index=False)
+    write_reference_diagnostics(submission_df, valid, stats, out_dir)
+
+    report_obj = {
+        "artifact_dir": str(artifact_dir), "expected_datasets": expected_datasets,
+        "split0_test_names": splits_result["split0_test_names"], "submission_shape": list(submission_df.shape),
+        "n_node_rows": stats["n_node_rows"], "n_edge_rows": stats["n_edge_rows"],
+        "max_in_degree": stats["max_in_degree"], "max_out_degree": stats["max_out_degree"],
+        "valid": valid, "final_source": "reference_learned_graph",
+        "final_instruction": "submission.csv built and validated. Do not submit until user reviews.",
+    }
+    (out_dir / "milestone16_reference_submission_report.json").write_text(json.dumps(report_obj, indent=2, default=str))
+    log(f"submission.csv written: shape={submission_df.shape}, source=reference_learned_graph")
+    log("submission.csv built and validated. Do not submit until user reviews.")
+    return {"submission_df": submission_df, "final_source": "reference_learned_graph", "valid": valid, "report": report_obj}
+
+
+def run_with_fallback(working_dir: str = KAGGLE_WORKING_DIR, competition_dir: str = KAGGLE_COMPETITION_INPUT_DIR) -> dict:
+    """Runs the learned pipeline; on ANY failure, if no submission.csv was
+    produced, writes a valid fallback from sample_submission.csv so a
+    hidden rerun still yields a scorable file instead of a thrown
+    exception. Re-raises ONLY if even the fallback cannot be written.
+    """
+    _RUN_LOG.clear()
+    out_dir = Path(working_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    submission_path = out_dir / "submission.csv"
+    sample_submission_path = Path(competition_dir) / "sample_submission.csv"
+    try:
+        result = run_pipeline(working_dir, competition_dir)
+        _write_log(out_dir)
+        return {"status": "ok", **result}
+    except Exception:
+        tb = traceback.format_exc()
+        log("[error] learned pipeline failed:\n" + tb)
+        if submission_path.exists():
+            log("submission.csv already exists; keeping it (not overwriting with fallback).")
+            _write_log(out_dir)
+            return {"status": "pipeline_failed_submission_exists"}
+        try:
+            fb = write_fallback_submission(sample_submission_path, submission_path)
+            (out_dir / "milestone16_failure_fallback_report.json").write_text(
+                json.dumps({"traceback": tb, "fallback": fb}, indent=2))
+            log("FALLBACK sample submission written because learned graph pipeline failed.")
+            _write_log(out_dir)
+            return {"status": "fallback_written", "fallback": fb}
+        except Exception:
+            fb_tb = traceback.format_exc()
+            try:
+                (out_dir / "milestone16_failure_fallback_report.json").write_text(
+                    json.dumps({"traceback": tb, "fallback_error": fb_tb}, indent=2))
+            except Exception:
+                pass
+            log("[fatal] could not write fallback submission either:\n" + fb_tb)
+            _write_log(out_dir)
+            raise
+
+# --------------------------------------------------------------------------- #
+# 11. Artifact introspection (runtime discovery of the reference's actual
+#     flags, weight splits, command, and post-processing scripts)
+# --------------------------------------------------------------------------- #
+import re
+
+# argparse flags that look like recovery/relinking/division/postprocess/
+# ensemble knobs - used to auto-detect whether Variant B is available.
+GAP_RELINK_FLAG_KEYWORDS = ("gap", "relink", "recover", "division", "merge",
+                            "postprocess", "post-process", "ensemble", "smooth", "close")
+
+
+def list_weight_splits(artifact_dir: Path) -> list[int]:
+    """Lists the split indices that actually ship an edge_predictor_best.pth
+    (weights/unet_transformer/split_<i>/edge_predictor_best.pth).
+    """
+    base = artifact_dir / "weights" / "unet_transformer"
+    splits: list[int] = []
+    if base.exists():
+        for d in sorted(base.iterdir()):
+            if d.is_dir() and d.name.startswith("split_") and (d / "edge_predictor_best.pth").exists():
+                try:
+                    splits.append(int(d.name.split("_", 1)[1]))
+                except ValueError:
+                    continue
+    return sorted(splits)
+
+
+def discover_predict_flags(predict_script_path: Path) -> list[str]:
+    """Greps the predict script's source for every argparse flag it
+    declares (`add_argument("--flag")`) - the definitive list of what the
+    script will accept, without ever executing it.
+    """
+    if not predict_script_path.exists():
+        return []
+    text = predict_script_path.read_text(errors="replace")
+    flags = set(re.findall(r"add_argument\(\s*['\"](--[A-Za-z0-9][A-Za-z0-9\-_]*)['\"]", text))
+    return sorted(flags)
+
+
+def discover_reference_commands(artifact_dir: Path, max_hits: int = 60) -> list[dict]:
+    """Scans the shipped repo/notebooks/readmes for lines that invoke
+    predict_unet_transformer.py - i.e. the original reference command(s),
+    so M17 can reproduce them exactly.
+    """
+    hits: list[dict] = []
+    exts = {".py", ".ipynb", ".md", ".sh", ".txt", ".json", ".cfg", ".yaml", ".yml"}
+    try:
+        for p in artifact_dir.rglob("*"):
+            if not p.is_file() or p.suffix.lower() not in exts:
+                continue
+            try:
+                text = p.read_text(errors="replace")
+            except Exception:
+                continue
+            if "predict_unet_transformer" not in text:
+                continue
+            for line in text.splitlines():
+                if "predict_unet_transformer" in line:
+                    hits.append({"file": str(p.relative_to(artifact_dir)), "line": line.strip()[:400]})
+                    if len(hits) >= max_hits:
+                        return hits
+    except OSError:
+        pass
+    return hits
+
+
+def list_postprocess_scripts(artifact_dir: Path) -> list[str]:
+    scripts_dir = artifact_dir / "repo" / "scripts"
+    if not scripts_dir.exists():
+        return []
+    return sorted(p.name for p in scripts_dir.glob("*.py"))
+
+
+def read_manifest(artifact_dir: Path) -> dict:
+    manifest_path = artifact_dir / "ARTIFACT_MANIFEST.json"
+    if not manifest_path.exists():
+        return {}
+    try:
+        return json.loads(manifest_path.read_text(errors="replace"))
+    except Exception:
+        return {}
+
+
+def introspect_artifact(artifact_dir: Path, out_dir: Path) -> dict:
+    """Discovers everything M17's variants need from the mounted artifact -
+    accepted predict flags, available weight splits, the original reference
+    command(s), post-processing scripts, and manifest metadata - and writes
+    milestone17_artifact_introspection.json. This is the step that actually
+    answers "what settings did the reference use / what can we tune", at
+    runtime on Kaggle, without ever guessing.
+    """
+    predict_script = artifact_dir / "repo" / "scripts" / "predict_unet_transformer.py"
+    predict_flags = discover_predict_flags(predict_script)
+    gap_relink_flags = [f for f in predict_flags if any(kw in f.lower() for kw in GAP_RELINK_FLAG_KEYWORDS)]
+
+    report = {
+        "artifact_dir": str(artifact_dir),
+        "weight_splits": list_weight_splits(artifact_dir),
+        "predict_flags": predict_flags,
+        "gap_or_relink_or_division_flags": gap_relink_flags,
+        "postprocess_scripts": list_postprocess_scripts(artifact_dir),
+        "reference_command_hits": discover_reference_commands(artifact_dir),
+        "manifest_keys": sorted(read_manifest(artifact_dir).keys()),
+    }
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "milestone17_artifact_introspection.json").write_text(json.dumps(report, indent=2, default=str))
+
+    print(f"  [introspect] weight splits: {report['weight_splits']}")
+    print(f"  [introspect] predict flags ({len(predict_flags)}): {predict_flags}")
+    print(f"  [introspect] gap/relink/division flags: {gap_relink_flags}")
+    print(f"  [introspect] postprocess scripts: {report['postprocess_scripts']}")
+    print(f"  [introspect] reference command hits: {len(report['reference_command_hits'])}")
+    return report
+
+# --------------------------------------------------------------------------- #
+# 12. Variant registry + FLAG-VALIDATED command builder
+# --------------------------------------------------------------------------- #
+# M16's known-good predict parameters (the exact settings that scored 0.874).
+BASE_PREDICT_PARAMS = {
+    "unet_batch_size": "4", "det_threshold": "0.99", "ilp_edge_weight": "-1.0",
+    "ilp_appearance_weight": "0.1", "ilp_disappearance_weight": "0.1", "ilp_division_weight": "1.0",
+}
+FLAG_FOR_PARAM = {
+    "unet_batch_size": "--unet-batch-size", "det_threshold": "--det-threshold",
+    "ilp_edge_weight": "--ilp-edge-weight", "ilp_appearance_weight": "--ilp-appearance-weight",
+    "ilp_disappearance_weight": "--ilp-disappearance-weight", "ilp_division_weight": "--ilp-division-weight",
+}
+
+# Each variant is a SMALL override on M16's known-good command. `split`
+# defaults to 0; `use_gap_flags` enables Variant B's discovery-gated gap/
+# relink flags; `extra_flags` are explicit additions validated against the
+# discovered accepted-flags set.
+M17_VARIANTS = {
+    "A": {"label": "reference_exact", "param_overrides": {}, "split": 0, "use_gap_flags": False, "extra_flags": []},
+    "B": {"label": "gap_recovery", "param_overrides": {}, "split": 0, "use_gap_flags": True, "extra_flags": []},
+    # Variant C's single active change vs M16: det-threshold 0.99 -> 0.985, a
+    # modest recall lever (more detections survive) with ILP weights held at
+    # reference. A blind ILP-weight change is riskier than a small threshold
+    # nudge; ILP-weight alternatives are documented for a follow-up sweep.
+    "C": {"label": "tuned_det_threshold_0985", "param_overrides": {"det_threshold": "0.985"}, "split": 0,
+          "use_gap_flags": False, "extra_flags": []},
+}
+
+
+def weights_rel_for_split(split: int) -> str:
+    return f"weights/unet_transformer/split_{split}/edge_predictor_best.pth"
+
+
+def select_weight_split(requested_split: int, available_splits: Sequence[int]) -> int:
+    """Chooses the requested split if it actually ships, else the first
+    available (or 0 when introspection could not enumerate any - e.g. an
+    off-Kaggle dry run).
+    """
+    if not available_splits:
+        return 0
+    if requested_split in available_splits:
+        return requested_split
+    return available_splits[0]
+
+
+def build_base_command(params: dict, split: int, splits_filename: str, data_dir: str) -> list[str]:
+    cmd = [
+        sys.executable, PREDICT_SCRIPT_REL, "--data-dir", data_dir, "--splits", splits_filename,
+        "--split", str(split), "--weights", weights_rel_for_split(split),
+    ]
+    for key, flag in FLAG_FOR_PARAM.items():
+        cmd += [flag, str(params[key])]
+    cmd += ["--use-ilp"]
+    return cmd
+
+
+def extract_flag_usage_from_hits(hits: Sequence[dict], flag: str) -> list[str]:
+    """Returns the EXACT tokens the reference command used for `flag`
+    (`[flag]` for a bare toggle, `[flag, value]` for a valued flag), copied
+    verbatim from a discovered reference command line - so Variant B only
+    ever passes a gap/relink flag the way the reference itself proved it
+    works, never a guessed value.
+    """
+    for h in hits:
+        toks = str(h.get("line", "")).replace("\\", " ").split()
+        if flag in toks:
+            i = toks.index(flag)
+            if i + 1 < len(toks) and not toks[i + 1].startswith("-"):
+                val = toks[i + 1].strip().strip(",").strip("'\"")
+                if val:
+                    return [flag, val]
+            return [flag]
+    return []
+
+
+def build_variant_command(
+    variant_name: str, introspection: dict,
+    data_dir: str = f"{KAGGLE_COMPETITION_INPUT_DIR}/test", splits_filename: str = SPLITS_FILENAME,
+) -> tuple[list[str], dict]:
+    """Builds one variant's predict command as a small override on M16's
+    known-good command, VALIDATING every added flag against the discovered
+    accepted-flags set. An unsupported flag is dropped with a note rather
+    than handed to predict (which would crash on an unrecognized argument),
+    so a variant can never regress M16's stability - at worst it reduces to
+    the reference-exact command.
+    """
+    accepted = set(introspection.get("predict_flags", []))
+    available_splits = list(introspection.get("weight_splits", [])) or [0]
+    hits = introspection.get("reference_command_hits", [])
+    gap_flags = list(introspection.get("gap_or_relink_or_division_flags", []))
+
+    vdef = M17_VARIANTS[variant_name]
+    params = dict(BASE_PREDICT_PARAMS)
+    params.update(vdef.get("param_overrides", {}))
+    split = select_weight_split(vdef.get("split", 0), available_splits)
+    cmd = build_base_command(params, split, splits_filename, data_dir)
+
+    notes = {
+        "variant": variant_name, "label": vdef["label"], "split_used": split,
+        "available_splits": available_splits, "param_overrides": vdef.get("param_overrides", {}),
+        "extra_flags_added": [], "dropped_flags": [], "gap_flags_discovered": gap_flags, "gap_notes": [],
+    }
+
+    if vdef.get("use_gap_flags"):
+        # Only NEW gap flags matter here - a keyword like "division" also
+        # matches the base --ilp-division-weight, which must never be
+        # re-appended as a duplicate on top of the base command.
+        base_flags_present = set(cmd)
+        candidate_gap_flags = [f for f in gap_flags if f not in base_flags_present]
+        if not candidate_gap_flags:
+            notes["gap_notes"].append(
+                "no NEW gap/relink/postprocess flag beyond the base command found in the predict "
+                "script - variant reduces to reference-exact")
+        else:
+            for flag in candidate_gap_flags:
+                if flag not in accepted:
+                    notes["dropped_flags"].append(flag)
+                    continue
+                usage = extract_flag_usage_from_hits(hits, flag)
+                if usage:
+                    cmd += usage
+                    notes["extra_flags_added"].append(usage)
+                else:
+                    notes["gap_notes"].append(
+                        f"{flag} is declared by the predict script but its exact reference usage/value "
+                        f"was not found in any discovered command - NOT guessing its argument (this flag "
+                        f"is skipped; review milestone17_artifact_introspection.json and specify it)")
+
+    for tok in vdef.get("extra_flags", []):
+        flag = tok[0] if isinstance(tok, list) else tok
+        if flag in accepted:
+            cmd += (list(tok) if isinstance(tok, list) else [tok])
+            notes["extra_flags_added"].append(tok)
+        else:
+            notes["dropped_flags"].append(flag)
+
+    return cmd, notes
+
+# --------------------------------------------------------------------------- #
+# 21. Reused metric primitives (physical_distance_um, linefit, prune, relabel)
+# --------------------------------------------------------------------------- #
+# All gates are physical micrometres (VOXEL_SIZE_UM / _VOXEL_SCALE come from
+# the reused M16 header). Every added edge spans a UNIT timepoint (t -> t+1)
+# so the evaluator can credit it; a direct t -> t+2 edge is never produced.
+
+# Safe-division gates (geometric second-child admission).
+M29_DIV_PARENT_CHILD_MAX_UM = 4.7    # source -> new (second) child
+M29_DIV_SISTER_MAX_UM = 6.85         # existing child <-> new child
+M29_DIV_EXISTING_CHILD_MAX_UM = 7.45  # the original single edge must not already be over-stretched
+M29_DIV_FRAME_CAP_FRAC = 0.0072      # per-timepoint cap on admitted divisions
+M29_DIV_GLOBAL_CAP_FRAC = 0.004      # per-dataset cap on admitted divisions
+
+# Single-frame gap recovery (end@t -> synthetic@t+1 -> start@t+2).
+M29_GAP1_MAX_TOTAL_UM = 6.2
+M29_GAP1_CAP_FRAC = 0.006
+M29_GAP1_CAP_ABS = 300
+
+# Two-frame gap recovery (end@t -> synth@t+1 -> synth@t+2 -> start@t+3).
+M29_GAP2_MAX_STEP_UM = 4.4           # per-unit-step budget (total <= 3*step by construction)
+M29_GAP2_MAX_TOTAL_UM = 10.2
+M29_GAP2_VELOCITY_COS_MIN = -0.25    # incoming velocity vs gap velocity must not strongly reverse
+M29_GAP2_VELOCITY_NORMDIFF_UM = 6.0  # |per-step gap velocity - incoming velocity| budget
+M29_GAP2_CAP_FRAC = 0.0045
+M29_GAP2_CAP_ABS = 180
+
+# Line-fit smoothing (topology-preserving coordinate blend).
+M29_LINEFIT_WINDOW = 2
+M29_LINEFIT_WEIGHT = 0.72
+
+# Isolated-node pruning (degree-0 predicted nodes = single-frame tracks).
+M29_PRUNE_MAX_FRAC = 0.6             # safety valve: if MORE than this fraction is isolated, skip (likely a read problem, not over-prediction)
+
+
+def physical_distance_um(pos_a, pos_b) -> float:
+    """Euclidean distance in micrometres between two (z, y, x) voxel-index
+    positions, applying the anisotropic VOXEL_SIZE_UM scale. `_VOXEL_SCALE`
+    is [z, y, x] to match the coordinate order.
+    """
+    d = (np.asarray(pos_a, dtype=float) - np.asarray(pos_b, dtype=float)) * _VOXEL_SCALE
+    return float(np.sqrt(float(np.dot(d, d))))
+
+
+def build_base_graph(geff_graph: dict) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Reproduces the M16 converter's node remap + topology enforcement
+    (raw -> consecutive local node_id starting at 0; drop dangling and
+    backward-in-time and duplicate edges; in_degree<=1 keeping the best
+    incoming; out_degree<=2 keeping the two best outgoing, ranked by higher
+    edge_prob then lower edge_dist then stable order) but returns a plain
+    (pred_nodes, pred_edges) pair - the SAME topology the M16 baseline
+    submits. With no post-processing applied the downstream converter
+    therefore reproduces the M16 baseline exactly.
+
+    pred_nodes columns: node_id (int, >=0), t, z, y, x.
+    pred_edges columns: source_id, target_id (both local node_id).
+    """
+    nodes = geff_graph["nodes"].copy()
+    edges = geff_graph["edges"].copy()
+
+    raw_to_local: dict[int, int] = {}
+    node_rows = []
+    node_t: dict[int, int] = {}
+    for local_id, row in enumerate(nodes.itertuples()):
+        raw_to_local[int(row.raw_id)] = local_id
+        node_t[local_id] = int(row.t)
+        node_rows.append({"node_id": local_id, "t": int(row.t), "z": float(row.z), "y": float(row.y), "x": float(row.x)})
+    pred_nodes = pd.DataFrame(node_rows, columns=["node_id", "t", "z", "y", "x"])
+
+    kept = []
+    for row in edges.itertuples():
+        s_raw, t_raw = int(row.raw_source), int(row.raw_target)
+        if s_raw not in raw_to_local or t_raw not in raw_to_local:
+            continue
+        s_kid, t_kid = raw_to_local[s_raw], raw_to_local[t_raw]
+        if not (node_t[t_kid] > node_t[s_kid]):
+            continue
+        kept.append({"source_id": s_kid, "target_id": t_kid, "edge_prob": float(row.edge_prob), "edge_dist": float(row.edge_dist)})
+
+    edges_df = pd.DataFrame(kept, columns=["source_id", "target_id", "edge_prob", "edge_dist"])
+    if len(edges_df):
+        edges_df = edges_df.drop_duplicates(subset=["source_id", "target_id"], keep="first")
+        edges_df = edges_df.assign(_order=np.arange(len(edges_df)))
+        edges_df = edges_df.sort_values(["edge_prob", "edge_dist", "_order"], ascending=[False, True, True]).reset_index(drop=True)
+        edges_df = edges_df.drop_duplicates(subset=["target_id"], keep="first")
+        edges_df = edges_df.groupby("source_id", sort=False, group_keys=False).head(2).reset_index(drop=True)
+
+    pred_edges = edges_df[["source_id", "target_id"]].reset_index(drop=True) if len(edges_df) else pd.DataFrame(columns=["source_id", "target_id"])
+    return pred_nodes, pred_edges
+
+
+def _degree_maps(pred_edges: pd.DataFrame) -> tuple[dict, dict]:
+    out_degree = pred_edges.groupby("source_id").size().to_dict() if len(pred_edges) else {}
+    in_degree = pred_edges.groupby("target_id").size().to_dict() if len(pred_edges) else {}
+    return out_degree, in_degree
+
+
+def add_micro_safe_divisions(
+    pred_nodes: pd.DataFrame, pred_edges: pd.DataFrame,
+    parent_child_max_um: float = M29_DIV_PARENT_CHILD_MAX_UM, sister_max_um: float = M29_DIV_SISTER_MAX_UM,
+    existing_child_max_um: float = M29_DIV_EXISTING_CHILD_MAX_UM,
+    frame_cap_frac: float = M29_DIV_FRAME_CAP_FRAC, global_cap_frac: float = M29_DIV_GLOBAL_CAP_FRAC,
+) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+    """Admits a geometrically safe SECOND outgoing edge for a source that
+    currently has EXACTLY one accepted child, turning it into a division.
+    The new child must be an unmatched node (current in_degree==0) so no
+    multi-parent is ever created; the source is never given a third child;
+    the existing child must be exactly ONE timepoint ahead (so the sister
+    edge is unit-timepoint and metric-valid) and its own edge must already
+    be within `existing_child_max_um`; the new child must be within
+    `parent_child_max_um` of the source and within `sister_max_um` of the
+    existing child. Candidates are admitted closest-first under per-frame
+    and per-dataset caps favouring the most confident (nearest) divisions.
+    """
+    diag = {"n_divisions_added": 0, "n_candidates_considered": 0}
+    if len(pred_edges) == 0 or len(pred_nodes) == 0:
+        return pred_nodes.copy(), pred_edges.copy(), diag
+
+    pos = pred_nodes.set_index("node_id")[["z", "y", "x"]]
+    t_of = dict(zip(pred_nodes["node_id"], pred_nodes["t"]))
+    out_degree, in_degree = _degree_maps(pred_edges)
+
+    # sources with exactly one child whose existing edge is unit-timepoint
+    # and short enough to be a credible parent.
+    existing_child_of: dict[int, int] = {}
+    for row in pred_edges.itertuples():
+        s, t = int(row.source_id), int(row.target_id)
+        if out_degree.get(s, 0) != 1:
+            continue
+        if t_of[t] != t_of[s] + 1:
+            continue
+        if physical_distance_um(pos.loc[s].to_numpy(float), pos.loc[t].to_numpy(float)) > existing_child_max_um:
+            continue
+        existing_child_of[s] = t
+
+    if not existing_child_of:
+        return pred_nodes.copy(), pred_edges.copy(), diag
+
+    # orphan pool: unmatched nodes (in_degree==0) keyed by timepoint.
+    orphans_by_t: dict[int, list[int]] = {}
+    for nid in pred_nodes["node_id"]:
+        if in_degree.get(nid, 0) == 0:
+            orphans_by_t.setdefault(int(t_of[nid]), []).append(int(nid))
+
+    candidates = []
+    for s, child in existing_child_of.items():
+        child_t = t_of[child]
+        s_pos = pos.loc[s].to_numpy(float)
+        child_pos = pos.loc[child].to_numpy(float)
+        for cand in orphans_by_t.get(child_t, []):
+            if cand == child or cand == s:
+                continue
+            c_pos = pos.loc[cand].to_numpy(float)
+            d_parent = physical_distance_um(s_pos, c_pos)
+            if d_parent > parent_child_max_um:
+                continue
+            d_sister = physical_distance_um(child_pos, c_pos)
+            if d_sister > sister_max_um:
+                continue
+            candidates.append({"source_id": s, "new_child": cand, "t": child_t, "d_parent": d_parent})
+    diag["n_candidates_considered"] = len(candidates)
+    if not candidates:
+        return pred_nodes.copy(), pred_edges.copy(), diag
+
+    candidates.sort(key=lambda c: c["d_parent"])
+    frame_totals: dict[int, int] = {}
+    for t in t_of.values():
+        frame_totals[int(t)] = frame_totals.get(int(t), 0) + 1
+
+    # Caps limit division DENSITY but never forbid every admission outright:
+    # the per-dataset global cap bounds the total (on real data int(frac*N)
+    # dominates; the floor of 1 only matters on small/dry-run graphs), and
+    # the per-frame cap is floored the same way so a lone confident division
+    # in a small frame is still reachable while the global cap holds the line.
+    global_cap = max(1, int(global_cap_frac * max(len(pred_nodes), 1)))
+    frame_counts: dict[int, int] = {}
+    new_edges = []
+    used_children: set[int] = set()
+    for c in candidates:
+        if len(new_edges) >= global_cap:
+            break
+        s, cand, ft = c["source_id"], c["new_child"], c["t"]
+        if cand in used_children:
+            continue
+        if in_degree.get(cand, 0) != 0:
+            continue  # became matched earlier this pass (never multi-parent)
+        if out_degree.get(s, 0) != 1:
+            continue  # source already divided this pass (never a third child)
+        frame_cap = max(1, int(frame_cap_frac * max(frame_totals.get(ft, 0), 1)))
+        if frame_counts.get(ft, 0) >= frame_cap:
+            continue
+        new_edges.append({"source_id": s, "target_id": cand})
+        out_degree[s] = out_degree.get(s, 0) + 1
+        in_degree[cand] = in_degree.get(cand, 0) + 1
+        frame_counts[ft] = frame_counts.get(ft, 0) + 1
+        used_children.add(cand)
+
+    result_edges = pd.concat([pred_edges, pd.DataFrame(new_edges, columns=["source_id", "target_id"])], ignore_index=True) if new_edges else pred_edges.copy()
+    diag["n_divisions_added"] = len(new_edges)
+    return pred_nodes.copy(), result_edges, diag
+
+
+def _ends_and_starts(pred_nodes: pd.DataFrame, pred_edges: pd.DataFrame) -> tuple[list, dict, dict]:
+    """Returns tracklet END nodes (out_degree==0, not at the last
+    timepoint) and START nodes (in_degree==0, not at the first timepoint)
+    indexed by timepoint, plus the node->predecessor map for velocity gates.
+    """
+    out_degree, in_degree = _degree_maps(pred_edges)
+    t_of = dict(zip(pred_nodes["node_id"], pred_nodes["t"]))
+    max_t, min_t = int(pred_nodes["t"].max()), int(pred_nodes["t"].min())
+    ends = [(int(nid), int(t_of[nid])) for nid in pred_nodes["node_id"] if out_degree.get(nid, 0) == 0 and t_of[nid] < max_t]
+    starts_by_t: dict[int, list[int]] = {}
+    for nid in pred_nodes["node_id"]:
+        if in_degree.get(nid, 0) == 0 and t_of[nid] > min_t:
+            starts_by_t.setdefault(int(t_of[nid]), []).append(int(nid))
+    pred_of = dict(zip(pred_edges["target_id"], pred_edges["source_id"])) if len(pred_edges) else {}
+    return ends, starts_by_t, pred_of
+
+
+def close_single_frame_gaps(
+    pred_nodes: pd.DataFrame, pred_edges: pd.DataFrame,
+    max_total_um: float = M29_GAP1_MAX_TOTAL_UM, cap_frac: float = M29_GAP1_CAP_FRAC, cap_abs: int = M29_GAP1_CAP_ABS,
+    next_synth_id: int = -1,
+) -> tuple[pd.DataFrame, pd.DataFrame, dict, int]:
+    """Recovers a single missing frame: an END node at t and a START node
+    at t+2 within `max_total_um` are bridged by ONE synthetic node at t+1
+    (straight-line midpoint) plus two UNIT-timepoint edges end->synth and
+    synth->start. A direct end->start (t -> t+2) edge is never created.
+    Synthetic node_ids are negative so they can never collide with a real
+    (>=0) id; they are relabelled positive later. Each end/start is used at
+    most once; admitted closest-first under a cap.
+    """
+    diag = {"n_gap1_candidates": 0, "n_gap1_closed": 0}
+    if len(pred_nodes) == 0:
+        return pred_nodes.copy(), pred_edges.copy(), diag, next_synth_id
+    ends, starts_by_t, _ = _ends_and_starts(pred_nodes, pred_edges)
+    pos = pred_nodes.set_index("node_id")[["z", "y", "x"]]
+
+    candidates = []
+    for end_id, end_t in ends:
+        e_pos = pos.loc[end_id].to_numpy(float)
+        for start_id in starts_by_t.get(end_t + 2, []):
+            s_pos = pos.loc[start_id].to_numpy(float)
+            total = physical_distance_um(e_pos, s_pos)
+            if total <= max_total_um:
+                candidates.append({"end": end_id, "start": start_id, "mid_t": end_t + 1, "total": total})
+    diag["n_gap1_candidates"] = len(candidates)
+    if not candidates:
+        return pred_nodes.copy(), pred_edges.copy(), diag, next_synth_id
+
+    candidates.sort(key=lambda c: c["total"])
+    cap = min(cap_abs, max(1, int(cap_frac * max(len(pred_nodes), 1))))
+    new_nodes, new_edges = [], []
+    used_ends, used_starts = set(), set()
+    sid = next_synth_id
+    for c in candidates:
+        if len(new_nodes) >= cap:
+            break
+        if c["end"] in used_ends or c["start"] in used_starts:
+            continue
+        e_pos = pos.loc[c["end"]].to_numpy(float)
+        s_pos = pos.loc[c["start"]].to_numpy(float)
+        mid = (e_pos + s_pos) / 2.0
+        new_nodes.append({"node_id": sid, "t": c["mid_t"], "z": float(mid[0]), "y": float(mid[1]), "x": float(mid[2])})
+        new_edges.append({"source_id": c["end"], "target_id": sid})
+        new_edges.append({"source_id": sid, "target_id": c["start"]})
+        used_ends.add(c["end"])
+        used_starts.add(c["start"])
+        sid -= 1
+
+    result_nodes = pd.concat([pred_nodes, pd.DataFrame(new_nodes, columns=["node_id", "t", "z", "y", "x"])], ignore_index=True) if new_nodes else pred_nodes.copy()
+    result_edges = pd.concat([pred_edges, pd.DataFrame(new_edges, columns=["source_id", "target_id"])], ignore_index=True) if new_edges else pred_edges.copy()
+    diag["n_gap1_closed"] = len(new_nodes)
+    return result_nodes, result_edges, diag, sid
+
+
+def recover_two_frame_gaps(
+    pred_nodes: pd.DataFrame, pred_edges: pd.DataFrame,
+    max_step_um: float = M29_GAP2_MAX_STEP_UM, max_total_um: float = M29_GAP2_MAX_TOTAL_UM,
+    velocity_cos_min: float = M29_GAP2_VELOCITY_COS_MIN, velocity_normdiff_um: float = M29_GAP2_VELOCITY_NORMDIFF_UM,
+    cap_frac: float = M29_GAP2_CAP_FRAC, cap_abs: int = M29_GAP2_CAP_ABS, next_synth_id: int = -1,
+) -> tuple[pd.DataFrame, pd.DataFrame, dict, int]:
+    """Recovers two missing frames: an END node at t and a START node at
+    t+3 are bridged by TWO synthetic nodes at t+1 and t+2 (linear
+    interpolation) plus three UNIT-timepoint edges. Gated on per-step and
+    total physical distance AND on velocity consistency - when the end node
+    has a predecessor, the incoming velocity and the gap velocity must not
+    strongly reverse (cosine >= `velocity_cos_min`) and their per-step
+    magnitudes must agree within `velocity_normdiff_um`. No direct multi-
+    frame edge is ever created. Synthetic ids are negative; admitted
+    closest-first under a cap.
+    """
+    diag = {"n_gap2_candidates": 0, "n_gap2_recovered": 0}
+    if len(pred_nodes) == 0:
+        return pred_nodes.copy(), pred_edges.copy(), diag, next_synth_id
+    ends, starts_by_t, pred_of = _ends_and_starts(pred_nodes, pred_edges)
+    pos = pred_nodes.set_index("node_id")[["z", "y", "x"]]
+    t_of = dict(zip(pred_nodes["node_id"], pred_nodes["t"]))
+
+    def _scaled(nid):
+        return pos.loc[nid].to_numpy(float) * _VOXEL_SCALE
+
+    candidates = []
+    for end_id, end_t in ends:
+        e_um = _scaled(end_id)
+        # incoming velocity (per unit step) if the end has a predecessor.
+        v_in = None
+        if end_id in pred_of:
+            p = pred_of[end_id]
+            dt = int(t_of[end_id]) - int(t_of[p])
+            if dt > 0:
+                v_in = (e_um - _scaled(p)) / float(dt)
+        for start_id in starts_by_t.get(end_t + 3, []):
+            s_um = _scaled(start_id)
+            total = float(np.linalg.norm(s_um - e_um))
+            if total > max_total_um:
+                continue
+            v_gap = (s_um - e_um) / 3.0
+            if float(np.linalg.norm(v_gap)) > max_step_um:
+                continue
+            if v_in is not None:
+                nin, ngap = float(np.linalg.norm(v_in)), float(np.linalg.norm(v_gap))
+                if nin > 1e-9 and ngap > 1e-9:
+                    cos = float(np.dot(v_in, v_gap) / (nin * ngap))
+                    if cos < velocity_cos_min:
+                        continue
+                    if float(np.linalg.norm(v_gap - v_in)) > velocity_normdiff_um:
+                        continue
+            candidates.append({"end": end_id, "start": start_id, "t0": end_t, "total": total})
+    diag["n_gap2_candidates"] = len(candidates)
+    if not candidates:
+        return pred_nodes.copy(), pred_edges.copy(), diag, next_synth_id
+
+    candidates.sort(key=lambda c: c["total"])
+    cap = min(cap_abs, max(1, int(cap_frac * max(len(pred_nodes), 1))))
+    new_nodes, new_edges = [], []
+    used_ends, used_starts = set(), set()
+    sid = next_synth_id
+    for c in candidates:
+        if len(new_nodes) >= 2 * cap:  # each recovery adds two nodes
+            break
+        if c["end"] in used_ends or c["start"] in used_starts:
+            continue
+        e_pos = pos.loc[c["end"]].to_numpy(float)
+        s_pos = pos.loc[c["start"]].to_numpy(float)
+        m1 = e_pos + (s_pos - e_pos) * (1.0 / 3.0)
+        m2 = e_pos + (s_pos - e_pos) * (2.0 / 3.0)
+        id1, id2 = sid, sid - 1
+        new_nodes.append({"node_id": id1, "t": c["t0"] + 1, "z": float(m1[0]), "y": float(m1[1]), "x": float(m1[2])})
+        new_nodes.append({"node_id": id2, "t": c["t0"] + 2, "z": float(m2[0]), "y": float(m2[1]), "x": float(m2[2])})
+        new_edges.append({"source_id": c["end"], "target_id": id1})
+        new_edges.append({"source_id": id1, "target_id": id2})
+        new_edges.append({"source_id": id2, "target_id": c["start"]})
+        used_ends.add(c["end"])
+        used_starts.add(c["start"])
+        sid -= 2
+
+    result_nodes = pd.concat([pred_nodes, pd.DataFrame(new_nodes, columns=["node_id", "t", "z", "y", "x"])], ignore_index=True) if new_nodes else pred_nodes.copy()
+    result_edges = pd.concat([pred_edges, pd.DataFrame(new_edges, columns=["source_id", "target_id"])], ignore_index=True) if new_edges else pred_edges.copy()
+    diag["n_gap2_recovered"] = len(new_nodes) // 2
+    return result_nodes, result_edges, diag, sid
+
+
+def linefit_smooth_nodes(
+    pred_nodes: pd.DataFrame, pred_edges: pd.DataFrame,
+    window: int = M29_LINEFIT_WINDOW, weight: float = M29_LINEFIT_WEIGHT,
+) -> tuple[pd.DataFrame, dict]:
+    """Topology-preserving coordinate smoothing - never adds/removes a node
+    or edge, only reassigns (z, y, x) for "linear interior" nodes (exactly
+    one predecessor at t-1 AND exactly one successor at t+1). Division
+    nodes, branch points, and chain endpoints are left untouched. Blends
+    weight*original + (1-weight)*mean(up-to-`window` neighbours each side).
+    """
+    diag = {"n_nodes_smoothed": 0}
+    if len(pred_nodes) == 0 or len(pred_edges) == 0:
+        return pred_nodes.copy(), diag
+
+    succ = dict(zip(pred_edges["source_id"], pred_edges["target_id"]))
+    pred = dict(zip(pred_edges["target_id"], pred_edges["source_id"]))
+    out_degree, in_degree = _degree_maps(pred_edges)
+    node_lookup = pred_nodes.set_index("node_id")
+    t_lookup = node_lookup["t"].to_dict()
+
+    def is_linear_interior(nid) -> bool:
+        if out_degree.get(nid, 0) != 1 or in_degree.get(nid, 0) != 1:
+            return False
+        s_id, p_id = succ.get(nid), pred.get(nid)
+        if s_id is None or p_id is None:
+            return False
+        return t_lookup.get(s_id) == t_lookup[nid] + 1 and t_lookup.get(p_id) == t_lookup[nid] - 1
+
+    def collect(nid, direction, steps):
+        out = []
+        cur = nid
+        for _ in range(steps):
+            nxt = succ.get(cur) if direction == "succ" else pred.get(cur)
+            if nxt is None:
+                break
+            out.append(nxt)
+            if not is_linear_interior(nxt):
+                break
+            cur = nxt
+        return out
+
+    smoothed: dict = {}
+    for nid in pred_nodes["node_id"]:
+        if not is_linear_interior(nid):
+            continue
+        neigh = collect(nid, "succ", window) + collect(nid, "pred", window)
+        if not neigh:
+            continue
+        neigh_avg = node_lookup.loc[neigh, ["z", "y", "x"]].to_numpy(float).mean(axis=0)
+        original = node_lookup.loc[nid, ["z", "y", "x"]].to_numpy(float)
+        smoothed[nid] = weight * original + (1.0 - weight) * neigh_avg
+
+    result = pred_nodes.copy()
+    if smoothed:
+        idx = result.set_index("node_id")
+        for nid, p in smoothed.items():
+            idx.loc[nid, ["z", "y", "x"]] = p
+        result = idx.reset_index()[["node_id", "t", "z", "y", "x"]]
+    diag["n_nodes_smoothed"] = len(smoothed)
+    return result, diag
+
+
+def prune_isolated_nodes(
+    pred_nodes: pd.DataFrame, pred_edges: pd.DataFrame, max_frac: float = M29_PRUNE_MAX_FRAC,
+) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+    """Removes degree-0 nodes (no incoming AND no outgoing edge) - the
+    single-frame tracks that inflate the predicted node count T_pred and
+    are penalised by the metric with zero edge benefit. Removing them can
+    never lower edge_jaccard (they carry no edges) or division_jaccard
+    (out_degree 0 is not a division). A safety valve skips pruning entirely
+    if MORE than `max_frac` of nodes are isolated, since that signals a
+    graph-read problem rather than genuine over-prediction (better to keep
+    the M16 baseline than gut it).
+    """
+    diag = {"n_isolated": 0, "n_pruned": 0, "prune_skipped_reason": None}
+    if len(pred_nodes) == 0:
+        return pred_nodes.copy(), pred_edges.copy(), diag
+    matched = set(pred_edges["source_id"]) | set(pred_edges["target_id"]) if len(pred_edges) else set()
+    isolated_mask = ~pred_nodes["node_id"].isin(matched)
+    n_isolated = int(isolated_mask.sum())
+    diag["n_isolated"] = n_isolated
+    if n_isolated == 0:
+        return pred_nodes.copy(), pred_edges.copy(), diag
+    if n_isolated > max_frac * len(pred_nodes):
+        diag["prune_skipped_reason"] = f"{n_isolated}/{len(pred_nodes)} isolated exceeds max_frac={max_frac}; kept baseline"
+        return pred_nodes.copy(), pred_edges.copy(), diag
+    result_nodes = pred_nodes[~isolated_mask].reset_index(drop=True)
+    diag["n_pruned"] = n_isolated
+    return result_nodes, pred_edges.copy(), diag
+
+
+def relabel_positive(pred_nodes: pd.DataFrame, pred_edges: pd.DataFrame, start_id: int) -> tuple[pd.DataFrame, pd.DataFrame, int]:
+    """Remaps every node_id (real >=0 AND synthetic <0) to positive
+    consecutive ids beginning at `start_id`, in node-row order, and rewrites
+    edges through the same map (dropping any edge whose endpoint no longer
+    exists, e.g. after isolated pruning). Guarantees no negative id ever
+    reaches the submission. Returns (nodes, edges, next_start).
+    """
+    id_map: dict[int, int] = {}
+    rows = []
+    cur = start_id
+    for row in pred_nodes.itertuples():
+        id_map[int(row.node_id)] = cur
+        rows.append({"node_id": cur, "t": int(row.t), "z": float(row.z), "y": float(row.y), "x": float(row.x)})
+        cur += 1
+    nodes_out = pd.DataFrame(rows, columns=["node_id", "t", "z", "y", "x"])
+
+    e_rows = []
+    for row in pred_edges.itertuples() if len(pred_edges) else []:
+        s, t = int(row.source_id), int(row.target_id)
+        if s in id_map and t in id_map:
+            e_rows.append({"source_id": id_map[s], "target_id": id_map[t]})
+    edges_out = pd.DataFrame(e_rows, columns=["source_id", "target_id"])
+    return nodes_out, edges_out, cur
+
+# --------------------------------------------------------------------------- #
+# 41. M29 winning post-processing ENGINE (embedded, self-contained, hidden-safe)
+# --------------------------------------------------------------------------- #
+# A faithful reimplementation of the uploaded winning_postprocess engine, copied
+# in-line so every M29 runner is a standalone Kaggle cell (needs only the
+# competition dataset + the mounted support pack - no external utility dataset).
+# The pipeline is: M16-identical base graph -> optional motion relink -> rescue
+# divisions (slot-Hungarian orphan adoption) -> stitch gaps 1/2/3 (per-timepoint
+# Hungarian + constant-velocity model) -> optional linefit -> prune isolated ->
+# relabel positive-consecutive. Every produced edge is UNIT-timepoint (t->t+1);
+# in_degree<=1 / out_degree<=2 are enforced; a direct multi-frame edge is never
+# created. All gates are physical micrometres via physical_distance_um.
+from dataclasses import dataclass, field, asdict
+
+M29_FINAL_SOURCE = "winning_postprocess_engine_reproduced"
+
+
+@dataclass
+class PPConfig:
+    gap_sizes: tuple = (1, 2, 3)
+    gap_max_step_um: float = 4.6
+    gap_max_total_um: dict = field(default_factory=lambda: {1: 6.5, 2: 10.5, 3: 14.5})
+    gap_vel_cos_min: float = -0.20
+    gap_vel_normdiff_um: float = 6.0
+    gap_vel_history: int = 3
+    gap_use_velocity_endpoint: bool = True
+    div_enable: bool = True
+    div_parent_child_max_um: float = 6.5
+    div_sister_max_um: float = 9.0
+    div_existing_child_max_um: float = 7.45
+    div_allow_bare_end: bool = True
+    div_frame_cap_frac: float = 0.030
+    div_global_cap_frac: float = 0.020
+    relink_enable: bool = False
+    relink_min_um: float = 7.0
+    relink_alt_max_um: float = 4.5
+    linefit_enable: bool = False
+    linefit_window: int = 2
+    linefit_weight: float = 0.75
+    prune_enable: bool = True
+    prune_max_frac: float = 0.6
+
+
+def _m29_assign_min_cost(cost: np.ndarray) -> list:
+    """One-to-one min-cost assignment (scipy Hungarian, deterministic greedy
+    fallback). Returns (row, col) index pairs."""
+    n_r, n_c = cost.shape
+    if n_r == 0 or n_c == 0:
+        return []
+    try:
+        from scipy.optimize import linear_sum_assignment
+        r, c = linear_sum_assignment(cost)
+        return list(zip(r.tolist(), c.tolist()))
+    except Exception:
+        order = sorted(((float(cost[i, j]), i, j) for i in range(n_r) for j in range(n_c)), key=lambda z: z[0])
+        used_r, used_c, pairs = set(), set(), []
+        for _, i, j in order:
+            if i in used_r or j in used_c:
+                continue
+            used_r.add(i)
+            used_c.add(j)
+            pairs.append((i, j))
+        return pairs
+
+
+def build_base_graph_m29(geff_graph: dict) -> tuple:
+    """M16-identical topology (raw -> consecutive local id; drop dangling /
+    backward / duplicate edges; in<=1 keeping best incoming; out<=2 keeping the
+    two best) but retains per-edge edge_prob/edge_dist for the relink step.
+    pred_nodes: node_id,t,z,y,x.  pred_edges: source_id,target_id,edge_prob,edge_dist."""
+    nodes = geff_graph["nodes"].copy()
+    edges = geff_graph["edges"].copy()
+    raw_to_local, node_rows, node_t = {}, [], {}
+    for local_id, row in enumerate(nodes.itertuples()):
+        raw_to_local[int(row.raw_id)] = local_id
+        node_t[local_id] = int(row.t)
+        node_rows.append({"node_id": local_id, "t": int(row.t), "z": float(row.z), "y": float(row.y), "x": float(row.x)})
+    pred_nodes = pd.DataFrame(node_rows, columns=["node_id", "t", "z", "y", "x"])
+    kept = []
+    for row in edges.itertuples():
+        s_raw, t_raw = int(row.raw_source), int(row.raw_target)
+        if s_raw not in raw_to_local or t_raw not in raw_to_local:
+            continue
+        s, t = raw_to_local[s_raw], raw_to_local[t_raw]
+        if not (node_t[t] > node_t[s]):
+            continue
+        kept.append({"source_id": s, "target_id": t, "edge_prob": float(row.edge_prob), "edge_dist": float(row.edge_dist)})
+    edf = pd.DataFrame(kept, columns=["source_id", "target_id", "edge_prob", "edge_dist"])
+    if len(edf):
+        edf = edf.drop_duplicates(subset=["source_id", "target_id"], keep="first")
+        edf = edf.assign(_o=np.arange(len(edf)))
+        edf = edf.sort_values(["edge_prob", "edge_dist", "_o"], ascending=[False, True, True]).reset_index(drop=True)
+        edf = edf.drop_duplicates(subset=["target_id"], keep="first")
+        edf = edf.groupby("source_id", sort=False, group_keys=False).head(2).reset_index(drop=True)
+        edf = edf[["source_id", "target_id", "edge_prob", "edge_dist"]]
+    return pred_nodes, edf
+
+
+def _m29_deg(edges):
+    out_d = edges.groupby("source_id").size().to_dict() if len(edges) else {}
+    in_d = edges.groupby("target_id").size().to_dict() if len(edges) else {}
+    return out_d, in_d
+
+
+def _m29_nodes_by_t(nodes):
+    by_t = {}
+    for r in nodes.itertuples():
+        by_t.setdefault(int(r.t), []).append(int(r.node_id))
+    return by_t
+
+
+def _m29_history_velocity(nid, pred_of, pos, history):
+    """Constant-velocity estimate (um/step) from up to `history` predecessors."""
+    chain = [nid]
+    cur = nid
+    for _ in range(history):
+        p = pred_of.get(cur)
+        if p is None:
+            break
+        chain.append(p)
+        cur = p
+    if len(chain) < 2:
+        return None
+    first, last = chain[-1], chain[0]
+    steps = len(chain) - 1
+    v = (pos.loc[last].to_numpy(float) - pos.loc[first].to_numpy(float)) * _VOXEL_SCALE / float(steps)
+    return v
+
+
+def motion_relink_engine(nodes, edges, cfg: PPConfig):
+    """Optional per-frame Hungarian re-assignment. Only edges LONGER than
+    relink_min_um are eligible to be replaced; a replacement is accepted only
+    within relink_alt_max_um and only if strictly closer. Keeps in<=1/out<=1 for
+    the relinked set. Returns (edges, diag)."""
+    diag = {"relink_enabled": True, "n_relinked": 0, "n_relink_candidates": 0, "n_relink_fails": 0}
+    if len(edges) == 0:
+        return edges.copy(), diag
+    pos = nodes.set_index("node_id")[["z", "y", "x"]]
+    by_t = _m29_nodes_by_t(nodes)
+    cur_out = {}   # source -> (target, dist)
+    for r in edges.itertuples():
+        d = physical_distance_um(pos.loc[int(r.source_id)].to_numpy(float), pos.loc[int(r.target_id)].to_numpy(float))
+        cur_out[int(r.source_id)] = (int(r.target_id), d)
+    matched_target = {int(r.target_id): int(r.source_id) for r in edges.itertuples()}
+    new_out = dict(cur_out)
+    for t in sorted(by_t.keys()):
+        srcs = by_t.get(t, [])
+        tgts = by_t.get(t + 1, [])
+        # eligible sources: long current edge (> relink_min_um) or no edge.
+        elig_s = [s for s in srcs if (s not in new_out) or (new_out[s][1] > cfg.relink_min_um)]
+        if not elig_s or not tgts:
+            continue
+        BIG = 1e6
+        cost = np.full((len(elig_s), len(tgts)), BIG, dtype=float)
+        for i, s in enumerate(elig_s):
+            sp = pos.loc[s].to_numpy(float)
+            for j, tg in enumerate(tgts):
+                d = physical_distance_um(sp, pos.loc[tg].to_numpy(float))
+                if d <= cfg.relink_alt_max_um:
+                    cost[i, j] = d
+        for i, j in _m29_assign_min_cost(cost):
+            if cost[i, j] >= BIG:
+                continue
+            s, tg = elig_s[i], tgts[j]
+            d = cost[i, j]
+            diag["n_relink_candidates"] += 1
+            old = new_out.get(s)
+            if old is not None and old[1] <= d:
+                diag["n_relink_fails"] += 1
+                continue
+            # target must be free or currently worse-matched.
+            occ = matched_target.get(tg)
+            if occ is not None and occ != s:
+                occ_d = new_out.get(occ, (None, 1e9))[1]
+                if occ_d <= d:
+                    diag["n_relink_fails"] += 1
+                    continue
+                new_out.pop(occ, None)
+            if old is not None:
+                matched_target.pop(old[0], None)
+            new_out[s] = (tg, d)
+            matched_target[tg] = s
+            diag["n_relinked"] += 1
+    rows = [{"source_id": s, "target_id": tg, "edge_prob": 0.0, "edge_dist": d} for s, (tg, d) in new_out.items()]
+    relinked = pd.DataFrame(rows, columns=["source_id", "target_id", "edge_prob", "edge_dist"])
+    if len(relinked):
+        relinked = relinked.drop_duplicates(subset=["target_id"], keep="first")
+        relinked = relinked.groupby("source_id", sort=False, group_keys=False).head(2).reset_index(drop=True)
+    return relinked, diag
+
+
+def rescue_divisions_engine(nodes, edges, cfg: PPConfig):
+    """Slot-Hungarian orphan adoption. A source with exactly one unit-timepoint
+    child (edge <= div_existing_child_max_um) offers ONE division slot at the
+    child's frame; if div_allow_bare_end, a real track END (out_degree 0, has an
+    incoming edge, not last frame) first adopts its nearest orphan (continuation)
+    and then may receive a second child too. Orphans (in_degree 0) are matched to
+    slots per frame by Hungarian on parent-child distance, gated by
+    div_parent_child_max_um and (for a true division) div_sister_max_um, capped
+    per-frame (div_frame_cap_frac) and per-dataset (div_global_cap_frac). Every
+    added edge is unit-timepoint; out_degree never exceeds 2, in_degree never
+    exceeds 1."""
+    diag = {"n_divisions_added": 0, "n_bare_end_adopted": 0, "n_div_candidates": 0}
+    if not cfg.div_enable or len(nodes) == 0:
+        return edges.copy(), diag
+    pos = nodes.set_index("node_id")[["z", "y", "x"]]
+    t_of = dict(zip(nodes["node_id"], nodes["t"]))
+    max_t = int(nodes["t"].max())
+    frame_size = {}
+    for tt in t_of.values():
+        frame_size[int(tt)] = frame_size.get(int(tt), 0) + 1
+    global_cap = max(1, int(cfg.div_global_cap_frac * max(len(nodes), 1)))
+    edges = edges.copy()
+
+    def _adopt_pass(edges, second_child_only):
+        nonlocal diag
+        out_d, in_d = _m29_deg(edges)
+        has_in = set(edges["target_id"].astype(int)) if len(edges) else set()
+        succ_child = {}
+        for r in edges.itertuples():
+            s = int(r.source_id)
+            if out_d.get(s, 0) == 1 and t_of[int(r.target_id)] == t_of[s] + 1:
+                succ_child[s] = int(r.target_id)
+        orphans_by_t = {}
+        for n in nodes["node_id"]:
+            if in_d.get(int(n), 0) == 0:
+                orphans_by_t.setdefault(int(t_of[int(n)]), []).append(int(n))
+        # build per-frame parent slots.
+        slots_by_t = {}
+        for s in nodes["node_id"]:
+            s = int(s)
+            if second_child_only:
+                if out_d.get(s, 0) != 1 or s not in succ_child:
+                    continue
+                c1 = succ_child[s]
+                if physical_distance_um(pos.loc[s].to_numpy(float), pos.loc[c1].to_numpy(float)) > cfg.div_existing_child_max_um:
+                    continue
+                slots_by_t.setdefault(t_of[c1], []).append((s, c1))
+            else:
+                if not cfg.div_allow_bare_end:
+                    continue
+                if out_d.get(s, 0) != 0 or t_of[s] >= max_t or s not in has_in:
+                    continue
+                slots_by_t.setdefault(t_of[s] + 1, []).append((s, None))
+        new_edges = []
+        frame_added = {}
+        used_orphans = set()
+        for ft, slots in slots_by_t.items():
+            orphs = [o for o in orphans_by_t.get(ft, []) if o not in used_orphans]
+            if not orphs:
+                continue
+            frame_cap = max(1, int(cfg.div_frame_cap_frac * max(frame_size.get(ft, 0), 1)))
+            BIG = 1e6
+            cost = np.full((len(slots), len(orphs)), BIG, dtype=float)
+            for i, (s, c1) in enumerate(slots):
+                sp = pos.loc[s].to_numpy(float)
+                for j, o in enumerate(orphs):
+                    if o == s or o == c1:
+                        continue
+                    op = pos.loc[o].to_numpy(float)
+                    d_pc = physical_distance_um(sp, op)
+                    if d_pc > cfg.div_parent_child_max_um:
+                        continue
+                    if c1 is not None and physical_distance_um(pos.loc[c1].to_numpy(float), op) > cfg.div_sister_max_um:
+                        continue
+                    cost[i, j] = d_pc
+            for i, j in _m29_assign_min_cost(cost):
+                if cost[i, j] >= BIG:
+                    continue
+                if diag["n_divisions_added"] + diag["n_bare_end_adopted"] >= global_cap and second_child_only:
+                    break
+                if frame_added.get(ft, 0) >= frame_cap:
+                    continue
+                s, c1 = slots[i]
+                o = orphs[j]
+                if o in used_orphans:
+                    continue
+                diag["n_div_candidates"] += 1
+                new_edges.append({"source_id": s, "target_id": o, "edge_prob": 0.0, "edge_dist": float(cost[i, j])})
+                used_orphans.add(o)
+                frame_added[ft] = frame_added.get(ft, 0) + 1
+                if second_child_only:
+                    diag["n_divisions_added"] += 1
+                else:
+                    diag["n_bare_end_adopted"] += 1
+        if new_edges:
+            edges = pd.concat([edges, pd.DataFrame(new_edges, columns=["source_id", "target_id", "edge_prob", "edge_dist"])], ignore_index=True)
+        return edges
+
+    if cfg.div_allow_bare_end:
+        edges = _adopt_pass(edges, second_child_only=False)   # bare-end continuation first
+    edges = _adopt_pass(edges, second_child_only=True)        # then true second-child divisions
+    return edges, diag
+
+
+def stitch_gaps_engine(nodes, edges, cfg: PPConfig):
+    """Per-timepoint Hungarian gap stitching with a constant-velocity model. For
+    each gap size g in cfg.gap_sizes, an END@t (out_degree 0, not too close to the
+    last frame) is matched to a START@t+g+1 (in_degree 0); g synthetic nodes at
+    t+1..t+g bridge them with g+1 UNIT-timepoint edges. Gated on per-step
+    (gap_max_step_um) and total (gap_max_total_um[g]) distance AND velocity
+    consistency vs the end's history velocity (cos >= gap_vel_cos_min, per-step
+    magnitude within gap_vel_normdiff_um). Synthetic ids are negative until the
+    final relabel. Returns (nodes, edges, diag, next_synth_id)."""
+    diag = {f"gap{g}_candidates": 0 for g in (1, 2, 3)}
+    diag.update({f"gap{g}_closed": 0 for g in (1, 2, 3)})
+    if len(nodes) == 0:
+        return nodes.copy(), edges.copy(), diag, -1
+    pos = nodes.set_index("node_id")[["z", "y", "x"]]
+    sid = -1
+    all_new_nodes, all_new_edges = [], []
+    used_ends, used_starts = set(), set()
+    for g in cfg.gap_sizes:
+        max_total = cfg.gap_max_total_um.get(g, cfg.gap_max_total_um.get(int(g), 14.5)) if isinstance(cfg.gap_max_total_um, dict) else cfg.gap_max_total_um
+        # recompute degrees each gap size (previous inserts change ends/starts).
+        cur_edges = edges if not all_new_edges else pd.concat([edges, pd.DataFrame(all_new_edges, columns=["source_id", "target_id"])], ignore_index=True)
+        out_d, in_d = _m29_deg(cur_edges[["source_id", "target_id"]] if len(cur_edges) else cur_edges)
+        pred_of = dict(zip(cur_edges["target_id"].astype(int), cur_edges["source_id"].astype(int))) if len(cur_edges) else {}
+        cur_nodes = nodes if not all_new_nodes else pd.concat([nodes, pd.DataFrame(all_new_nodes, columns=["node_id", "t", "z", "y", "x"])], ignore_index=True)
+        pos_all = cur_nodes.set_index("node_id")[["z", "y", "x"]]
+        t_all = dict(zip(cur_nodes["node_id"].astype(int), cur_nodes["t"].astype(int)))
+        max_t, min_t = int(cur_nodes["t"].max()), int(cur_nodes["t"].min())
+        ends = [int(n) for n in cur_nodes["node_id"] if out_d.get(int(n), 0) == 0 and t_all[int(n)] <= max_t - (g + 1) and int(n) not in used_ends]
+        starts_by_t = {}
+        for n in cur_nodes["node_id"]:
+            n = int(n)
+            if in_d.get(n, 0) == 0 and t_all[n] > min_t and n not in used_starts:
+                starts_by_t.setdefault(t_all[n], []).append(n)
+        # group ends by t for per-frame Hungarian.
+        ends_by_t = {}
+        for e in ends:
+            ends_by_t.setdefault(t_all[e], []).append(e)
+        for t, elist in ends_by_t.items():
+            slist = starts_by_t.get(t + g + 1, [])
+            slist = [s for s in slist if s not in used_starts]
+            if not slist:
+                continue
+            BIG = 1e6
+            cost = np.full((len(elist), len(slist)), BIG, dtype=float)
+            for i, e in enumerate(elist):
+                e_um = pos_all.loc[e].to_numpy(float) * _VOXEL_SCALE
+                v_hist = _m29_history_velocity(e, pred_of, pos_all, cfg.gap_vel_history)
+                pred_end = e_um + (v_hist * (0.0) if v_hist is not None else 0.0)  # end anchor
+                for j, s in enumerate(slist):
+                    s_um = pos_all.loc[s].to_numpy(float) * _VOXEL_SCALE
+                    total = float(np.linalg.norm(s_um - e_um))
+                    if total > max_total:
+                        continue
+                    v_gap = (s_um - e_um) / float(g + 1)
+                    if float(np.linalg.norm(v_gap)) > cfg.gap_max_step_um:
+                        continue
+                    if cfg.gap_use_velocity_endpoint and v_hist is not None:
+                        nin, ngap = float(np.linalg.norm(v_hist)), float(np.linalg.norm(v_gap))
+                        if nin > 1e-9 and ngap > 1e-9:
+                            cos = float(np.dot(v_hist, v_gap) / (nin * ngap))
+                            if cos < cfg.gap_vel_cos_min:
+                                continue
+                            if float(np.linalg.norm(v_gap - v_hist)) > cfg.gap_vel_normdiff_um:
+                                continue
+                    cost[i, j] = total
+            diag[f"gap{g}_candidates"] += int((cost < BIG).sum())
+            for i, j in _m29_assign_min_cost(cost):
+                if cost[i, j] >= BIG:
+                    continue
+                e, s = elist[i], slist[j]
+                if e in used_ends or s in used_starts:
+                    continue
+                e_pos = pos_all.loc[e].to_numpy(float)
+                s_pos = pos_all.loc[s].to_numpy(float)
+                prev = e
+                for k in range(1, g + 1):
+                    m = e_pos + (s_pos - e_pos) * (k / float(g + 1))
+                    nid = sid
+                    sid -= 1
+                    all_new_nodes.append({"node_id": nid, "t": t + k, "z": float(m[0]), "y": float(m[1]), "x": float(m[2])})
+                    all_new_edges.append({"source_id": prev, "target_id": nid})
+                    prev = nid
+                all_new_edges.append({"source_id": prev, "target_id": s})
+                used_ends.add(e)
+                used_starts.add(s)
+                diag[f"gap{g}_closed"] += 1
+    res_nodes = pd.concat([nodes, pd.DataFrame(all_new_nodes, columns=["node_id", "t", "z", "y", "x"])], ignore_index=True) if all_new_nodes else nodes.copy()
+    base_edges = edges[["source_id", "target_id"]] if len(edges) else pd.DataFrame(columns=["source_id", "target_id"])
+    res_edges = pd.concat([base_edges, pd.DataFrame(all_new_edges, columns=["source_id", "target_id"])], ignore_index=True) if all_new_edges else base_edges.copy()
+    return res_nodes, res_edges, diag, sid
+
+
+def run_engine(base_nodes, base_edges, cfg: PPConfig):
+    """The full engine on ONE dataset's base graph. Returns
+    (final_nodes[node_id,t,z,y,x], final_edges[source_id,target_id], diag)."""
+    diag = {"raw_nodes": int(len(base_nodes)), "raw_edges": int(len(base_edges))}
+    out_d0, _ = _m29_deg(base_edges)
+    diag["base_divisions"] = int(sum(1 for v in out_d0.values() if v >= 2))
+    nodes = base_nodes[["node_id", "t", "z", "y", "x"]].copy()
+    edges = base_edges.copy()
+
+    if cfg.relink_enable:
+        edges, rl = motion_relink_engine(nodes, edges, cfg)
+        diag["relink"] = rl
+    else:
+        diag["relink"] = {"relink_enabled": False, "n_relinked": 0}
+
+    edges, dd = rescue_divisions_engine(nodes, edges, cfg)
+    diag["divisions"] = dd
+
+    edges2 = edges[["source_id", "target_id"]].copy() if len(edges) else pd.DataFrame(columns=["source_id", "target_id"])
+    nodes, edges2, gd, _sid = stitch_gaps_engine(nodes, edges2, cfg)
+    diag["gaps"] = gd
+
+    if cfg.linefit_enable:
+        nodes, lf = linefit_smooth_nodes(nodes, edges2, window=cfg.linefit_window, weight=cfg.linefit_weight)
+        diag["linefit"] = {"linefit_enabled": True, "n_smoothed": lf.get("n_nodes_smoothed", 0)}
+    else:
+        diag["linefit"] = {"linefit_enabled": False, "n_smoothed": 0}
+
+    if cfg.prune_enable:
+        nodes, edges2, pr = prune_isolated_nodes(nodes, edges2, max_frac=cfg.prune_max_frac)
+        diag["prune"] = {"isolated_nodes_pruned": pr.get("n_pruned", 0)}
+    else:
+        diag["prune"] = {"isolated_nodes_pruned": 0}
+
+    out_dF, _ = _m29_deg(edges2)
+    diag["divisions_total"] = int(sum(1 for v in out_dF.values() if v >= 2))
+    diag["final_nodes"] = int(len(nodes))
+    diag["final_edges"] = int(len(edges2))
+    return nodes, edges2, diag
+
+
+def convert_engine_to_submission(predictions_dir: Path, expected_datasets, cfg: PPConfig):
+    """Per dataset: read GEFF -> build_base_graph_m29 -> run_engine -> relabel to
+    globally-consecutive positive ids -> emit node then edge rows. Aggregates the
+    engine diagnostics the report needs. synthetic_nodes_added = sum g*gapg_closed."""
+    stores = find_prediction_geff_stores(predictions_dir)
+    all_rows, per_dataset = [], []
+    next_id = next_node_id = 0
+    agg = {k: 0 for k in ["raw_nodes", "raw_edges", "final_nodes", "final_edges",
+                          "gap1_candidates", "gap1_closed", "gap2_candidates", "gap2_closed",
+                          "gap3_candidates", "gap3_closed", "divisions_added", "bare_end_adopted",
+                          "divisions_total", "base_divisions", "n_relinked", "n_smoothed", "isolated_nodes_pruned"]}
+    emptied = []
+    for dataset_name, geff_root in stores:
+        geff_graph = read_geff_graph(geff_root)
+        base_nodes, base_edges = build_base_graph_m29(geff_graph)
+        fn, fe, d = run_engine(base_nodes, base_edges, cfg)
+        fn, fe, next_node_id = relabel_positive(fn, fe, next_node_id)
+        if len(fn) == 0:
+            emptied.append(dataset_name)
+        for row in fn.itertuples():
+            all_rows.append({"id": next_id, "dataset": dataset_name, "row_type": "node", "node_id": int(row.node_id),
+                             "t": int(row.t), "z": float(row.z), "y": float(row.y), "x": float(row.x), "source_id": -1, "target_id": -1})
+            next_id += 1
+        for row in (fe.itertuples() if len(fe) else []):
+            all_rows.append({"id": next_id, "dataset": dataset_name, "row_type": "edge", "node_id": -1,
+                             "t": -1, "z": -1, "y": -1, "x": -1, "source_id": int(row.source_id), "target_id": int(row.target_id)})
+            next_id += 1
+        gd = d["gaps"]
+        agg["raw_nodes"] += d["raw_nodes"]; agg["raw_edges"] += d["raw_edges"]
+        agg["final_nodes"] += d["final_nodes"]; agg["final_edges"] += d["final_edges"]
+        for g in (1, 2, 3):
+            agg[f"gap{g}_candidates"] += gd.get(f"gap{g}_candidates", 0)
+            agg[f"gap{g}_closed"] += gd.get(f"gap{g}_closed", 0)
+        agg["divisions_added"] += d["divisions"]["n_divisions_added"]
+        agg["bare_end_adopted"] += d["divisions"]["n_bare_end_adopted"]
+        agg["divisions_total"] += d["divisions_total"]
+        agg["base_divisions"] += d["base_divisions"]
+        agg["n_relinked"] += d["relink"].get("n_relinked", 0)
+        agg["n_smoothed"] += d["linefit"].get("n_smoothed", 0)
+        agg["isolated_nodes_pruned"] += d["prune"].get("isolated_nodes_pruned", 0)
+        per_dataset.append({"dataset": dataset_name, "nodes": d["final_nodes"], "edges": d["final_edges"],
+                            "raw_nodes": d["raw_nodes"], "raw_edges": d["raw_edges"], "diag": d})
+        print(f"  [m29] {dataset_name}: raw {d['raw_nodes']}/{d['raw_edges']} -> final {d['final_nodes']}/{d['final_edges']} "
+              f"(gap1={gd.get('gap1_closed',0)} gap2={gd.get('gap2_closed',0)} gap3={gd.get('gap3_closed',0)} "
+              f"div+={d['divisions']['n_divisions_added']} div_total={d['divisions_total']} relink={d['relink'].get('n_relinked',0)})")
+    agg["synthetic_nodes_added"] = agg["gap1_closed"] + 2 * agg["gap2_closed"] + 3 * agg["gap3_closed"]
+    submission_df = pd.DataFrame(all_rows, columns=SUBMISSION_COLUMNS)
+    conversion = {"predictions_dir": str(predictions_dir), "n_stores_found": len(stores),
+                  "found_datasets": [n for n, _ in stores], "expected_datasets": list(expected_datasets),
+                  "engine_config": asdict(cfg), "emptied_datasets": emptied, **agg, "per_dataset": per_dataset}
+    return submission_df, conversion
+
+# --------------------------------------------------------------------------- #
+# 43. M29 variant registry (engine configs) + command builder + artifact id
+# --------------------------------------------------------------------------- #
+# Universal submission sanity window (safety gate).
+M29_MIN_NODE_ROWS, M29_MAX_NODE_ROWS = 125000, 165000
+M29_MIN_EDGE_ROWS, M29_MAX_EDGE_ROWS = 110000, 155000
+M29_MAX_DIVISIONS_TOTAL = 4000
+M29_SYNTH_CAP_DEFAULT = 12000
+M29_SYNTH_CAP_DET095 = 18000
+
+# submission(3).csv sanity profile (uploaded engine on the current 400ep base) -
+# used ONLY for soft WARN, never a hard gate.
+M29_EXPECTED_NODE_ROWS = 139418
+M29_EXPECTED_EDGE_ROWS = 132871
+M29_EXPECTED_DIVISIONS = 2382
+
+
+def _m29_base_config(**overrides) -> PPConfig:
+    cfg = PPConfig()
+    for k, v in overrides.items():
+        setattr(cfg, k, v)
+    return cfg
+
+
+M29_VARIANTS = {
+    # A: full engine default (integration_cell / winning_postprocess). Primary.
+    "A": {"label": "winning_engine_default", "det_threshold": "0.99",
+          "config": _m29_base_config(), "synth_cap": M29_SYNTH_CAP_DEFAULT},
+    # B: gaps 1,2 only (isolate whether gap3 over-adds synthetic / FP).
+    "B": {"label": "engine_gap12_only", "det_threshold": "0.99",
+          "config": _m29_base_config(gap_sizes=(1, 2)), "synth_cap": M29_SYNTH_CAP_DEFAULT},
+    # C: default + linefit ON (compare with M19-C where linefit helped).
+    "C": {"label": "engine_linefit_on", "det_threshold": "0.99",
+          "config": _m29_base_config(linefit_enable=True, linefit_window=2, linefit_weight=0.75),
+          "synth_cap": M29_SYNTH_CAP_DEFAULT},
+    # D: default + motion relink ON (risky).
+    "D": {"label": "engine_relink_on", "det_threshold": "0.99",
+          "config": _m29_base_config(relink_enable=True, relink_min_um=7.0, relink_alt_max_um=4.5),
+          "synth_cap": M29_SYNTH_CAP_DEFAULT},
+    # E: default but det-threshold 0.95 (cautious detection-recall sweep).
+    "E": {"label": "engine_det095_safe", "det_threshold": "0.95",
+          "config": _m29_base_config(), "synth_cap": M29_SYNTH_CAP_DET095, "node_explosion_guard": True},
+}
+
+
+def build_m29_command(
+    variant_name: str, introspection: dict,
+    data_dir: str = f"{KAGGLE_COMPETITION_INPUT_DIR}/test", splits_filename: str = SPLITS_FILENAME,
+) -> tuple:
+    """The reference predict command with the variant's det-threshold (all other
+    flags identical to M16/M19-C: ilp-edge -1.0, appearance/disappearance 0.1,
+    division 1.0, --use-ilp, --unet-batch-size 4). Only E changes det to 0.95."""
+    vdef = M29_VARIANTS[variant_name]
+    params = dict(BASE_PREDICT_PARAMS)
+    params["det_threshold"] = vdef["det_threshold"]
+    available_splits = list(introspection.get("weight_splits", [])) or [0]
+    split = select_weight_split(0, available_splits)
+    cmd = build_base_command(params, split, splits_filename, data_dir)
+    notes = {"variant": variant_name, "label": vdef["label"], "det_threshold": params["det_threshold"],
+             "split_used": split, "available_splits": available_splits,
+             "engine_config": asdict(vdef["config"]),
+             "predict_command_flags_identical_to_m16_except_det": True}
+    return cmd, notes
+
+
+def _m29_artifact_name_sha(artifact_dir: Path) -> tuple:
+    """Reference artifact identity for the report (name from manifest, sha256 of
+    the split_0 edge-predictor weights). M29 runs whatever reference support pack
+    is mounted (like M19-C); it does NOT pin a specific artifact."""
+    import hashlib
+    name = None
+    mp = artifact_dir / "ARTIFACT_MANIFEST.json"
+    if mp.exists():
+        try:
+            m = json.loads(mp.read_text())
+            name = m.get("artifact_name") or m.get("name") or m.get("artifact") or m.get("dataset")
+        except Exception:
+            name = None
+    sha = None
+    wpath = artifact_dir / "weights" / "unet_transformer" / "split_0" / "edge_predictor_best.pth"
+    if wpath.exists() and wpath.is_file():
+        h = hashlib.sha256()
+        with open(wpath, "rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+        sha = h.hexdigest()
+    return name, sha
+
+# --------------------------------------------------------------------------- #
+# 44. M29 orchestration (reference predict -> winning engine -> guards) + fallback
+# --------------------------------------------------------------------------- #
+def _m29_submission_invariants(df: pd.DataFrame, expected_datasets) -> dict:
+    nodes = df[df["row_type"] == "node"]
+    edges = df[df["row_type"] == "edge"]
+    inv = {"n_node_rows": int(len(nodes)), "n_edge_rows": int(len(edges)),
+           "max_in_degree": 0, "max_out_degree": 0, "direct_multiframe_edges": 0,
+           "dangling_edges": 0, "id_consecutive": True, "no_nan": True,
+           "datasets_present": sorted(df["dataset"].unique().tolist()), "missing_datasets": [], "emptied_datasets": []}
+    ids = df["id"].to_numpy()
+    inv["id_consecutive"] = bool(len(ids) == 0 or (ids.min() == 0 and ids.max() == len(ids) - 1 and len(set(ids.tolist())) == len(ids)))
+    if len(nodes):
+        inv["no_nan"] = bool(not nodes[["t", "z", "y", "x", "node_id"]].isna().any().any())
+    for ds, g in df.groupby("dataset"):
+        gn = g[g["row_type"] == "node"]
+        ge = g[g["row_type"] == "edge"]
+        if len(gn) == 0:
+            inv["emptied_datasets"].append(ds)
+        t_of = dict(zip(gn["node_id"].astype(int), gn["t"].astype(int)))
+        if len(ge):
+            inv["max_in_degree"] = max(inv["max_in_degree"], int(ge.groupby("target_id").size().max()))
+            inv["max_out_degree"] = max(inv["max_out_degree"], int(ge.groupby("source_id").size().max()))
+            for r in ge.itertuples():
+                s, t = int(r.source_id), int(r.target_id)
+                if s not in t_of or t not in t_of:
+                    inv["dangling_edges"] += 1
+                elif t_of[t] - t_of[s] != 1:
+                    inv["direct_multiframe_edges"] += 1
+    inv["missing_datasets"] = [d for d in expected_datasets if d not in set(inv["datasets_present"])]
+    return inv
+
+
+def _m29_recommendation(variant_name: str, valid: bool, fallback_used: bool, inv: dict,
+                        synthetic: int, divisions_total: int, vdef: dict) -> str:
+    if not valid or fallback_used or not inv["no_nan"] or not inv["id_consecutive"]:
+        return "DO_NOT_SUBMIT_VALIDATION_FAILED"
+    if inv["dangling_edges"] > 0 or inv["direct_multiframe_edges"] > 0:
+        return "DO_NOT_SUBMIT_VALIDATION_FAILED"
+    if inv["max_in_degree"] > 1 or inv["max_out_degree"] > 2:
+        return "DO_NOT_SUBMIT_VALIDATION_FAILED"
+    if inv["missing_datasets"] or inv["emptied_datasets"]:
+        return "DO_NOT_SUBMIT_MISSING_OR_EMPTY_DATASET"
+    if variant_name == "E" and vdef.get("node_explosion_guard") and (inv["n_node_rows"] > M29_MAX_NODE_ROWS or inv["n_edge_rows"] > M29_MAX_EDGE_ROWS):
+        return "DO_NOT_SUBMIT_NODE_EXPLOSION"
+    if not (M29_MIN_NODE_ROWS <= inv["n_node_rows"] <= M29_MAX_NODE_ROWS):
+        return "DO_NOT_SUBMIT_UNSANE_NODE_COUNT"
+    if not (M29_MIN_EDGE_ROWS <= inv["n_edge_rows"] <= M29_MAX_EDGE_ROWS):
+        return "DO_NOT_SUBMIT_UNSANE_EDGE_COUNT"
+    if synthetic > vdef["synth_cap"]:
+        return "DO_NOT_SUBMIT_SYNTHETIC_EXPLOSION"
+    if divisions_total > M29_MAX_DIVISIONS_TOTAL:
+        return "DO_NOT_SUBMIT_DIVISION_EXPLOSION"
+    return "OK_TO_SUBMIT_EXPERIMENTAL"
+
+
+def _m29_soft_warnings(variant_name: str, inv: dict, divisions_total: int) -> list:
+    """Soft WARN vs the submission(3).csv sanity profile (never a hard gate)."""
+    warns = []
+    if variant_name == "A":
+        if abs(inv["n_node_rows"] - M29_EXPECTED_NODE_ROWS) > 3000:
+            warns.append(f"n_node_rows {inv['n_node_rows']} outside {M29_EXPECTED_NODE_ROWS}+-3000")
+        if abs(inv["n_edge_rows"] - M29_EXPECTED_EDGE_ROWS) > 4000:
+            warns.append(f"n_edge_rows {inv['n_edge_rows']} outside {M29_EXPECTED_EDGE_ROWS}+-4000")
+        if abs(divisions_total - M29_EXPECTED_DIVISIONS) > 800:
+            warns.append(f"divisions_total {divisions_total} outside {M29_EXPECTED_DIVISIONS}+-800")
+    return warns
+
+
+def _m29_report(variant_name, vdef, artifact_name, weight_sha256, inv, conversion, det_threshold,
+                valid, fallback_used, final_source, recommendation, warnings, instruction) -> dict:
+    c = conversion or {}
+    i = inv or {}
+    return {
+        "variant": variant_name, "label": vdef["label"],
+        "artifact_name": artifact_name, "weight_sha256": weight_sha256, "det_threshold": det_threshold,
+        "engine_config": asdict(vdef["config"]),
+        "raw_nodes": c.get("raw_nodes", 0), "raw_edges": c.get("raw_edges", 0),
+        "final_nodes": c.get("final_nodes", 0), "final_edges": c.get("final_edges", 0),
+        "n_node_rows": i.get("n_node_rows", 0), "n_edge_rows": i.get("n_edge_rows", 0),
+        "per_dataset": [{"dataset": p["dataset"], "nodes": p["nodes"], "edges": p["edges"]} for p in c.get("per_dataset", [])],
+        "gap1_candidates": c.get("gap1_candidates", 0), "gap1_closed": c.get("gap1_closed", 0),
+        "gap2_candidates": c.get("gap2_candidates", 0), "gap2_closed": c.get("gap2_closed", 0),
+        "gap3_candidates": c.get("gap3_candidates", 0), "gap3_closed": c.get("gap3_closed", 0),
+        "synthetic_nodes_added": c.get("synthetic_nodes_added", 0),
+        "divisions_added": c.get("divisions_added", 0), "divisions_total": c.get("divisions_total", 0),
+        "bare_end_adopted": c.get("bare_end_adopted", 0),
+        "relink_enabled": bool(vdef["config"].relink_enable), "n_relinked": c.get("n_relinked", 0),
+        "linefit_enabled": bool(vdef["config"].linefit_enable), "n_smoothed": c.get("n_smoothed", 0),
+        "isolated_nodes_pruned": c.get("isolated_nodes_pruned", 0),
+        "max_in_degree": i.get("max_in_degree", 0), "max_out_degree": i.get("max_out_degree", 0),
+        "direct_multiframe_edges": i.get("direct_multiframe_edges", 0), "dangling_edges": i.get("dangling_edges", 0),
+        "id_consecutive": i.get("id_consecutive", None), "no_nan": i.get("no_nan", None),
+        "valid": valid, "fallback_used": fallback_used, "final_source": final_source,
+        "recommendation": recommendation, "soft_warnings": warnings,
+        "synthetic_cap": vdef["synth_cap"], "divisions_total_cap": M29_MAX_DIVISIONS_TOTAL,
+        "expected_profile": {"n_node_rows": M29_EXPECTED_NODE_ROWS, "n_edge_rows": M29_EXPECTED_EDGE_ROWS, "divisions_total": M29_EXPECTED_DIVISIONS},
+        "missing_datasets": i.get("missing_datasets", []), "emptied_datasets": i.get("emptied_datasets", []),
+        "final_instruction": instruction,
+    }
+
+
+def run_m29_variant_pipeline(
+    variant_name: str, working_dir: str = KAGGLE_WORKING_DIR, competition_dir: str = KAGGLE_COMPETITION_INPUT_DIR,
+) -> dict:
+    out_dir = Path(working_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    comp = Path(competition_dir)
+    test_dir = comp / "test"
+    sample_submission_path = comp / "sample_submission.csv"
+    vdef = M29_VARIANTS[variant_name]
+    cfg = vdef["config"]
+    log(f"=== Milestone 29 variant {variant_name} ({vdef['label']}) det={vdef['det_threshold']} "
+        f"gaps={cfg.gap_sizes} relink={cfg.relink_enable} linefit={cfg.linefit_enable} ===")
+
+    artifact = resolve_artifact()
+    (out_dir / "milestone29_artifact_selection.json").write_text(json.dumps(artifact, indent=2, default=str))
+    if not artifact["resolved"]:
+        raise RuntimeError("support-pack artifact not found at any candidate mount (see milestone29_artifact_selection.json)")
+    artifact_dir = Path(artifact["artifact_dir"])
+    artifact_name, weight_sha256 = _m29_artifact_name_sha(artifact_dir)
+    log(f"Artifact resolved: {artifact_dir}  name={artifact_name}  sha={str(weight_sha256)[:12]}")
+
+    materialize = materialize_repo(artifact_dir, out_dir)
+    write_sitecustomize()
+    env = build_subprocess_env()
+    introspection = introspect_artifact(artifact_dir, out_dir)
+    dep_report = install_dependencies(artifact_dir / "wheels", env)
+    if not dep_report["all_ok"]:
+        raise RuntimeError("offline wheel install failed")
+    import_report = verify_imports(env)
+    if not import_report["all_ok"]:
+        raise RuntimeError(f"post-install import check failed: {import_report['modules']}")
+
+    repo_dst = Path(materialize["repo_dst"])
+    shipped_template = repo_dst / SPLITS_FILENAME
+    prepare_splits(test_dir=test_dir, sample_submission_path=sample_submission_path,
+                   template_path=shipped_template if shipped_template.exists() else None,
+                   out_splits_path=repo_dst / SPLITS_FILENAME, diagnostic_path=out_dir / "milestone29_splits.json")
+
+    command, cmd_notes = build_m29_command(variant_name, introspection)
+    (out_dir / "milestone29_run_command.json").write_text(json.dumps({"variant": variant_name, "command": command, "cwd": str(repo_dst), "notes": cmd_notes}, indent=2, default=str))
+    log("predict command: " + " ".join(command))
+    exec_result = run_prediction(command, cwd=repo_dst, env=env)
+    if not exec_result["ok"]:
+        raise RuntimeError("predict script returned nonzero")
+    predictions_dir = repo_dst / "predictions" / "unknown" / "unet_transformer" / f"split_{cmd_notes['split_used']}"
+    if not predictions_dir.exists():
+        predictions_dir = repo_dst / "predictions" / "unknown" / "unet_transformer" / "split_0"
+    expected_datasets = discover_test_datasets(test_dir, sample_submission_path)["chosen"]
+
+    submission_df, conversion = convert_engine_to_submission(predictions_dir, expected_datasets, cfg)
+    (out_dir / "milestone29_engine_conversion.json").write_text(json.dumps(conversion, indent=2, default=str))
+
+    valid, vreport, vstats = validate_reference_submission(submission_df, expected_datasets)
+    log(vreport)
+    inv = _m29_submission_invariants(submission_df, expected_datasets)
+    synthetic = int(conversion["synthetic_nodes_added"])
+    divisions_total = int(conversion["divisions_total"])
+
+    submission_path = out_dir / "submission.csv"
+    if valid:
+        submission_df.to_csv(submission_path, index=False)
+        submission_df.to_csv(out_dir / f"submission_m29_variant_{variant_name}.csv", index=False)
+        write_reference_diagnostics(submission_df, valid, vstats, out_dir)
+
+    recommendation = _m29_recommendation(variant_name, valid, False, inv, synthetic, divisions_total, vdef)
+    warnings = _m29_soft_warnings(variant_name, inv, divisions_total)
+    report_obj = _m29_report(variant_name, vdef, artifact_name, weight_sha256, inv, conversion, vdef["det_threshold"],
+                             valid, False, M29_FINAL_SOURCE, recommendation, warnings,
+                             instruction=("submission.csv built (M29 winning post-processing engine, experimental). "
+                                          + ("Review the on-Kaggle gates then submit." if recommendation == "OK_TO_SUBMIT_EXPERIMENTAL"
+                                             else f"{recommendation} - keep M19-C 0.880.")))
+    (out_dir / "milestone29_reference_submission_report.json").write_text(json.dumps(report_obj, indent=2, default=str))
+    (out_dir / "milestone29_failure_fallback_report.json").write_text(json.dumps(
+        {"variant": variant_name, "fallback": {"used": False, "reason": "pipeline succeeded"}, "final_source": M29_FINAL_SOURCE}, indent=2))
+    if not valid:
+        raise RuntimeError("M29 submission FAILED validation (falling back)")
+
+    print("\n=== Variant summary ===")
+    print(f"  variant: {variant_name} ({vdef['label']})  det: {vdef['det_threshold']}  gaps: {cfg.gap_sizes}")
+    print(f"  artifact: {artifact_name}  sha: {str(weight_sha256)[:12]}")
+    print(f"  raw: {conversion['raw_nodes']}/{conversion['raw_edges']}  final: {inv['n_node_rows']}/{inv['n_edge_rows']}")
+    print(f"  gap1={conversion['gap1_closed']} gap2={conversion['gap2_closed']} gap3={conversion['gap3_closed']} "
+          f"synthetic={synthetic} div_added={conversion['divisions_added']} div_total={divisions_total} "
+          f"relink={conversion['n_relinked']} smoothed={conversion['n_smoothed']} pruned={conversion['isolated_nodes_pruned']}")
+    print(f"  topology: in<={inv['max_in_degree']} out<={inv['max_out_degree']} multiframe={inv['direct_multiframe_edges']} dangling={inv['dangling_edges']}")
+    if warnings:
+        print(f"  SOFT WARN: {warnings}")
+    print(f"  RECOMMENDATION: {recommendation}")
+    log("submission.csv built and validated. Do not submit until user reviews (M29 experimental).")
+    return {"submission_df": submission_df, "variant": variant_name, "valid": valid,
+            "recommendation": recommendation, "report": report_obj}
+
+
+def run_m29_variant_with_fallback(
+    variant_name: str, working_dir: str = KAGGLE_WORKING_DIR, competition_dir: str = KAGGLE_COMPETITION_INPUT_DIR,
+) -> dict:
+    _RUN_LOG.clear()
+    out_dir = Path(working_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    submission_path = out_dir / "submission.csv"
+    sample_submission_path = Path(competition_dir) / "sample_submission.csv"
+    try:
+        result = run_m29_variant_pipeline(variant_name, working_dir, competition_dir)
+        _write_log(out_dir)
+        return {"status": "ok", **result}
+    except Exception:
+        tb = traceback.format_exc()
+        log("[error] M29 variant pipeline failed:\n" + tb)
+        if submission_path.exists():
+            log("submission.csv already exists; keeping it (not overwriting with fallback).")
+            (out_dir / "milestone29_failure_fallback_report.json").write_text(json.dumps(
+                {"variant": variant_name, "traceback": tb, "fallback": {"used": False, "reason": "submission already written"}}, indent=2))
+            _write_log(out_dir)
+            return {"status": "pipeline_failed_submission_exists"}
+        try:
+            fb = write_fallback_submission(sample_submission_path, submission_path)
+            (out_dir / "milestone29_failure_fallback_report.json").write_text(json.dumps({"variant": variant_name, "traceback": tb, "fallback": fb}, indent=2))
+            print("\n=== Variant summary ===")
+            print(f"  variant: {variant_name}  final_source: fallback_sample_submission  fallback_used: True")
+            print("  RECOMMENDATION: DO_NOT_SUBMIT_VALIDATION_FAILED")
+            log("FALLBACK sample submission written because the M29 engine pipeline failed.")
+            _write_log(out_dir)
+            return {"status": "fallback_written", "fallback": fb}
+        except Exception:
+            fb_tb = traceback.format_exc()
+            try:
+                (out_dir / "milestone29_failure_fallback_report.json").write_text(json.dumps({"variant": variant_name, "traceback": tb, "fallback_error": fb_tb}, indent=2))
+            except Exception:
+                pass
+            log("[fatal] could not write fallback submission either:\n" + fb_tb)
+            _write_log(out_dir)
+            raise
+
+
+# --------------------------------------------------------------------------- #
+# 45. M29 LOCAL CV HARNESS (non-submit diagnostic). Wires local_cv_harness.py
+# ideas to the mounted repo: find train GEFF GT, run the engine on a smoke set,
+# and report the official-metric wiring status HONESTLY (no faked CV numbers).
+# --------------------------------------------------------------------------- #
+def _m29_find_train_geff(competition_dir: str) -> list:
+    """Locate train datasets that ship a ground-truth GEFF/tracking graph.
+    Hidden-safe: globs the mounted train dir, no hardcoded dataset names."""
+    comp = Path(competition_dir)
+    found = []
+    for train_root in [comp / "train", comp]:
+        if not train_root.exists():
+            continue
+        for p in sorted(train_root.glob("*")):
+            if not p.is_dir():
+                continue
+            geff = None
+            for cand in list(p.glob("**/*.geff")) + list(p.glob("**/tracks*")) + list(p.glob("**/*graph*")):
+                geff = cand
+                break
+            if geff is not None:
+                found.append({"dataset": p.name, "path": str(p), "gt_candidate": str(geff)})
+    return found
+
+
+def _m29_locate_official_metric():
+    """Try to import the competition's official metric. Returns (callable|None,
+    where-string). NEVER fabricates a metric."""
+    for modname, fnname in [("biohub_tracking.metrics", "score"), ("biohub_tracking.metric", "evaluate"),
+                            ("metrics", "cell_tracking_metric"), ("evaluate", "score")]:
+        try:
+            mod = __import__(modname, fromlist=[fnname])
+            fn = getattr(mod, fnname, None)
+            if callable(fn):
+                return fn, f"{modname}.{fnname}"
+        except Exception:
+            continue
+    return None, None
+
+
+def run_m29_local_cv(working_dir: str = KAGGLE_WORKING_DIR, competition_dir: str = KAGGLE_COMPETITION_INPUT_DIR) -> dict:
+    """NON-SUBMIT harness: run the engine on 1-2 train datasets and report the
+    official-metric wiring status. If the official metric cannot be located, say
+    exactly what is missing - do NOT fake CV numbers. Writes m29_local_cv_report.json.
+    Never writes a competition submission."""
+    _RUN_LOG.clear()
+    out_dir = Path(working_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    report = {"kind": "local_cv_harness", "submit": False, "engine_config": asdict(PPConfig()),
+              "train_datasets_found": [], "smoke_runs": [], "official_metric": None,
+              "metric_wired": False, "missing": [], "notes": []}
+    try:
+        trains = _m29_find_train_geff(competition_dir)
+        report["train_datasets_found"] = trains
+        metric_fn, metric_where = _m29_locate_official_metric()
+        report["official_metric"] = metric_where
+        report["metric_wired"] = metric_fn is not None
+        if metric_fn is None:
+            report["missing"].append("official metric callable not importable (tried biohub_tracking.metrics.score, "
+                                     "biohub_tracking.metric.evaluate, metrics.cell_tracking_metric, evaluate.score)")
+        if not trains:
+            report["missing"].append("no train dataset with a ground-truth GEFF/tracking graph found under the mounted "
+                                     "competition dir (train GT is required for CV; test-only mounts cannot be scored locally)")
+        # Smoke-run the engine on up to 2 train GT graphs (structure only) if readable.
+        for tr in trains[:2]:
+            entry = {"dataset": tr["dataset"], "engine_ran": False, "error": None}
+            try:
+                geff_root = _geff_root_of(Path(tr["gt_candidate"])) or Path(tr["gt_candidate"])
+                geff_graph = read_geff_graph(geff_root)
+                base_nodes, base_edges = build_base_graph_m29(geff_graph)
+                fn, fe, d = run_engine(base_nodes, base_edges, PPConfig())
+                entry["engine_ran"] = True
+                entry["raw_nodes"] = d["raw_nodes"]; entry["final_nodes"] = d["final_nodes"]
+                entry["final_edges"] = d["final_edges"]; entry["gaps"] = d["gaps"]
+                if metric_fn is not None:
+                    entry["note"] = "engine ran; metric wiring present but GT->metric call is left to the official harness"
+                else:
+                    entry["note"] = "engine ran on the train graph; NO official metric available so NO CV score computed"
+            except Exception as exc:
+                entry["error"] = repr(exc)
+            report["smoke_runs"].append(entry)
+        if not report["metric_wired"]:
+            report["notes"].append("CV NOT computed: honest status is that the official metric is not wired at this mount. "
+                                   "Provide the official scoring function (or its module path) to complete local CV before "
+                                   "further LB submits.")
+        else:
+            report["notes"].append("Official metric importable; complete the GT->prediction scoring call in the official "
+                                   "harness to produce CV numbers. No CV score is fabricated here.")
+        report["status"] = "ok"
+    except Exception:
+        report["status"] = "error"
+        report["traceback"] = traceback.format_exc()
+    (out_dir / "m29_local_cv_report.json").write_text(json.dumps(report, indent=2, default=str))
+    _write_log(out_dir)
+    print("=== M29 LOCAL CV HARNESS (non-submit) ===")
+    print(f"  train datasets found: {len(report['train_datasets_found'])}")
+    print(f"  official metric wired: {report['metric_wired']} ({report['official_metric']})")
+    if report["missing"]:
+        print("  MISSING for real CV:")
+        for m in report["missing"]:
+            print(f"   - {m}")
+    print("  No submission was created (non-submit harness). See m29_local_cv_report.json.")
+    return report
+
+# --------------------------------------------------------------------------- #
+# 46. M29 tests + top-level drivers (variant + local CV harness)
+# --------------------------------------------------------------------------- #
+def _mk29n(rows):
+    return pd.DataFrame(rows, columns=["node_id", "t", "z", "y", "x"])
+
+
+def _mk29e4(rows):
+    return pd.DataFrame(rows, columns=["source_id", "target_id", "edge_prob", "edge_dist"])
+
+
+def _mk29e2(rows):
+    return pd.DataFrame(rows, columns=["source_id", "target_id"])
+
+
+def _m29_test_stitch_gaps_unit_edges():
+    # single END@t0 / START@t4 -> only gap3 matches; 3 synth nodes, 4 unit edges.
+    nodes = _mk29n([(0, 0, 0.0, 0.0, 0.0), (1, 4, 0.0, 4.0, 0.0)])
+    n2, e2, d, _ = stitch_gaps_engine(nodes, _mk29e2([]), PPConfig())
+    assert d["gap3_closed"] == 1 and d["gap1_closed"] == 0 and d["gap2_closed"] == 0, d
+    assert len(n2) == 2 + 3 and len(e2) == 4, (len(n2), len(e2))
+    t_of = dict(zip(n2["node_id"], n2["t"]))
+    for r in e2.itertuples():
+        assert t_of[int(r.target_id)] - t_of[int(r.source_id)] == 1, "gap stitch produced a NON-unit edge"
+    assert sorted(int(t) for nid, t in t_of.items() if nid < 0) == [1, 2, 3]
+    # gap1 case.
+    nodes2 = _mk29n([(0, 0, 0.0, 0.0, 0.0), (1, 2, 0.0, 1.0, 0.0)])
+    _n, _e, d1, _ = stitch_gaps_engine(nodes2, _mk29e2([]), PPConfig())
+    assert d1["gap1_closed"] == 1 and d1["gap2_closed"] == 0 and d1["gap3_closed"] == 0, d1
+
+
+def _m29_test_rescue_divisions():
+    # S has one child C1 at t1; orphan O at t1 within gates -> division (out 2).
+    nodes = _mk29n([(0, 0, 0.0, 0.0, 0.0), (1, 1, 0.0, 2.0, 0.0), (2, 1, 0.0, 1.0, 0.0)])
+    edges = _mk29e4([(0, 1, 0.9, 0.81)])
+    e2, d = rescue_divisions_engine(nodes, edges, PPConfig())
+    assert d["n_divisions_added"] == 1 and d["n_bare_end_adopted"] == 0, d
+    assert int(e2.groupby("source_id").size().max()) == 2, "source should be a division (out_degree 2)"
+    assert int(e2.groupby("target_id").size().max()) <= 1, "in_degree must stay <= 1"
+
+
+def _m29_test_bare_end_adoption():
+    # P->E is a real track end at t1; orphan O at t2 -> bare-end continuation.
+    nodes = _mk29n([(9, 0, 0.0, 0.0, 0.0), (0, 1, 0.0, 1.0, 0.0), (1, 2, 0.0, 2.0, 0.0)])
+    edges = _mk29e4([(9, 0, 0.9, 0.41)])
+    e2, d = rescue_divisions_engine(nodes, edges, PPConfig())
+    assert d["n_bare_end_adopted"] == 1, d
+    t_of = dict(zip(nodes["node_id"], nodes["t"]))
+    for r in e2.itertuples():
+        assert t_of[int(r.target_id)] - t_of[int(r.source_id)] == 1, "bare-end adoption produced a non-unit edge"
+
+
+def _m29_test_motion_relink():
+    # A0->A1 is long (>relink_min 7um); a closer target B1 (<relink_alt_max 4.5) exists.
+    nodes = _mk29n([(0, 0, 0.0, 0.0, 0.0), (1, 1, 0.0, 20.0, 0.0), (2, 1, 0.0, 0.5, 0.0)])
+    edges = _mk29e4([(0, 1, 0.9, 8.1)])
+    cfg = _m29_base_config(relink_enable=True, relink_min_um=7.0, relink_alt_max_um=4.5)
+    e2, d = motion_relink_engine(nodes, edges, cfg)
+    assert d["n_relinked"] == 1, d
+    assert ((e2["source_id"] == 0) & (e2["target_id"] == 2)).any(), "should relink 0->2 (closer target)"
+    assert not ((e2["source_id"] == 0) & (e2["target_id"] == 1)).any(), "long edge 0->1 should be dropped"
+
+
+def _m29_test_variant_registry_and_command():
+    assert M29_VARIANTS["A"]["config"].gap_sizes == (1, 2, 3) and M29_VARIANTS["A"]["config"].relink_enable is False
+    assert M29_VARIANTS["B"]["config"].gap_sizes == (1, 2)
+    assert M29_VARIANTS["C"]["config"].linefit_enable is True and M29_VARIANTS["C"]["config"].linefit_weight == 0.75
+    assert M29_VARIANTS["D"]["config"].relink_enable is True and M29_VARIANTS["D"]["config"].relink_alt_max_um == 4.5
+    assert M29_VARIANTS["E"]["det_threshold"] == "0.95" and M29_VARIANTS["E"].get("node_explosion_guard") is True
+    assert M29_VARIANTS["A"]["config"].div_parent_child_max_um == 6.5 and M29_VARIANTS["A"]["config"].div_global_cap_frac == 0.020
+    for v, det in [("A", "0.99"), ("B", "0.99"), ("C", "0.99"), ("D", "0.99"), ("E", "0.95")]:
+        cmd, notes = build_m29_command(v, {"weight_splits": [0]})
+        assert cmd[cmd.index("--det-threshold") + 1] == det, (v, cmd)
+        assert "--use-ilp" in cmd and cmd[cmd.index("--ilp-edge-weight") + 1] == "-1.0"
+        assert notes["det_threshold"] == det
+
+
+def _m29_test_recommendation_gates():
+    ok = {"n_node_rows": 139418, "n_edge_rows": 132871, "max_in_degree": 1, "max_out_degree": 2,
+          "direct_multiframe_edges": 0, "dangling_edges": 0, "id_consecutive": True, "no_nan": True,
+          "missing_datasets": [], "emptied_datasets": []}
+    A = M29_VARIANTS["A"]; E = M29_VARIANTS["E"]
+    assert _m29_recommendation("A", True, False, ok, 5000, 2400, A) == "OK_TO_SUBMIT_EXPERIMENTAL"
+    assert _m29_recommendation("A", False, False, ok, 5000, 2400, A) == "DO_NOT_SUBMIT_VALIDATION_FAILED"
+    assert _m29_recommendation("A", True, False, {**ok, "dangling_edges": 1}, 5000, 2400, A) == "DO_NOT_SUBMIT_VALIDATION_FAILED"
+    assert _m29_recommendation("A", True, False, {**ok, "n_node_rows": 170000}, 5000, 2400, A) == "DO_NOT_SUBMIT_UNSANE_NODE_COUNT"
+    assert _m29_recommendation("A", True, False, ok, 13000, 2400, A) == "DO_NOT_SUBMIT_SYNTHETIC_EXPLOSION"
+    assert _m29_recommendation("A", True, False, ok, 5000, 4200, A) == "DO_NOT_SUBMIT_DIVISION_EXPLOSION"
+    assert _m29_recommendation("A", True, False, {**ok, "emptied_datasets": ["ds9"]}, 5000, 2400, A) == "DO_NOT_SUBMIT_MISSING_OR_EMPTY_DATASET"
+    # E: node-explosion guard fires above the window; E allows a higher synthetic cap.
+    assert _m29_recommendation("E", True, False, {**ok, "n_node_rows": 170000}, 5000, 2400, E) == "DO_NOT_SUBMIT_NODE_EXPLOSION"
+    assert _m29_recommendation("E", True, False, {**ok, "n_node_rows": 160000}, 15000, 2400, E) == "OK_TO_SUBMIT_EXPERIMENTAL"
+    # soft warnings (never a gate).
+    assert _m29_soft_warnings("A", {"n_node_rows": 150000, "n_edge_rows": 132871}, 2382), "A should warn when far from profile"
+    assert _m29_soft_warnings("A", {"n_node_rows": 139418, "n_edge_rows": 132871}, 2382) == []
+
+
+def _m29_test_end_to_end_submission():
+    rows, edges = [], []
+    for tr in range(3):
+        base = tr * 100
+        for t in range(9):
+            rows.append((base + t, t, 0.0, float(base + t), 0.0))
+        edges += [(base + t, base + t + 1, 0.9, 0.41) for t in range(8)]
+    base_nodes = _mk29n(rows)
+    base_edges = _mk29e4(edges)
+    fn, fe, d = run_engine(base_nodes, base_edges, PPConfig())
+    fn, fe, _ = relabel_positive(fn, fe, 0)
+    assert len(fn) > 0 and len(fe) > 0
+    all_rows, nid = [], 0
+    for r in fn.itertuples():
+        all_rows.append({"id": nid, "dataset": "ds1", "row_type": "node", "node_id": int(r.node_id),
+                         "t": int(r.t), "z": float(r.z), "y": float(r.y), "x": float(r.x), "source_id": -1, "target_id": -1})
+        nid += 1
+    for r in fe.itertuples():
+        all_rows.append({"id": nid, "dataset": "ds1", "row_type": "edge", "node_id": -1,
+                         "t": -1, "z": -1, "y": -1, "x": -1, "source_id": int(r.source_id), "target_id": int(r.target_id)})
+        nid += 1
+    df = pd.DataFrame(all_rows, columns=SUBMISSION_COLUMNS)
+    valid, rep, stats = validate_reference_submission(df, ["ds1"])
+    assert valid, f"end-to-end engine submission must be valid: {rep}"
+    inv = _m29_submission_invariants(df, ["ds1"])
+    assert inv["direct_multiframe_edges"] == 0 and inv["dangling_edges"] == 0
+    assert inv["max_in_degree"] <= 1 and inv["max_out_degree"] <= 2
+
+
+def run_milestone29_tests() -> None:
+    """Winning-engine math on synthetic fixtures (no Kaggle/GPU): gap stitching
+    (gap1/gap3, UNIT edges only, synthetic at t+1..t+g), slot-Hungarian division
+    rescue + bare-end adoption, motion relink (long-edge replacement), the variant
+    registry + per-variant predict det-threshold, the recommendation/explosion
+    guards + soft warnings, and an end-to-end valid submission."""
+    _m29_test_stitch_gaps_unit_edges()
+    _m29_test_rescue_divisions()
+    _m29_test_bare_end_adoption()
+    _m29_test_motion_relink()
+    _m29_test_variant_registry_and_command()
+    _m29_test_recommendation_gates()
+    _m29_test_end_to_end_submission()
+    print("All milestone29_winning_engine_integration_runner tests passed (7/7).")
+
+
+DEFAULT_M29_VARIANT = "A"   # submit-order first: full winning engine default
+
+
+def run_milestone29_variant(
+    variant_name: str = DEFAULT_M29_VARIANT, working_dir: str = KAGGLE_WORKING_DIR,
+    competition_dir: str = KAGGLE_COMPETITION_INPUT_DIR,
+) -> dict:
+    print("=== Self-test: M29 winning engine (gaps, divisions, relink, guards) ===")
+    run_milestone29_tests()
+    if variant_name not in M29_VARIANTS:
+        raise ValueError(f"unknown variant {variant_name!r}, expected one of {sorted(M29_VARIANTS)}")
+    if not is_kaggle_env():
+        print(f"[dry-run] /kaggle/input absent - self-tests only (variant {variant_name}). On Kaggle this runs the "
+              "reference predict on the mounted support pack, applies the embedded winning engine, and writes a guarded submission.")
+        return {"status": "dry_run", "variant": variant_name}
+    return run_m29_variant_with_fallback(variant_name, working_dir, competition_dir)
+
+
+def run_milestone29_local_cv(working_dir: str = KAGGLE_WORKING_DIR, competition_dir: str = KAGGLE_COMPETITION_INPUT_DIR) -> dict:
+    """Non-submit local-CV harness driver (writes m29_local_cv_report.json only)."""
+    print("=== Self-test: M29 winning engine (harness shares the engine) ===")
+    run_milestone29_tests()
+    if not is_kaggle_env():
+        print("[dry-run] /kaggle/input absent - self-tests only. On Kaggle this locates train GT GEFF, smoke-runs the "
+              "engine, and HONESTLY reports whether the official metric is wired (no faked CV). It never creates a submission.")
+        return {"status": "dry_run", "kind": "local_cv_harness"}
+    return run_m29_local_cv(working_dir, competition_dir)
+
+
+run_milestone29_local_cv()
