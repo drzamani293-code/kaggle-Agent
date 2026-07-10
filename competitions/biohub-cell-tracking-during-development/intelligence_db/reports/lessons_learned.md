@@ -1,6 +1,6 @@
 # Lessons Learned
 
-_Generated 2026-07-09 18:23 UTC from intelligence.duckdb._
+_Generated 2026-07-10 14:19 UTC from intelligence.duckdb._
 
 Distilled, evidence-linked findings driving strategy.
 
@@ -39,6 +39,7 @@ Distilled, evidence-linked findings driving strategy.
 - [1.00] Cell-tracking competition metric specification — https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/metrics.md
 - [1.00] lb893 learned-graph tracker with micro-safe divisions — https://github.com/dalloliogm/kaggle_competitions
 - [0.99] biohub-cell-tracking-v4-unet-ilp-reproduction (public high-score notebook) — kaggle:notebook/biohub-cell-tracking-v4-unet-ilp-reproduction
+- [0.97] biohub_winning_strategy.md (uploaded) — upload:biohub_winning_strategy.md
 - [0.95] tracking_cellmot/metrics.py — https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/src/tracking_cellmot/metrics.py
 - [0.95] tracking_cellmot/division_metrics.py — https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/src/tracking_cellmot/division_metrics.py
 - [0.95] biohub-tracking-support-pack-400ep-snapshot-v1 (discovered via M23-C guard failure) — kaggle:/kaggle/input/datasets/pilkwang/biohub-tracking-support-pack-50ep-v1

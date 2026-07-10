@@ -269,6 +269,41 @@ def report_next_actions(con) -> str:
             "node-penalty reduction WITHOUT synthetic-node risk first.",
             f"**Keep `{best_id}` at {_fmt_score(best_score)} as final** unless an M23 score beats 0.880.",
         ]
+    elif [e for e in ["M28_A_M19C_GAP_CAPS_OPEN", "M28_C_DIVISION_CAP_OPEN",
+                      "M28_D_GAP_OPEN_PLUS_DIV_OPEN_NO_LINEFIT", "M28_B_M19C_GAP3_ADDED",
+                      "M28_E_DET095_M19C_SAFE"] if e in pending_ids]:
+        m28_order = [e for e in ["M28_A_M19C_GAP_CAPS_OPEN", "M28_C_DIVISION_CAP_OPEN",
+                                 "M28_D_GAP_OPEN_PLUS_DIV_OPEN_NO_LINEFIT", "M28_B_M19C_GAP3_ADDED",
+                                 "M28_E_DET095_M19C_SAFE"] if e in pending_ids]
+        out += [
+            "**Pivot back to M19-C and EXPAND RECALL (M28).** M27-A (public-notebook reproduction) scored",
+            "**0.859 < 0.880** - its pruning-heavy output pipeline over-prunes / lowers node recall on our",
+            "base, so the pruning path is deprioritized. The uploaded winning strategy argues the opposite",
+            "for M19-C: our post-processing is too **conservative** (gap caps too small, division cap too",
+            "small, det-threshold 0.99 possibly too high), and recall-oriented gap/division recovery is the",
+            "path beyond 0.880.",
+            "",
+            "M28 keeps the exact M19-C predict command + metric-aware chain and OPENS one recall lever per",
+            "variant (every recovered edge stays unit-timepoint t->t+1; in<=1/out<=2). Submit each only if its",
+            "report prints `OK_TO_SUBMIT_EXPERIMENTAL` (valid, no fallback, no NaN, consecutive id, no dangling,",
+            "all edges t->t+1, in<=1/out<=2, node/edge counts sane, synthetic within the per-variant cap,",
+            "final_source=reference_learned_graph_postprocessed) plus the per-variant explosion guard.",
+            "",
+            "**Submit order recommendation:**",
+        ]
+        for i, eid in enumerate(m28_order, 1):
+            reason = {1: " (gap caps open - the strategy's strongest claim; node_rows 132000-140000, synthetic<=4500)",
+                      2: " (division caps open only - isolate the division lever; DO_NOT_SUBMIT_DIVISION_EXPLOSION if divisions>2500)",
+                      3: " (gaps + divisions open, linefit disabled - aggressive recall without smoothing; synthetic<=5000)",
+                      4: " (adds strict-velocity gap3 = 3-frame recovery; higher upside, synthetic<=6500)",
+                      5: " (det-threshold 0.95, a SAFE first det-sweep step; DO_NOT_SUBMIT_NODE_EXPLOSION if node_rows>155000)"}.get(i, "")
+            out.append(f"{i}. `{eid}`{reason}")
+        out += [
+            "",
+            f"**Keep `{best_id}` at {_fmt_score(best_score)} as final** unless an M28 variant beats 0.880.",
+            "Do NOT build det 0.90/0.80 until the M28-E 0.95 result lands. The M26 ensemble variants remain a",
+            "secondary pending track.",
+        ]
     elif [e for e in ["M27_A_PUBLIC_REPRO_EXACT_SAFETY", "M27_C_PUBLIC_REPRO_MINLEN5",
                       "M27_B_PUBLIC_REPRO_NO_EDGE_VETO", "M27_D_PUBLIC_REPRO_STRICT_PRECISION"] if e in pending_ids]:
         m27_order = [e for e in ["M27_A_PUBLIC_REPRO_EXACT_SAFETY", "M27_C_PUBLIC_REPRO_MINLEN5",

@@ -1328,10 +1328,10 @@
     "linefit",
     "final_safety_repair"
    ],
-   "public_score": null,
-   "status": "pending",
+   "public_score": 0.859,
+   "status": "scored",
    "created_at": "2026-07-09",
-   "notes": "PENDING (experimental). Faithful reproduction of the public v4-unet-ilp notebook on the guarded 400ep artifact (name contains 400ep + weight_sha256 12f6881e..) + final safety repair (in<=1/out<=2, all edges t->t+1, no dangling, no NaN, consecutive id; a >2-out source keeps its two best children by edge_prob then repair_policy_score then shorter distance). Expected public diag: node_rows ~119000-121000, edge_rows ~114000-116500, gap_synthetic ~2000-2300, safe_div ~350-430, short_track_nodes_removed ~9000-11000, edges_vetoed ~900-1400, linefit ~118000-121000. SUBMIT FIRST if OK_TO_SUBMIT_EXPERIMENTAL. Keep M19-C 0.880 final unless this beats it.",
+   "notes": "SCORED 0.859 on public LB - BELOW M19-C 0.880. The public-notebook reproduction's pruning-heavy output pipeline (short-track filtering + edge veto) over-prunes / lowers node recall on our base. Pruning-heavy public-repro path DEPRIORITIZED; pivot back to M19-C and expand RECALL (M28). PENDING (experimental). Faithful reproduction of the public v4-unet-ilp notebook on the guarded 400ep artifact (name contains 400ep + weight_sha256 12f6881e..) + final safety repair (in<=1/out<=2, all edges t->t+1, no dangling, no NaN, consecutive id; a >2-out source keeps its two best children by edge_prob then repair_policy_score then shorter distance). Expected public diag: node_rows ~119000-121000, edge_rows ~114000-116500, gap_synthetic ~2000-2300, safe_div ~350-430, short_track_nodes_removed ~9000-11000, edges_vetoed ~900-1400, linefit ~118000-121000. SUBMIT FIRST if OK_TO_SUBMIT_EXPERIMENTAL. Keep M19-C 0.880 final unless this beats it.",
    "submission_stats": {
     "n_rows": null,
     "n_nodes": null,
@@ -1380,9 +1380,9 @@
     "final_safety_repair"
    ],
    "public_score": null,
-   "status": "pending",
+   "status": "blocked",
    "created_at": "2026-07-09",
-   "notes": "PENDING (experimental). Same as A but the edge-policy VETO is DISABLED - isolates whether the veto helps or hurts. Expected: slightly more edges, maybe more FP. Submit only if valid and counts sane (universal safety gate).",
+   "notes": "DEPRIORITIZED (pruning-heavy public-repro path failed: M27-A scored 0.859 < 0.880). Not submitting further M27 pruning variants; recall-expansion (M28) is the new path. PENDING (experimental). Same as A but the edge-policy VETO is DISABLED - isolates whether the veto helps or hurts. Expected: slightly more edges, maybe more FP. Submit only if valid and counts sane (universal safety gate).",
    "submission_stats": {
     "n_rows": null,
     "n_nodes": null,
@@ -1432,9 +1432,9 @@
     "final_safety_repair"
    ],
    "public_score": null,
-   "status": "pending",
+   "status": "blocked",
    "created_at": "2026-07-09",
-   "notes": "PENDING (experimental). Same as A but output_min_track_len=5 - tests whether minlen 7 over-prunes true short tracks. Expected more nodes/edges than A, still below M24-B. Submit (order #2) if valid and n_node_rows <= 126000.",
+   "notes": "DEPRIORITIZED (pruning-heavy public-repro path failed: M27-A scored 0.859 < 0.880). Not submitting further M27 pruning variants; recall-expansion (M28) is the new path. PENDING (experimental). Same as A but output_min_track_len=5 - tests whether minlen 7 over-prunes true short tracks. Expected more nodes/edges than A, still below M24-B. Submit (order #2) if valid and n_node_rows <= 126000.",
    "submission_stats": {
     "n_rows": null,
     "n_nodes": null,
@@ -1484,9 +1484,259 @@
     "final_safety_repair"
    ],
    "public_score": null,
-   "status": "pending",
+   "status": "blocked",
    "created_at": "2026-07-09",
-   "notes": "PENDING (experimental). Same as A but stricter short-track filtering (output_min_track_len=8, keep division components) - tests whether an even lower node penalty raises the public score. Submit only if n_node_rows>=112000 and n_edge_rows>=108000.",
+   "notes": "DEPRIORITIZED (pruning-heavy public-repro path failed: M27-A scored 0.859 < 0.880). Not submitting further M27 pruning variants; recall-expansion (M28) is the new path. PENDING (experimental). Same as A but stricter short-track filtering (output_min_track_len=8, keep division components) - tests whether an even lower node penalty raises the public score. Submit only if n_node_rows>=112000 and n_edge_rows>=108000.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M28_A_M19C_GAP_CAPS_OPEN",
+   "milestone": "M28",
+   "variant": "A",
+   "label": "m19c_gap_caps_open",
+   "notebook_name": "milestone28_metric_aware_recall_expansion_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M28_A_M19C_GAP_CAPS_OPEN.txt",
+   "command": {
+    "det_threshold": 0.99,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "safe_divisions",
+    "gap1",
+    "gap2",
+    "linefit",
+    "prune_isolated"
+   ],
+   "public_score": null,
+   "status": "pending",
+   "created_at": "2026-07-10",
+   "notes": "PENDING (experimental, SUBMIT FIRST). M19-C full_chain with ONLY the gap caps opened (gap1 max_total 6.5 / cap_frac 0.05 / cap_abs 100000; gap2 max_step 4.6 / max_total 10.5 / cap_frac 0.05 / cap_abs 100000). Cleanest test of the winning strategy's strongest claim: M19-C left TP gaps unrecovered because caps were too low. Safety: synthetic<=4500, n_node_rows 132000-140000, multiframe=0, in<=1/out<=2. Keep M19-C 0.880 final unless this beats it.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M28_B_M19C_GAP3_ADDED",
+   "milestone": "M28",
+   "variant": "B",
+   "label": "m19c_gap3_added",
+   "notebook_name": "milestone28_metric_aware_recall_expansion_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M28_B_M19C_GAP3_ADDED.txt",
+   "command": {
+    "det_threshold": 0.99,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "safe_divisions",
+    "gap1",
+    "gap2",
+    "gap3",
+    "linefit",
+    "prune_isolated"
+   ],
+   "public_score": null,
+   "status": "pending",
+   "created_at": "2026-07-10",
+   "notes": "PENDING (experimental). A + a strict-velocity THREE-frame gap recovery (END@t -> START@t+4 via 3 synthetic nodes at t+1/t+2/t+3, unit edges only; max_step 4.6, max_total 14.5, velocity_cos_min 0.0, velocity_normdiff 5.5, cap_frac 0.03). gap3_recovered reported separately. Safety: synthetic<=6500, n_node_rows<=142500. Higher upside, more synthetic risk.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M28_C_DIVISION_CAP_OPEN",
+   "milestone": "M28",
+   "variant": "C",
+   "label": "division_cap_open",
+   "notebook_name": "milestone28_metric_aware_recall_expansion_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M28_C_DIVISION_CAP_OPEN.txt",
+   "command": {
+    "det_threshold": 0.99,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "safe_divisions",
+    "gap1",
+    "gap2",
+    "linefit",
+    "prune_isolated"
+   ],
+   "public_score": null,
+   "status": "pending",
+   "created_at": "2026-07-10",
+   "notes": "PENDING (experimental). M19-C EXACT gap settings, open ONLY the division caps (parent_child 6.5, sister 9.0, frame_cap_frac 0.030, global_cap_frac 0.020). Isolates whether the division term is underused. Safety: divisions_added<=2500 (else DO_NOT_SUBMIT_DIVISION_EXPLOSION), max_out<=2.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M28_D_GAP_OPEN_PLUS_DIV_OPEN_NO_LINEFIT",
+   "milestone": "M28",
+   "variant": "D",
+   "label": "gap_open_plus_div_open_no_linefit",
+   "notebook_name": "milestone28_metric_aware_recall_expansion_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M28_D_GAP_OPEN_PLUS_DIV_OPEN_NO_LINEFIT.txt",
+   "command": {
+    "det_threshold": 0.99,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "safe_divisions",
+    "gap1",
+    "gap2",
+    "prune_isolated"
+   ],
+   "public_score": null,
+   "status": "pending",
+   "created_at": "2026-07-10",
+   "notes": "PENDING (experimental). A + C combined (gaps open AND divisions open) with linefit DISABLED (strategy warns smoothing may hurt curved motion). Safety: synthetic<=5000, n_node_rows<=142500, valid degrees.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M28_E_DET095_M19C_SAFE",
+   "milestone": "M28",
+   "variant": "E",
+   "label": "det095_m19c_safe",
+   "notebook_name": "milestone28_metric_aware_recall_expansion_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M28_E_DET095_M19C_SAFE.txt",
+   "command": {
+    "det_threshold": 0.95,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "safe_divisions",
+    "gap1",
+    "gap2",
+    "linefit",
+    "prune_isolated"
+   ],
+   "public_score": null,
+   "status": "pending",
+   "created_at": "2026-07-10",
+   "notes": "PENDING (experimental). M19-C postprocess settings, det-threshold lowered 0.99 -> 0.95 - a single SAFE step of a detection-recall sweep. Safety: n_node_rows<=155000, n_edge_rows<=145000 (else DO_NOT_SUBMIT_NODE_EXPLOSION). Do NOT build det 0.90/0.80 until the 0.95 result lands.",
    "submission_stats": {
     "n_rows": null,
     "n_nodes": null,
@@ -1620,6 +1870,15 @@
    "next_variant": "M27_A -> M27_C -> M27_B -> M27_D",
    "risk_level": "medium",
    "created_at": "2026-07-09"
+  },
+  {
+   "decision_id": "DEC_M28_METRIC_AWARE_RECALL_PIVOT",
+   "after_experiment_id": "M27_A_PUBLIC_REPRO_EXACT_SAFETY",
+   "observation": "M27-A (public-notebook reproduction) scored 0.859 < M19-C 0.880 - its pruning-heavy output pipeline (short-track filtering + edge veto) over-prunes / lowers node recall on our base. The uploaded winning strategy argues the opposite problem for M19-C: our post-processing is too CONSERVATIVE (gap caps too small, division cap too small, det-threshold 0.99 possibly too high) and recall-oriented recovery is the path beyond 0.880.",
+   "recommendation": "Stop the pruning-heavy M27 path. Pivot back to the proven M19-C full_chain and OPEN recall levers one at a time (M28): A gap caps open, C division caps open, D both + no linefit, B add strict gap3, E det 0.95. Submit order A -> C -> D -> B -> E, each only if its report prints OK_TO_SUBMIT_EXPERIMENTAL. Keep M19-C 0.880 final unless an M28 variant beats it. Build a local CV before deeper LB tuning.",
+   "next_variant": "M28_A -> M28_C -> M28_D -> M28_B -> M28_E",
+   "risk_level": "medium",
+   "created_at": "2026-07-10"
   }
  ],
  "lessons": [

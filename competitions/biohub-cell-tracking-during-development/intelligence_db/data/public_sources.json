@@ -157,6 +157,24 @@
     "filter_short_track_components lowers the node penalty; keep components that contain divisions",
     "gap_close_reuse_existing reduces synthetic-node inflation"
    ]
+  },
+  {
+   "source_id": "WINNING_STRATEGY_MD",
+   "source_type": "strategy_doc",
+   "title": "biohub_winning_strategy.md (uploaded)",
+   "url": "upload:biohub_winning_strategy.md",
+   "repo": null,
+   "path": null,
+   "relevance_score": 0.97,
+   "summary": "Uploaded winning-strategy analysis arguing our post-processing is too CONSERVATIVE: gap caps too small, division-recovery cap too small, det-threshold 0.99 possibly too high; recommends building a local CV before blind LB tuning and pursuing RECALL-oriented edge/gap/division recovery as the path beyond M19-C 0.880. Basis for the M28 metric-aware recall-expansion pack.",
+   "extracted_ideas": [
+    "gap1/gap2 caps in M19-C are too small - many TP gaps left unrecovered",
+    "division-recovery cap too small - the division term may be underused",
+    "det-threshold 0.99 may be too high - sweep down (0.95 first, then 0.90/0.80)",
+    "add gap3 (three-frame) recovery for high-upside recall",
+    "linefit smoothing may hurt curved motion - test disabling it",
+    "build local CV before blind LB tuning"
+   ]
   }
  ]
 }

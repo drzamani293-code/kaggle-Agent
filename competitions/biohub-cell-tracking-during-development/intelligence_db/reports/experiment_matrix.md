@@ -1,6 +1,6 @@
 # Experiment Matrix
 
-_Generated 2026-07-09 18:23 UTC from intelligence.duckdb._
+_Generated 2026-07-10 14:19 UTC from intelligence.duckdb._
 
 Command differences, post-processing ops, submission stats, and score for every variant.
 All variants share ILP weights (edge -1.0, appearance 0.1, disappearance 0.1, division 1.0, --use-ilp);
@@ -32,13 +32,18 @@ only `det_threshold` and the post-processing chain differ.
 | `M26_A_CONSENSUS_2OFN_PRECISION` | 0.99 | consensus2_keep, safe_divisions, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M26_B_PRIMARY_M19C_STYLE_PLUS_CONSENSUS_EDGES` | 0.99 | primary_plus_consensus, safe_divisions, gap1_micro, linefit, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M26_C_WEIGHTED_ENSEMBLE_FULLCHAIN_LIGHT` | 0.99 | weighted_ensemble, safe_divisions, gap1, gap2_light, linefit, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
-| `M27_A_PUBLIC_REPRO_EXACT_SAFETY` | 0.99 | motion_relink, gap_close, safe_divisions, edge_policy_veto, filter_short_tracks_minlen7, linefit, final_safety_repair | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M27_A_PUBLIC_REPRO_EXACT_SAFETY` | 0.99 | motion_relink, gap_close, safe_divisions, edge_policy_veto, filter_short_tracks_minlen7, linefit, final_safety_repair | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | 0.8590 |
 | `M27_B_PUBLIC_REPRO_NO_EDGE_VETO` | 0.99 | motion_relink, gap_close, safe_divisions, filter_short_tracks_minlen7, linefit, final_safety_repair | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M27_C_PUBLIC_REPRO_MINLEN5` | 0.99 | motion_relink, gap_close, safe_divisions, edge_policy_veto, filter_short_tracks_minlen5, linefit, final_safety_repair | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M27_D_PUBLIC_REPRO_STRICT_PRECISION` | 0.99 | motion_relink, gap_close, safe_divisions, edge_policy_veto, filter_short_tracks_minlen8_keepdiv, linefit, final_safety_repair | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M25_A_PRUNE_MILD_SAFE_DIV` | 0.99 | node_prune_mild, safe_divisions, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M25_B_PRUNE_STRONG_SAFE_DIV` | 0.99 | node_prune_strong, safe_divisions, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M25_C_PRUNE_M23B_PLUS_MICRO_GAP1` | 0.99 | node_prune_m23b, safe_divisions, gap1_micro, linefit, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M28_A_M19C_GAP_CAPS_OPEN` | 0.99 | safe_divisions, gap1, gap2, linefit, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M28_B_M19C_GAP3_ADDED` | 0.99 | safe_divisions, gap1, gap2, gap3, linefit, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M28_C_DIVISION_CAP_OPEN` | 0.99 | safe_divisions, gap1, gap2, linefit, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M28_D_GAP_OPEN_PLUS_DIV_OPEN_NO_LINEFIT` | 0.99 | safe_divisions, gap1, gap2, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M28_E_DET095_M19C_SAFE` | 0.95 | safe_divisions, gap1, gap2, linefit, prune_isolated | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 
 Legend: div+ = safe divisions added, gap1 = single-frame gaps closed, 
 gap2 = two-frame gaps recovered, synth = synthetic nodes added, prune = isolated nodes pruned, 

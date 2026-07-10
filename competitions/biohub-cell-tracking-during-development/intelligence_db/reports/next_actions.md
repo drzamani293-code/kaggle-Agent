@@ -1,36 +1,36 @@
 # Next Actions
 
-_Generated 2026-07-09 18:23 UTC from intelligence.duckdb._
+_Generated 2026-07-10 14:19 UTC from intelligence.duckdb._
 
 **Best scored experiment:** `M19_C_FULL_CHAIN_PENDING` at **0.8800**.
 **M19-C full_chain:** final (score 0.8800).
-**Open (pending):** 7 · **blocked:** 10 · **unsafe/superseded:** 2.
+**Open (pending):** 8 · **blocked:** 13 · **unsafe/superseded:** 2.
 
 ## Recommendation
 
-**Reproduce the public high-score notebook (M27).** A public notebook
-(`biohub-cell-tracking-v4-unet-ilp-reproduction`) runs the SAME 400ep artifact we tested in M24
-(weight_sha256 `12f6881e..`, base 127790/115694) but scores much higher by replacing our thin
-safe_div/gap/linefit post-processing with a richer, evaluator-safe OUTPUT pipeline: motion-relink
-(per-frame Hungarian) -> gap close (reuse-or-insert) -> safe divisions -> a conservative logistic
-edge VETO (capped 1%, skip divisions) -> short-track-component filter (keep divisions) -> linefit.
-M24 (0.872/0.873) underperformed on 400ep only because our postprocess was too thin.
+**Pivot back to M19-C and EXPAND RECALL (M28).** M27-A (public-notebook reproduction) scored
+**0.859 < 0.880** - its pruning-heavy output pipeline over-prunes / lowers node recall on our
+base, so the pruning path is deprioritized. The uploaded winning strategy argues the opposite
+for M19-C: our post-processing is too **conservative** (gap caps too small, division cap too
+small, det-threshold 0.99 possibly too high), and recall-oriented gap/division recovery is the
+path beyond 0.880.
 
-M27 reproduces that LOGIC hidden-safe (never the static submission.csv), guards the 400ep artifact
-(name contains `400ep` AND exact weight_sha256) and adds a final safety repair. Submit each only if
-its report prints `OK_TO_SUBMIT_EXPERIMENTAL` (artifact guard, valid, no fallback,
-final_source=public_notebook_logic_reproduced, in<=1/out<=2, all edges t->t+1, no dangling, no NaN,
-consecutive id, 110000<=node_rows<=130000, 105000<=edge_rows<=122000, synthetic<=2600) plus the
-variant-specific count rule.
+M28 keeps the exact M19-C predict command + metric-aware chain and OPENS one recall lever per
+variant (every recovered edge stays unit-timepoint t->t+1; in<=1/out<=2). Submit each only if its
+report prints `OK_TO_SUBMIT_EXPERIMENTAL` (valid, no fallback, no NaN, consecutive id, no dangling,
+all edges t->t+1, in<=1/out<=2, node/edge counts sane, synthetic within the per-variant cap,
+final_source=reference_learned_graph_postprocessed) plus the per-variant explosion guard.
 
 **Submit order recommendation:**
-1. `M27_A_PUBLIC_REPRO_EXACT_SAFETY` (faithful public reproduction + safety repair - highest-fidelity shot)
-2. `M27_C_PUBLIC_REPRO_MINLEN5` (min_track_len 5 - does minlen 7 over-prune true short tracks? submit if node_rows<=126000)
-3. `M27_B_PUBLIC_REPRO_NO_EDGE_VETO` (edge-policy veto disabled - isolate whether the veto helps or hurts)
-4. `M27_D_PUBLIC_REPRO_STRICT_PRECISION` (strict min_track_len 8, keep divisions - even lower node penalty; node_rows>=112000 & edge_rows>=108000)
+1. `M28_A_M19C_GAP_CAPS_OPEN` (gap caps open - the strategy's strongest claim; node_rows 132000-140000, synthetic<=4500)
+2. `M28_C_DIVISION_CAP_OPEN` (division caps open only - isolate the division lever; DO_NOT_SUBMIT_DIVISION_EXPLOSION if divisions>2500)
+3. `M28_D_GAP_OPEN_PLUS_DIV_OPEN_NO_LINEFIT` (gaps + divisions open, linefit disabled - aggressive recall without smoothing; synthetic<=5000)
+4. `M28_B_M19C_GAP3_ADDED` (adds strict-velocity gap3 = 3-frame recovery; higher upside, synthetic<=6500)
+5. `M28_E_DET095_M19C_SAFE` (det-threshold 0.95, a SAFE first det-sweep step; DO_NOT_SUBMIT_NODE_EXPLOSION if node_rows>155000)
 
-**Keep `M19_C_FULL_CHAIN_PENDING` at 0.8800 as final** unless an M27 variant beats 0.880.
-The M26 multi-artifact ensemble variants remain pending as a secondary track.
+**Keep `M19_C_FULL_CHAIN_PENDING` at 0.8800 as final** unless an M28 variant beats 0.880.
+Do NOT build det 0.90/0.80 until the M28-E 0.95 result lands. The M26 ensemble variants remain a
+secondary pending track.
 
 ## Recorded decisions (history)
 
@@ -70,3 +70,6 @@ The M26 multi-artifact ensemble variants remain pending as a secondary track.
 - **after `M25_A_PRUNE_MILD_SAFE_DIV`** (2026-07-10, risk low):
   - observation: M25 could not run: the required pilkwang350 350ep artifact (artifact_name biohub-tracking-support-pack-350ep-snapshot-v1, weight_sha256 dfb848..) is no longer recoverable/attachable - the mounted pack is now the 400ep snapshot (12f688..), so the M25 artifact guard failed (DO_NOT_SUBMIT_WRONG_ARTIFACT). Across M21 (0.874), M23 (0.877), M24 (0.873/0.872), no experimental path beat M19-C 0.880, and the true M19-C artifact is unrecoverable.
   - recommendation: FINAL: stop experimental submissions unless the exact 350ep/dfb848 artifact OR the true M19-C artifact is recovered. The final recommended submission is M19-C version 12 (Biohub5-notebook015ca8d31a - version 12), public score 0.880 - the strongest and safest final candidate.  → next: `KEEP_M19_C_FINAL_0880`
+- **after `M27_A_PUBLIC_REPRO_EXACT_SAFETY`** (2026-07-10, risk medium):
+  - observation: M27-A (public-notebook reproduction) scored 0.859 < M19-C 0.880 - its pruning-heavy output pipeline (short-track filtering + edge veto) over-prunes / lowers node recall on our base. The uploaded winning strategy argues the opposite problem for M19-C: our post-processing is too CONSERVATIVE (gap caps too small, division cap too small, det-threshold 0.99 possibly too high) and recall-oriented recovery is the path beyond 0.880.
+  - recommendation: Stop the pruning-heavy M27 path. Pivot back to the proven M19-C full_chain and OPEN recall levers one at a time (M28): A gap caps open, C division caps open, D both + no linefit, B add strict gap3, E det 0.95. Submit order A -> C -> D -> B -> E, each only if its report prints OK_TO_SUBMIT_EXPERIMENTAL. Keep M19-C 0.880 final unless an M28 variant beats it. Build a local CV before deeper LB tuning.  → next: `M28_A -> M28_C -> M28_D -> M28_B -> M28_E`
