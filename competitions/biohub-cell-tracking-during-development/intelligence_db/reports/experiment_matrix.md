@@ -1,6 +1,6 @@
 # Experiment Matrix
 
-_Generated 2026-07-10 20:41 UTC from intelligence.duckdb._
+_Generated 2026-07-10 22:31 UTC from intelligence.duckdb._
 
 Command differences, post-processing ops, submission stats, and score for every variant.
 All variants share ILP weights (edge -1.0, appearance 0.1, disappearance 0.1, division 1.0, --use-ilp);
@@ -55,6 +55,13 @@ only `det_threshold` and the post-processing chain differ.
 | `M30_C_V2_AUTO_SPARSE_KNN_TIGHT` | 0.99 | read_candidate_geff, two_stage_hungarian_relink, stitch_gaps, prune_isolated, relabel | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M30_D_V2_AUTO_DET095` | 0.95 | read_candidate_geff, two_stage_hungarian_relink, stitch_gaps, prune_isolated, relabel | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M30_E_V2_DIVISION_RELAXED` | 0.99 | read_candidate_geff, two_stage_hungarian_relink, stitch_gaps, prune_isolated, relabel | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M31_A_EXACT_09_REPRO` | 0.97 | tta6, motion_relink, gap1, safe_divisions, short_track_min6, linefit0.8, prune | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M31_B_DEEPCENTER_SHADOW` | 0.97 | deepcenter_shadow | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M31_C_DEEPCENTER_GATE_BASE_CAPS` | 0.97 | tta6, motion_relink, gap1, deepcenter_gate, safe_divisions, short_track_min6, linefit0.8, prune | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M31_D_DEEPCENTER_GATE_GAP2_OPEN` | 0.97 | tta6, motion_relink, gap1, gap2, deepcenter_gate, safe_divisions, short_track_min6, linefit0.8, prune | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M31_E_DEEPCENTER_GATE_DIVISION_RELAXED` | 0.97 | tta6, motion_relink, gap1, deepcenter_gate, safe_divisions_relaxed, short_track_min6, linefit0.8, prune | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M31_LOCAL_CV_HARNESS` | 0.97 | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M31_REFERENCE_AUDIT` | 0.97 | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 
 Legend: div+ = safe divisions added, gap1 = single-frame gaps closed, 
 gap2 = two-frame gaps recovered, synth = synthetic nodes added, prune = isolated nodes pruned, 

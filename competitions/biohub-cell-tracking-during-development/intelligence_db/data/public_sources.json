@@ -296,6 +296,22 @@
    "relevance_score": 0.99,
    "summary": "v2 README: candidate-graph re-solve rationale, LinkConfig fields, no-link/two-stage linking, sparse kNN, CV harness.",
    "extracted_ideas": []
+  },
+  {
+   "source_id": "ANALYSIS_09_STRATEGY",
+   "source_type": "strategy_doc",
+   "title": "analysis_09_strategy.md (uploaded)",
+   "url": "upload:analysis_09_strategy.md",
+   "repo": null,
+   "path": null,
+   "relevance_score": 0.99,
+   "summary": "Near-0.900 strategy: 400ep/split_0, 6-way TTA, det 0.97, ilp_division_weight 0.7, pool kernel ~2.0um, large-scale learned motion_relink, one-frame gap close, conservative safe divisions, short-track filter min_len 6, linefit 0.8, prune isolated, DeepCenter UNet3D loaded but inactive (checked=0). Reference profile: final ~128871 nodes, gap synthetic ~2182, safe div ~420, short-track nodes removed ~6233, median edge ~1.6um, edges>7um ~0, division rate ~0.3%. The ~123700 baseline / 120976 'raw replaced' edges are NOT actual replacement counts (must be computed by exact set-diff). M31 reproduces REFERENCE-FIRST: every value resolved from source or reported REFERENCE_CONFIG_UNRESOLVED; nothing invented.",
+   "extracted_ideas": [
+    "6-way TTA + det 0.97 + div 0.7 + pool ~2.0um",
+    "learned motion_relink (accounting must be exact set-diff)",
+    "DeepCenter shadow-then-gate (add-only) before trusting it",
+    "reference-first: resolve-or-refuse, never approximate"
+   ]
   }
  ]
 }

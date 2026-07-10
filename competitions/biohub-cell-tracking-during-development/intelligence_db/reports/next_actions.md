@@ -1,39 +1,38 @@
 # Next Actions
 
-_Generated 2026-07-10 20:41 UTC from intelligence.duckdb._
+_Generated 2026-07-10 22:31 UTC from intelligence.duckdb._
 
 **Best scored experiment:** `M19_C_FULL_CHAIN_PENDING` at **0.8800**.
 **M19-C full_chain:** final (score 0.8800).
-**Open (pending):** 18 · **blocked:** 13 · **unsafe/superseded:** 2.
+**Open (pending):** 19 · **blocked:** 16 · **unsafe/superseded:** 2.
 
 ## Recommendation
 
-**Metric-aware GLOBAL RELINKER v2 (M30) - run the candidate diagnostic FIRST.** A new v2 package
-re-solves unit-timepoint linking from the RAW GEFF candidate graph (v1/M29 only patched the ILP
-solution) with a fused cost `-log(edge_prob) + w_dist*(dist/7) + w_motion*motion_dev`, a two-stage
-Hungarian (primary + division) with EXPLICIT no-link dummies, and sparse kNN augmentation. Whether
-it can help depends entirely on candidate richness.
+**TTA6 + DeepCenter REFERENCE-FIRST reproduction (M31) - run the reference audit FIRST.** The
+analysis_09_strategy.md near-0.900 pipeline (400ep, 6-way TTA, det 0.97, div 0.7, pool ~2.0um,
+learned motion_relink, one-frame gap, safe divisions, min_track_len 6, linefit 0.8, DeepCenter
+loaded-but-inactive) is reproduced ONLY from values RESOLVED at runtime from the mounted source -
+nothing is invented, and M27/M28/M29/M30 logic is never substituted.
 
-1. **Run `M30_CANDIDATE_GRAPH_DIAGNOSTIC_NOT_SUBMIT` first (non-submit).** It profiles the raw
-   candidate graph (reading edges WITHOUT the ILP solution mask) and classifies it:
-   `FULL_CANDIDATE_GRAPH` / `MODERATELY_SPARSE` / `ILP_SOLUTION_LIKE` / `EDGE_PROB_UNAVAILABLE`.
-2. **Submit order depends on the class:**
-   - `FULL_CANDIDATE_GRAPH` -> `M30_A_V2_FULL_CANDIDATES_BALANCED` -> `M30_B_V2_FULL_CANDIDATES_GAP123`
-     -> `M30_E_V2_DIVISION_RELAXED` -> `M30_D_V2_AUTO_DET095`.
-   - `ILP_SOLUTION_LIKE` / `MODERATELY_SPARSE` -> `M30_C_V2_AUTO_SPARSE_KNN_TIGHT` ->
-     `M30_D_V2_AUTO_DET095` -> `M30_E_V2_DIVISION_RELAXED` (skip A/B - their guard reports
-     `DO_NOT_SUBMIT_WRONG_CANDIDATE_MODE`).
-   - `EDGE_PROB_UNAVAILABLE` -> submit nothing (`DO_NOT_SUBMIT_EDGE_PROB_UNAVAILABLE`).
+1. **Run `M31_REFERENCE_AUDIT_NOT_SUBMIT` first (non-submit).** It resolves every reference field
+   with provenance; `AUDIT_PASS` only if the source-only items (TTA flag, pool-kernel flag,
+   motion_relink function, reference notebook) are OBSERVED, else `REFERENCE_CONFIG_UNRESOLVED`.
+2. **`M31_A_EXACT_09_REPRO`** - submit only if `reference_config_resolved`, TTA count = 6,
+   `reference_profile_pass`, and `OK_TO_SUBMIT_EXPERIMENTAL`. If the reference is not resolvable it
+   reports `DO_NOT_SUBMIT_REFERENCE_CONFIG_UNRESOLVED` and writes a hidden-safe fallback (no
+   substitute pipeline). Motion-relink accounting is an exact edge-set diff (`raw_replaced` == post
+   edges is NOT a replacement count).
+3. **`M31_B_DEEPCENTER_SHADOW_NOT_SUBMIT`** (non-submit) must prove DeepCenter is loaded, scores
+   every gap/division candidate (checked > 0), and produces output byte-identical to the baseline.
+   Do **not** run C/D/E until B passes.
+4. Then `M31_C_DEEPCENTER_GATE_BASE_CAPS` (add-only gate) -> `M31_D` (gap2) / `M31_E` (relaxed
+   divisions) as isolated ablations. `M31_LOCAL_CV_HARNESS_NOT_SUBMIT` scores A/C/D/E on train GT
+   via the official metric (never fabricated).
 
-Submit each only on `OK_TO_SUBMIT_EXPERIMENTAL` (artifact guard, edge_prob present + non-degenerate,
-candidate mode matches the class, valid, no fallback, unit-timepoint edges, in<=1/out<=2, sane
-counts, synthetic<=12000, divisions_total<=4000, final_source=metric_aware_global_relinker_v2).
-**Never submit the diagnostic or the v2 CV harness.** The v2 CV harness
-(`M30_V2_LOCAL_CV_HARNESS_NOT_SUBMIT`) reports honest metric-wiring status (no faked CV).
-
-**Keep `M19_C_FULL_CHAIN_PENDING` at 0.8800 as final** unless an M30 variant beats 0.880.
-M29-A (v1) remains pending on Kaggle; M28/M26 remain secondary pending tracks. Do NOT build det
-0.90/0.80 until the M30-D 0.95 result lands.
+**Never submit the audit, B shadow, or CV harness.** final_source
+`tta6_motion_relink_reference_reproduced` (A) / `tta6_deepcenter_gate_*` (C/D/E).
+**Keep `M19_C_FULL_CHAIN_PENDING` at 0.8800 as final** unless an M31 variant beats 0.880.
+M29-A / M30-C remain pending on Kaggle; M30 diagnostic gates that family.
 
 ## Recorded decisions (history)
 
@@ -82,3 +81,6 @@ M29-A (v1) remains pending on Kaggle; M28/M26 remain secondary pending tracks. D
 - **after `M29_A_WINNING_ENGINE_DEFAULT`** (2026-07-10, risk medium):
   - observation: A new v2 package (winning_postprocess_v2.py / integration_v2.py) RE-SOLVES unit-timepoint linking from the RAW GEFF candidate graph rather than patching the ILP solution (v1/M29). CRITICAL: the reused read_geff_graph applies the edge solution mask and returns only the ILP solution, so v2 needs read_candidate_geff (no mask). Whether v2 can help depends entirely on candidate richness - a full candidate graph enables global relinking, an ILP-solution-like store does not. M29-A is still pending on Kaggle; M30 is built in parallel.
   - recommendation: Integrate v2 as M30, embedded self-contained. RUN THE STAGE-0 CANDIDATE DIAGNOSTIC FIRST to classify the graph. If FULL_CANDIDATE_GRAPH submit A -> B -> E -> D; if ILP_SOLUTION_LIKE/MODERATELY_SPARSE submit C -> D -> E (skip A/B). Every submit requires edge_prob present+non-degenerate, the candidate mode matching the Stage-0 class, and OK_TO_SUBMIT_EXPERIMENTAL. Never submit the diagnostic or the v2 CV harness. Keep M19-C 0.880 final; keep M29-A pending until the user supplies its score.  → next: `M30_CANDIDATE_DIAGNOSTIC -> (FULL: A,B,E,D | SPARSE: C,D,E) + v2 CV harness`
+- **after `M30_A_V2_FULL_CANDIDATES_BALANCED`** (2026-07-10, risk medium):
+  - observation: analysis_09_strategy.md describes a near-0.900 TTA6 + learned-motion_relink + DeepCenter pipeline on 400ep. The exact reference (TTA transforms, pool-kernel flag, motion_relink params, DeepCenter model class/weights/call signature) is NOT locatable in this environment. The critical rule forbids inventing any of it or substituting M27/M28/M29/M30 logic.
+  - recommendation: Build M31 REFERENCE-FIRST: resolve every field from mounted source with provenance (grounded in the actual predict script via discover_predict_flags), and REFUSE (REFERENCE_CONFIG_UNRESOLVED / DO_NOT_SUBMIT_*) rather than approximate. Operational order: audit -> A exact repro -> B DeepCenter shadow (must prove loaded+checked>0+shadow==baseline) -> C gate -> D gap2 / E division (isolated ablations) -> CV. Never submit audit/B/CV. Keep M19-C 0.880 final; M29-A and M30-C pending.  → next: `M31_REFERENCE_AUDIT -> A -> B(shadow) -> C -> D/E -> CV`

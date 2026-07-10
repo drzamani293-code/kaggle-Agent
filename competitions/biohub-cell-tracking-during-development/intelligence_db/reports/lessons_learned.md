@@ -1,6 +1,6 @@
 # Lessons Learned
 
-_Generated 2026-07-10 20:41 UTC from intelligence.duckdb._
+_Generated 2026-07-10 22:31 UTC from intelligence.duckdb._
 
 Distilled, evidence-linked findings driving strategy.
 
@@ -50,6 +50,7 @@ Distilled, evidence-linked findings driving strategy.
 - [0.99] integration_v2.py (uploaded) — upload:integration_v2.py
 - [0.99] local_cv_harness(1).py (uploaded) — upload:local_cv_harness(1).py
 - [0.99] README_v2.md (uploaded) — upload:README_v2.md
+- [0.99] analysis_09_strategy.md (uploaded) — upload:analysis_09_strategy.md
 - [0.97] biohub_winning_strategy.md (uploaded) — upload:biohub_winning_strategy.md
 - [0.95] tracking_cellmot/metrics.py — https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/src/tracking_cellmot/metrics.py
 - [0.95] tracking_cellmot/division_metrics.py — https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/src/tracking_cellmot/division_metrics.py

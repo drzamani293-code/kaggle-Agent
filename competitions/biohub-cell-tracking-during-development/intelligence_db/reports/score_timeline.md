@@ -1,6 +1,6 @@
 # Score Timeline
 
-_Generated 2026-07-10 20:41 UTC from intelligence.duckdb._
+_Generated 2026-07-10 22:31 UTC from intelligence.duckdb._
 
 Baseline **0.874** · best so far **0.8800**.
 
@@ -55,6 +55,13 @@ Delta = step change vs the previous **scored** experiment (chronological).
 | 45 | 2026-07-10 | `M30_C_V2_AUTO_SPARSE_KNN_TIGHT` | pending | — | — | pending |
 | 46 | 2026-07-10 | `M30_D_V2_AUTO_DET095` | pending | — | — | pending |
 | 47 | 2026-07-10 | `M30_E_V2_DIVISION_RELAXED` | pending | — | — | pending |
+| 48 | 2026-07-10 | `M31_A_EXACT_09_REPRO` | pending | — | — | pending |
+| 49 | 2026-07-10 | `M31_B_DEEPCENTER_SHADOW` | pending | — | — | diagnostic |
+| 50 | 2026-07-10 | `M31_C_DEEPCENTER_GATE_BASE_CAPS` | pending | — | — | blocked |
+| 51 | 2026-07-10 | `M31_D_DEEPCENTER_GATE_GAP2_OPEN` | pending | — | — | blocked |
+| 52 | 2026-07-10 | `M31_E_DEEPCENTER_GATE_DIVISION_RELAXED` | pending | — | — | blocked |
+| 53 | 2026-07-10 | `M31_LOCAL_CV_HARNESS` | pending | — | — | diagnostic |
+| 54 | 2026-07-10 | `M31_REFERENCE_AUDIT` | pending | — | — | diagnostic |
 
 ## Notes per experiment
 
@@ -105,3 +112,10 @@ Delta = step change vs the previous **scored** experiment (chronological).
 - **M30_C_V2_AUTO_SPARSE_KNN_TIGHT** (pending, pending): PENDING (experimental). v2 with raw + tight kNN augmentation (top-k<=3 within 4.5um, conservative knn_default_prob 0.20, no duplicates; null_link_cost 4.2, max_link 7.0, gaps (1,2)). PRIMARY variant when Stage-0 is ILP_SOLUTION_LIKE / MODERATELY_SPARSE. Reports raw vs augmented candidate counts and links_selected_from_raw/knn.
 - **M30_D_V2_AUTO_DET095** (pending, pending): PENDING (experimental). Auto candidate mode (raw if FULL, tight kNN if sparse) at det 0.95 - cautious detection-recall expansion. Node-explosion guard (n_node_rows<=165000/n_edge_rows<=155000). Do NOT build det 0.90/0.80 yet.
 - **M30_E_V2_DIVISION_RELAXED** (pending, pending): PENDING (experimental). Auto mode, relaxed division gates (div_min_prob 0.15, div_global_cap_frac 0.030). Tests the 0.1-weight division term. Hard division-explosion guard (divisions_total<=4000).
+- **M31_A_EXACT_09_REPRO** (pending, pending): PENDING (experimental). Exact near-0.900 reproduction from RESOLVED values (det 0.97, div 0.7, pool ~2.0um, TTA6, one-frame gap, conservative safe divisions, min_track_len 6, linefit 0.8, DeepCenter OFF). Motion-relink accounting is an EXACT edge-set diff (no counter mislabeled as replacements). Hard graph gates + reference-profile soft checks (nodes 125000-133000, gap synthetic 1400-3200, median edge 1.1-2.3um, edges>7um<=20, division rate 0.0015-0.0075). final_source tta6_motion_relink_reference_reproduced. Submits only if reference_config_resolved + TTA=6 + profile_pass + OK. Refuses (DO_NOT_SUBMIT_REFERENCE_CONFIG_UNRESOLVED) if the reference is not resolvable from source. Keep M19-C 0.880 final.
+- **M31_B_DEEPCENTER_SHADOW** (pending, diagnostic): NON-SUBMIT. Proves DeepCenter is loaded + scores every gap/division candidate (checked>0) and changes NOTHING (shadow output byte-identical to the internal baseline: DataFrame + submission SHA). DEEPCENTER_WEIGHTS_MISSING / DEEPCENTER_NOT_WIRED / DEEPCENTER_SHADOW_MISMATCH otherwise. C/D/E must NOT run until B passes. Writes m31_deepcenter_shadow_report.json.
+- **M31_C_DEEPCENTER_GATE_BASE_CAPS** (pending, blocked): BLOCKED until B shadow passes. Identical to A but DeepCenter is an ADD-ONLY gate (vetoes proposed gap/division additions; never removes a base detection/edge, never touches motion_relink base edges or short-track decisions). Polarity must be resolved first. gap threshold 0.06 / div threshold 0.08 (reference-confirmed). final_source tta6_deepcenter_gate_basecaps. Submit before D/E.
+- **M31_D_DEEPCENTER_GATE_GAP2_OPEN** (pending, blocked): BLOCKED until B shadow passes. Base C + gap2 (max gap 2, gap_close 6->7um); DeepCenter scores gap1 AND gap2; only unit-timepoint chains; synthetic<=7500. Isolated ablation - do not combine with E yet. final_source tta6_deepcenter_gate_gap2_open.
+- **M31_E_DEEPCENTER_GATE_DIVISION_RELAXED** (pending, blocked): BLOCKED until B shadow passes. Base C + relaxed divisions (div weight 0.7->1.0, max_um ~4.66->5.2, sister ~8.0->9.0, global cap ~0.00375->0.010, frame cap ~0.0076->0.020); hard division-explosion guard (divisions_total<=3000, rate<=0.025). Isolated ablation. final_source tta6_deepcenter_gate_division_relaxed.
+- **M31_LOCAL_CV_HARNESS** (pending, diagnostic): NON-SUBMIT. Compares A/C/D/E on held-out train GT via the OFFICIAL metric (tracking_cellmot.metrics / evaluate); never fabricates a score - reports CV_NOT_WIRED with the exact missing import/path/format if wiring fails. Writes m31_local_cv_report.json.
+- **M31_REFERENCE_AUDIT** (pending, diagnostic): STAGE 0 (non-scoring). Resolves EVERY reference field from mounted source with provenance (observed vs inferred vs unresolved): reference notebook, predict flags (det/division/pool-kernel via discover_predict_flags), TTA flag+transforms, motion_relink function+params, DeepCenter code/weights/class/polarity/thresholds. AUDIT_PASS only if the source-only items (TTA flag, pool-kernel flag, motion_relink function, reference notebook) are OBSERVED; else REFERENCE_CONFIG_UNRESOLVED. Writes m31_reference_audit.json. RUN FIRST. No submission.

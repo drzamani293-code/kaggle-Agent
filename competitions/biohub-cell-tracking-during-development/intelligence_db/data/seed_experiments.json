@@ -2306,6 +2306,352 @@
     "edges_after": null,
     "per_dataset": []
    }
+  },
+  {
+   "experiment_id": "M31_REFERENCE_AUDIT",
+   "milestone": "M31",
+   "variant": "AUDIT",
+   "label": "reference_audit",
+   "notebook_name": "milestone31_tta6_deepcenter_repro_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M31_REFERENCE_AUDIT_NOT_SUBMIT.txt",
+   "command": {
+    "det_threshold": 0.97,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 0.7,
+    "use_ilp": true
+   },
+   "postprocess_ops": [],
+   "public_score": null,
+   "status": "diagnostic",
+   "created_at": "2026-07-10",
+   "notes": "STAGE 0 (non-scoring). Resolves EVERY reference field from mounted source with provenance (observed vs inferred vs unresolved): reference notebook, predict flags (det/division/pool-kernel via discover_predict_flags), TTA flag+transforms, motion_relink function+params, DeepCenter code/weights/class/polarity/thresholds. AUDIT_PASS only if the source-only items (TTA flag, pool-kernel flag, motion_relink function, reference notebook) are OBSERVED; else REFERENCE_CONFIG_UNRESOLVED. Writes m31_reference_audit.json. RUN FIRST. No submission.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M31_A_EXACT_09_REPRO",
+   "milestone": "M31",
+   "variant": "A",
+   "label": "exact_09_repro",
+   "notebook_name": "milestone31_tta6_deepcenter_repro_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M31_A_EXACT_09_REPRO.txt",
+   "command": {
+    "det_threshold": 0.97,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 0.7,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "tta6",
+    "motion_relink",
+    "gap1",
+    "safe_divisions",
+    "short_track_min6",
+    "linefit0.8",
+    "prune"
+   ],
+   "public_score": null,
+   "status": "pending",
+   "created_at": "2026-07-10",
+   "notes": "PENDING (experimental). Exact near-0.900 reproduction from RESOLVED values (det 0.97, div 0.7, pool ~2.0um, TTA6, one-frame gap, conservative safe divisions, min_track_len 6, linefit 0.8, DeepCenter OFF). Motion-relink accounting is an EXACT edge-set diff (no counter mislabeled as replacements). Hard graph gates + reference-profile soft checks (nodes 125000-133000, gap synthetic 1400-3200, median edge 1.1-2.3um, edges>7um<=20, division rate 0.0015-0.0075). final_source tta6_motion_relink_reference_reproduced. Submits only if reference_config_resolved + TTA=6 + profile_pass + OK. Refuses (DO_NOT_SUBMIT_REFERENCE_CONFIG_UNRESOLVED) if the reference is not resolvable from source. Keep M19-C 0.880 final.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M31_B_DEEPCENTER_SHADOW",
+   "milestone": "M31",
+   "variant": "B",
+   "label": "deepcenter_shadow",
+   "notebook_name": "milestone31_tta6_deepcenter_repro_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M31_B_DEEPCENTER_SHADOW_NOT_SUBMIT.txt",
+   "command": {
+    "det_threshold": 0.97,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 0.7,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "deepcenter_shadow"
+   ],
+   "public_score": null,
+   "status": "diagnostic",
+   "created_at": "2026-07-10",
+   "notes": "NON-SUBMIT. Proves DeepCenter is loaded + scores every gap/division candidate (checked>0) and changes NOTHING (shadow output byte-identical to the internal baseline: DataFrame + submission SHA). DEEPCENTER_WEIGHTS_MISSING / DEEPCENTER_NOT_WIRED / DEEPCENTER_SHADOW_MISMATCH otherwise. C/D/E must NOT run until B passes. Writes m31_deepcenter_shadow_report.json.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M31_C_DEEPCENTER_GATE_BASE_CAPS",
+   "milestone": "M31",
+   "variant": "C",
+   "label": "deepcenter_gate_basecaps",
+   "notebook_name": "milestone31_tta6_deepcenter_repro_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M31_C_DEEPCENTER_GATE_BASE_CAPS.txt",
+   "command": {
+    "det_threshold": 0.97,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 0.7,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "tta6",
+    "motion_relink",
+    "gap1",
+    "deepcenter_gate",
+    "safe_divisions",
+    "short_track_min6",
+    "linefit0.8",
+    "prune"
+   ],
+   "public_score": null,
+   "status": "blocked",
+   "created_at": "2026-07-10",
+   "notes": "BLOCKED until B shadow passes. Identical to A but DeepCenter is an ADD-ONLY gate (vetoes proposed gap/division additions; never removes a base detection/edge, never touches motion_relink base edges or short-track decisions). Polarity must be resolved first. gap threshold 0.06 / div threshold 0.08 (reference-confirmed). final_source tta6_deepcenter_gate_basecaps. Submit before D/E.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M31_D_DEEPCENTER_GATE_GAP2_OPEN",
+   "milestone": "M31",
+   "variant": "D",
+   "label": "deepcenter_gate_gap2_open",
+   "notebook_name": "milestone31_tta6_deepcenter_repro_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M31_D_DEEPCENTER_GATE_GAP2_OPEN.txt",
+   "command": {
+    "det_threshold": 0.97,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 0.7,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "tta6",
+    "motion_relink",
+    "gap1",
+    "gap2",
+    "deepcenter_gate",
+    "safe_divisions",
+    "short_track_min6",
+    "linefit0.8",
+    "prune"
+   ],
+   "public_score": null,
+   "status": "blocked",
+   "created_at": "2026-07-10",
+   "notes": "BLOCKED until B shadow passes. Base C + gap2 (max gap 2, gap_close 6->7um); DeepCenter scores gap1 AND gap2; only unit-timepoint chains; synthetic<=7500. Isolated ablation - do not combine with E yet. final_source tta6_deepcenter_gate_gap2_open.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M31_E_DEEPCENTER_GATE_DIVISION_RELAXED",
+   "milestone": "M31",
+   "variant": "E",
+   "label": "deepcenter_gate_division_relaxed",
+   "notebook_name": "milestone31_tta6_deepcenter_repro_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M31_E_DEEPCENTER_GATE_DIVISION_RELAXED.txt",
+   "command": {
+    "det_threshold": 0.97,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "tta6",
+    "motion_relink",
+    "gap1",
+    "deepcenter_gate",
+    "safe_divisions_relaxed",
+    "short_track_min6",
+    "linefit0.8",
+    "prune"
+   ],
+   "public_score": null,
+   "status": "blocked",
+   "created_at": "2026-07-10",
+   "notes": "BLOCKED until B shadow passes. Base C + relaxed divisions (div weight 0.7->1.0, max_um ~4.66->5.2, sister ~8.0->9.0, global cap ~0.00375->0.010, frame cap ~0.0076->0.020); hard division-explosion guard (divisions_total<=3000, rate<=0.025). Isolated ablation. final_source tta6_deepcenter_gate_division_relaxed.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M31_LOCAL_CV_HARNESS",
+   "milestone": "M31",
+   "variant": "CV",
+   "label": "local_cv_harness",
+   "notebook_name": "milestone31_tta6_deepcenter_repro_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M31_LOCAL_CV_HARNESS_NOT_SUBMIT.txt",
+   "command": {
+    "det_threshold": 0.97,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 0.7,
+    "use_ilp": true
+   },
+   "postprocess_ops": [],
+   "public_score": null,
+   "status": "diagnostic",
+   "created_at": "2026-07-10",
+   "notes": "NON-SUBMIT. Compares A/C/D/E on held-out train GT via the OFFICIAL metric (tracking_cellmot.metrics / evaluate); never fabricates a score - reports CV_NOT_WIRED with the exact missing import/path/format if wiring fails. Writes m31_local_cv_report.json.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
   }
  ],
  "decisions": [
@@ -2441,6 +2787,15 @@
    "observation": "A new v2 package (winning_postprocess_v2.py / integration_v2.py) RE-SOLVES unit-timepoint linking from the RAW GEFF candidate graph rather than patching the ILP solution (v1/M29). CRITICAL: the reused read_geff_graph applies the edge solution mask and returns only the ILP solution, so v2 needs read_candidate_geff (no mask). Whether v2 can help depends entirely on candidate richness - a full candidate graph enables global relinking, an ILP-solution-like store does not. M29-A is still pending on Kaggle; M30 is built in parallel.",
    "recommendation": "Integrate v2 as M30, embedded self-contained. RUN THE STAGE-0 CANDIDATE DIAGNOSTIC FIRST to classify the graph. If FULL_CANDIDATE_GRAPH submit A -> B -> E -> D; if ILP_SOLUTION_LIKE/MODERATELY_SPARSE submit C -> D -> E (skip A/B). Every submit requires edge_prob present+non-degenerate, the candidate mode matching the Stage-0 class, and OK_TO_SUBMIT_EXPERIMENTAL. Never submit the diagnostic or the v2 CV harness. Keep M19-C 0.880 final; keep M29-A pending until the user supplies its score.",
    "next_variant": "M30_CANDIDATE_DIAGNOSTIC -> (FULL: A,B,E,D | SPARSE: C,D,E) + v2 CV harness",
+   "risk_level": "medium",
+   "created_at": "2026-07-10"
+  },
+  {
+   "decision_id": "DEC_M31_TTA6_DEEPCENTER_REFERENCE_FIRST",
+   "after_experiment_id": "M30_A_V2_FULL_CANDIDATES_BALANCED",
+   "observation": "analysis_09_strategy.md describes a near-0.900 TTA6 + learned-motion_relink + DeepCenter pipeline on 400ep. The exact reference (TTA transforms, pool-kernel flag, motion_relink params, DeepCenter model class/weights/call signature) is NOT locatable in this environment. The critical rule forbids inventing any of it or substituting M27/M28/M29/M30 logic.",
+   "recommendation": "Build M31 REFERENCE-FIRST: resolve every field from mounted source with provenance (grounded in the actual predict script via discover_predict_flags), and REFUSE (REFERENCE_CONFIG_UNRESOLVED / DO_NOT_SUBMIT_*) rather than approximate. Operational order: audit -> A exact repro -> B DeepCenter shadow (must prove loaded+checked>0+shadow==baseline) -> C gate -> D gap2 / E division (isolated ablations) -> CV. Never submit audit/B/CV. Keep M19-C 0.880 final; M29-A and M30-C pending.",
+   "next_variant": "M31_REFERENCE_AUDIT -> A -> B(shadow) -> C -> D/E -> CV",
    "risk_level": "medium",
    "created_at": "2026-07-10"
   }

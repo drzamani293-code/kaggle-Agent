@@ -269,6 +269,34 @@ def report_next_actions(con) -> str:
             "node-penalty reduction WITHOUT synthetic-node risk first.",
             f"**Keep `{best_id}` at {_fmt_score(best_score)} as final** unless an M23 score beats 0.880.",
         ]
+    elif "M31_A_EXACT_09_REPRO" in pending_ids:
+        out += [
+            "**TTA6 + DeepCenter REFERENCE-FIRST reproduction (M31) - run the reference audit FIRST.** The",
+            "analysis_09_strategy.md near-0.900 pipeline (400ep, 6-way TTA, det 0.97, div 0.7, pool ~2.0um,",
+            "learned motion_relink, one-frame gap, safe divisions, min_track_len 6, linefit 0.8, DeepCenter",
+            "loaded-but-inactive) is reproduced ONLY from values RESOLVED at runtime from the mounted source -",
+            "nothing is invented, and M27/M28/M29/M30 logic is never substituted.",
+            "",
+            "1. **Run `M31_REFERENCE_AUDIT_NOT_SUBMIT` first (non-submit).** It resolves every reference field",
+            "   with provenance; `AUDIT_PASS` only if the source-only items (TTA flag, pool-kernel flag,",
+            "   motion_relink function, reference notebook) are OBSERVED, else `REFERENCE_CONFIG_UNRESOLVED`.",
+            "2. **`M31_A_EXACT_09_REPRO`** - submit only if `reference_config_resolved`, TTA count = 6,",
+            "   `reference_profile_pass`, and `OK_TO_SUBMIT_EXPERIMENTAL`. If the reference is not resolvable it",
+            "   reports `DO_NOT_SUBMIT_REFERENCE_CONFIG_UNRESOLVED` and writes a hidden-safe fallback (no",
+            "   substitute pipeline). Motion-relink accounting is an exact edge-set diff (`raw_replaced` == post",
+            "   edges is NOT a replacement count).",
+            "3. **`M31_B_DEEPCENTER_SHADOW_NOT_SUBMIT`** (non-submit) must prove DeepCenter is loaded, scores",
+            "   every gap/division candidate (checked > 0), and produces output byte-identical to the baseline.",
+            "   Do **not** run C/D/E until B passes.",
+            "4. Then `M31_C_DEEPCENTER_GATE_BASE_CAPS` (add-only gate) -> `M31_D` (gap2) / `M31_E` (relaxed",
+            "   divisions) as isolated ablations. `M31_LOCAL_CV_HARNESS_NOT_SUBMIT` scores A/C/D/E on train GT",
+            "   via the official metric (never fabricated).",
+            "",
+            "**Never submit the audit, B shadow, or CV harness.** final_source",
+            "`tta6_motion_relink_reference_reproduced` (A) / `tta6_deepcenter_gate_*` (C/D/E).",
+            f"**Keep `{best_id}` at {_fmt_score(best_score)} as final** unless an M31 variant beats 0.880.",
+            "M29-A / M30-C remain pending on Kaggle; M30 diagnostic gates that family.",
+        ]
     elif [e for e in ["M30_A_V2_FULL_CANDIDATES_BALANCED", "M30_B_V2_FULL_CANDIDATES_GAP123",
                       "M30_C_V2_AUTO_SPARSE_KNN_TIGHT", "M30_D_V2_AUTO_DET095", "M30_E_V2_DIVISION_RELAXED"]
           if e in pending_ids]:
