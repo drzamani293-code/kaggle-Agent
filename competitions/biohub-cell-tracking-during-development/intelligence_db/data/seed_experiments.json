@@ -2012,6 +2012,300 @@
     "edges_after": null,
     "per_dataset": []
    }
+  },
+  {
+   "experiment_id": "M30_CANDIDATE_DIAGNOSTIC",
+   "milestone": "M30",
+   "variant": "DIAG",
+   "label": "candidate_graph_diagnostic",
+   "notebook_name": "milestone30_metric_aware_global_relinker_v2_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M30_CANDIDATE_GRAPH_DIAGNOSTIC_NOT_SUBMIT.txt",
+   "command": {
+    "det_threshold": 0.99,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [],
+   "public_score": null,
+   "status": "diagnostic",
+   "created_at": "2026-07-10",
+   "notes": "STAGE 0 (non-scoring). Runs det=0.99 predict on the 400ep artifact and profiles the RAW candidate graph (read WITHOUT the edge solution mask): edge_prob availability+quantiles+degeneracy, candidates/source & /target distributions, per-frame & per-dataset stats. Classifies FULL_CANDIDATE_GRAPH / MODERATELY_SPARSE / ILP_SOLUTION_LIKE / EDGE_PROB_UNAVAILABLE and recommends which submit variant is valid. Writes m30_candidate_graph_report.json + table.csv. RUN FIRST - selects A/B (full) vs C/D (sparse). No submission.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M30_A_V2_FULL_CANDIDATES_BALANCED",
+   "milestone": "M30",
+   "variant": "A",
+   "label": "v2_full_candidates_balanced",
+   "notebook_name": "milestone30_metric_aware_global_relinker_v2_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M30_A_V2_FULL_CANDIDATES_BALANCED.txt",
+   "command": {
+    "det_threshold": 0.99,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "read_candidate_geff",
+    "two_stage_hungarian_relink",
+    "stitch_gaps",
+    "prune_isolated",
+    "relabel"
+   ],
+   "public_score": null,
+   "status": "pending",
+   "created_at": "2026-07-10",
+   "notes": "PENDING (experimental). v2 global relinker, RAW candidates only, balanced (null_link_cost 4.5, w_dist 1.0, w_motion 0.4, max_link 7.5um, min_prob 0.05, max_cost 12.0, div min_prob 0.20/child 6.5/sister 9.0/global 0.020, gaps (1,2)). Two-stage Hungarian with explicit no-link. ONLY valid if Stage-0 = FULL_CANDIDATE_GRAPH (else DO_NOT_SUBMIT_WRONG_CANDIDATE_MODE). final_source=metric_aware_global_relinker_v2. Submit first when class is FULL. Keep M19-C 0.880 final unless it beats.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M30_B_V2_FULL_CANDIDATES_GAP123",
+   "milestone": "M30",
+   "variant": "B",
+   "label": "v2_full_candidates_gap123",
+   "notebook_name": "milestone30_metric_aware_global_relinker_v2_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M30_B_V2_FULL_CANDIDATES_GAP123.txt",
+   "command": {
+    "det_threshold": 0.99,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "read_candidate_geff",
+    "two_stage_hungarian_relink",
+    "stitch_gaps",
+    "prune_isolated",
+    "relabel"
+   ],
+   "public_score": null,
+   "status": "pending",
+   "created_at": "2026-07-10",
+   "notes": "PENDING (experimental). A + gap3 (gap_sizes (1,2,3)). FULL graph only. Submit after A.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M30_C_V2_AUTO_SPARSE_KNN_TIGHT",
+   "milestone": "M30",
+   "variant": "C",
+   "label": "v2_auto_sparse_knn_tight",
+   "notebook_name": "milestone30_metric_aware_global_relinker_v2_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M30_C_V2_AUTO_SPARSE_KNN_TIGHT.txt",
+   "command": {
+    "det_threshold": 0.99,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "read_candidate_geff",
+    "two_stage_hungarian_relink",
+    "stitch_gaps",
+    "prune_isolated",
+    "relabel"
+   ],
+   "public_score": null,
+   "status": "pending",
+   "created_at": "2026-07-10",
+   "notes": "PENDING (experimental). v2 with raw + tight kNN augmentation (top-k<=3 within 4.5um, conservative knn_default_prob 0.20, no duplicates; null_link_cost 4.2, max_link 7.0, gaps (1,2)). PRIMARY variant when Stage-0 is ILP_SOLUTION_LIKE / MODERATELY_SPARSE. Reports raw vs augmented candidate counts and links_selected_from_raw/knn.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M30_D_V2_AUTO_DET095",
+   "milestone": "M30",
+   "variant": "D",
+   "label": "v2_auto_det095",
+   "notebook_name": "milestone30_metric_aware_global_relinker_v2_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M30_D_V2_AUTO_DET095.txt",
+   "command": {
+    "det_threshold": 0.95,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "read_candidate_geff",
+    "two_stage_hungarian_relink",
+    "stitch_gaps",
+    "prune_isolated",
+    "relabel"
+   ],
+   "public_score": null,
+   "status": "pending",
+   "created_at": "2026-07-10",
+   "notes": "PENDING (experimental). Auto candidate mode (raw if FULL, tight kNN if sparse) at det 0.95 - cautious detection-recall expansion. Node-explosion guard (n_node_rows<=165000/n_edge_rows<=155000). Do NOT build det 0.90/0.80 yet.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M30_E_V2_DIVISION_RELAXED",
+   "milestone": "M30",
+   "variant": "E",
+   "label": "v2_division_relaxed",
+   "notebook_name": "milestone30_metric_aware_global_relinker_v2_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M30_E_V2_DIVISION_RELAXED.txt",
+   "command": {
+    "det_threshold": 0.99,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [
+    "read_candidate_geff",
+    "two_stage_hungarian_relink",
+    "stitch_gaps",
+    "prune_isolated",
+    "relabel"
+   ],
+   "public_score": null,
+   "status": "pending",
+   "created_at": "2026-07-10",
+   "notes": "PENDING (experimental). Auto mode, relaxed division gates (div_min_prob 0.15, div_global_cap_frac 0.030). Tests the 0.1-weight division term. Hard division-explosion guard (divisions_total<=4000).",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
   }
  ],
  "decisions": [
@@ -2138,6 +2432,15 @@
    "observation": "M28 was only a PARTIAL recall expansion (M28-A: nodes=132166, gap1=1604, gap2=1386, synthetic=4376). The uploaded winning-engine package (winning_postprocess.py / integration_cell.py) is a FULLER recall engine: motion relink + slot-Hungarian division rescue + per-timepoint Hungarian gap 1/2/3 stitching (constant velocity) + optional linefit + prune. Its submission(3).csv profiles to nodes=139418, edges=132871, divisions~2382, all invariants clean. M27 pruning path already failed (0.859).",
    "recommendation": "Integrate the full engine as M29, EMBEDDED self-contained (no external utility-dataset import) so each runner is a standalone Kaggle cell. Submit order A (default) -> B (gap12 only) -> C (linefit) -> D (relink) -> E (det 0.95), each only if its report prints OK_TO_SUBMIT_EXPERIMENTAL. If A>0.880 make it the new candidate and continue B/C; if A in [0.875,0.880) test B and C; if A<0.875 test B only, then PAUSE and run the local-CV harness before more submits. Keep M19-C version 12 0.880 final until beaten. Do not submit the uploaded submission(3).csv.",
    "next_variant": "M29_A -> M29_B -> M29_C -> M29_D -> M29_E (then local_cv_harness)",
+   "risk_level": "medium",
+   "created_at": "2026-07-10"
+  },
+  {
+   "decision_id": "DEC_M30_GLOBAL_RELINKER_V2",
+   "after_experiment_id": "M29_A_WINNING_ENGINE_DEFAULT",
+   "observation": "A new v2 package (winning_postprocess_v2.py / integration_v2.py) RE-SOLVES unit-timepoint linking from the RAW GEFF candidate graph rather than patching the ILP solution (v1/M29). CRITICAL: the reused read_geff_graph applies the edge solution mask and returns only the ILP solution, so v2 needs read_candidate_geff (no mask). Whether v2 can help depends entirely on candidate richness - a full candidate graph enables global relinking, an ILP-solution-like store does not. M29-A is still pending on Kaggle; M30 is built in parallel.",
+   "recommendation": "Integrate v2 as M30, embedded self-contained. RUN THE STAGE-0 CANDIDATE DIAGNOSTIC FIRST to classify the graph. If FULL_CANDIDATE_GRAPH submit A -> B -> E -> D; if ILP_SOLUTION_LIKE/MODERATELY_SPARSE submit C -> D -> E (skip A/B). Every submit requires edge_prob present+non-degenerate, the candidate mode matching the Stage-0 class, and OK_TO_SUBMIT_EXPERIMENTAL. Never submit the diagnostic or the v2 CV harness. Keep M19-C 0.880 final; keep M29-A pending until the user supplies its score.",
+   "next_variant": "M30_CANDIDATE_DIAGNOSTIC -> (FULL: A,B,E,D | SPARSE: C,D,E) + v2 CV harness",
    "risk_level": "medium",
    "created_at": "2026-07-10"
   }

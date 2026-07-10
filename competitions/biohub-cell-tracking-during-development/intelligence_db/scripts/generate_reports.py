@@ -269,6 +269,37 @@ def report_next_actions(con) -> str:
             "node-penalty reduction WITHOUT synthetic-node risk first.",
             f"**Keep `{best_id}` at {_fmt_score(best_score)} as final** unless an M23 score beats 0.880.",
         ]
+    elif [e for e in ["M30_A_V2_FULL_CANDIDATES_BALANCED", "M30_B_V2_FULL_CANDIDATES_GAP123",
+                      "M30_C_V2_AUTO_SPARSE_KNN_TIGHT", "M30_D_V2_AUTO_DET095", "M30_E_V2_DIVISION_RELAXED"]
+          if e in pending_ids]:
+        out += [
+            "**Metric-aware GLOBAL RELINKER v2 (M30) - run the candidate diagnostic FIRST.** A new v2 package",
+            "re-solves unit-timepoint linking from the RAW GEFF candidate graph (v1/M29 only patched the ILP",
+            "solution) with a fused cost `-log(edge_prob) + w_dist*(dist/7) + w_motion*motion_dev`, a two-stage",
+            "Hungarian (primary + division) with EXPLICIT no-link dummies, and sparse kNN augmentation. Whether",
+            "it can help depends entirely on candidate richness.",
+            "",
+            "1. **Run `M30_CANDIDATE_GRAPH_DIAGNOSTIC_NOT_SUBMIT` first (non-submit).** It profiles the raw",
+            "   candidate graph (reading edges WITHOUT the ILP solution mask) and classifies it:",
+            "   `FULL_CANDIDATE_GRAPH` / `MODERATELY_SPARSE` / `ILP_SOLUTION_LIKE` / `EDGE_PROB_UNAVAILABLE`.",
+            "2. **Submit order depends on the class:**",
+            "   - `FULL_CANDIDATE_GRAPH` -> `M30_A_V2_FULL_CANDIDATES_BALANCED` -> `M30_B_V2_FULL_CANDIDATES_GAP123`",
+            "     -> `M30_E_V2_DIVISION_RELAXED` -> `M30_D_V2_AUTO_DET095`.",
+            "   - `ILP_SOLUTION_LIKE` / `MODERATELY_SPARSE` -> `M30_C_V2_AUTO_SPARSE_KNN_TIGHT` ->",
+            "     `M30_D_V2_AUTO_DET095` -> `M30_E_V2_DIVISION_RELAXED` (skip A/B - their guard reports",
+            "     `DO_NOT_SUBMIT_WRONG_CANDIDATE_MODE`).",
+            "   - `EDGE_PROB_UNAVAILABLE` -> submit nothing (`DO_NOT_SUBMIT_EDGE_PROB_UNAVAILABLE`).",
+            "",
+            "Submit each only on `OK_TO_SUBMIT_EXPERIMENTAL` (artifact guard, edge_prob present + non-degenerate,",
+            "candidate mode matches the class, valid, no fallback, unit-timepoint edges, in<=1/out<=2, sane",
+            "counts, synthetic<=12000, divisions_total<=4000, final_source=metric_aware_global_relinker_v2).",
+            "**Never submit the diagnostic or the v2 CV harness.** The v2 CV harness",
+            "(`M30_V2_LOCAL_CV_HARNESS_NOT_SUBMIT`) reports honest metric-wiring status (no faked CV).",
+            "",
+            f"**Keep `{best_id}` at {_fmt_score(best_score)} as final** unless an M30 variant beats 0.880.",
+            "M29-A (v1) remains pending on Kaggle; M28/M26 remain secondary pending tracks. Do NOT build det",
+            "0.90/0.80 until the M30-D 0.95 result lands.",
+        ]
     elif [e for e in ["M29_A_WINNING_ENGINE_DEFAULT", "M29_B_ENGINE_GAP12_ONLY", "M29_C_ENGINE_LINEFIT_ON",
                       "M29_D_ENGINE_RELINK_ON", "M29_E_ENGINE_DET095_SAFE"] if e in pending_ids]:
         m29_order = [e for e in ["M29_A_WINNING_ENGINE_DEFAULT", "M29_B_ENGINE_GAP12_ONLY", "M29_C_ENGINE_LINEFIT_ON",

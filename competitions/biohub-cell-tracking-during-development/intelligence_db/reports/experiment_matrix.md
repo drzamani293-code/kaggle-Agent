@@ -1,6 +1,6 @@
 # Experiment Matrix
 
-_Generated 2026-07-10 16:58 UTC from intelligence.duckdb._
+_Generated 2026-07-10 20:41 UTC from intelligence.duckdb._
 
 Command differences, post-processing ops, submission stats, and score for every variant.
 All variants share ILP weights (edge -1.0, appearance 0.1, disappearance 0.1, division 1.0, --use-ilp);
@@ -49,6 +49,12 @@ only `det_threshold` and the post-processing chain differ.
 | `M29_C_ENGINE_LINEFIT_ON` | 0.99 | build_base_graph, rescue_divisions, stitch_gaps_1_2_3, linefit, prune_isolated, relabel | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M29_D_ENGINE_RELINK_ON` | 0.99 | build_base_graph, motion_relink, rescue_divisions, stitch_gaps_1_2_3, prune_isolated, relabel | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M29_E_ENGINE_DET095_SAFE` | 0.95 | build_base_graph, rescue_divisions, stitch_gaps_1_2_3, prune_isolated, relabel | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M30_A_V2_FULL_CANDIDATES_BALANCED` | 0.99 | read_candidate_geff, two_stage_hungarian_relink, stitch_gaps, prune_isolated, relabel | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M30_B_V2_FULL_CANDIDATES_GAP123` | 0.99 | read_candidate_geff, two_stage_hungarian_relink, stitch_gaps, prune_isolated, relabel | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M30_CANDIDATE_DIAGNOSTIC` | 0.99 | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M30_C_V2_AUTO_SPARSE_KNN_TIGHT` | 0.99 | read_candidate_geff, two_stage_hungarian_relink, stitch_gaps, prune_isolated, relabel | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M30_D_V2_AUTO_DET095` | 0.95 | read_candidate_geff, two_stage_hungarian_relink, stitch_gaps, prune_isolated, relabel | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M30_E_V2_DIVISION_RELAXED` | 0.99 | read_candidate_geff, two_stage_hungarian_relink, stitch_gaps, prune_isolated, relabel | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 
 Legend: div+ = safe divisions added, gap1 = single-frame gaps closed, 
 gap2 = two-frame gaps recovered, synth = synthetic nodes added, prune = isolated nodes pruned, 

@@ -241,6 +241,61 @@
    "relevance_score": 0.99,
    "summary": "Sanity profile ONLY (never submitted/hardcoded): the uploaded engine's output on the current 400ep base - rows=272289, nodes=139418, edges=132871, max_in=1, max_out=2, multiframe=0, dangling=0, id_consecutive=True, no_nan=True, divisions~2382. Used as the M29-A soft-WARN target window.",
    "extracted_ideas": []
+  },
+  {
+   "source_id": "V2_WINNING_POSTPROCESS_V2",
+   "source_type": "code",
+   "title": "winning_postprocess_v2.py (uploaded v2 engine)",
+   "url": "upload:winning_postprocess_v2.py",
+   "repo": null,
+   "path": null,
+   "relevance_score": 0.99,
+   "summary": "v2 RE-SOLVES unit-timepoint linking from the RAW GEFF candidate graph (v1 only patched the ILP solution). Fused cost -log(edge_prob)+w_dist*(dist/7)+w_motion*motion_dev, two-stage Hungarian (primary + division) with EXPLICIT no-link dummies, sparse kNN augmentation. Reimplemented in-line as the M30 relinker.",
+   "extracted_ideas": []
+  },
+  {
+   "source_id": "V2_WINNING_POSTPROCESS_V1",
+   "source_type": "code",
+   "title": "winning_postprocess.py (v1, shipped alongside v2)",
+   "url": "upload:winning_postprocess.py",
+   "repo": null,
+   "path": null,
+   "relevance_score": 0.99,
+   "summary": "The v1 engine (patches the ILP solution). M29 already integrated v1; kept for reference in the v2 package.",
+   "extracted_ideas": []
+  },
+  {
+   "source_id": "V2_INTEGRATION_V2",
+   "source_type": "code",
+   "title": "integration_v2.py (uploaded)",
+   "url": "upload:integration_v2.py",
+   "repo": null,
+   "path": null,
+   "relevance_score": 0.99,
+   "summary": "v2 one-cell integration harness: run reference predict, build candidate graph, re-solve linking with LinkConfig. Basis for the M30 orchestration + variant defaults.",
+   "extracted_ideas": []
+  },
+  {
+   "source_id": "V2_LOCAL_CV_HARNESS_1",
+   "source_type": "code",
+   "title": "local_cv_harness(1).py (uploaded)",
+   "url": "upload:local_cv_harness(1).py",
+   "repo": null,
+   "path": null,
+   "relevance_score": 0.99,
+   "summary": "v2 CV harness scaffold - imports v1 and leaves official_metric + GT loader as TODO. M30 builds a REAL v2 CV harness that discovers train GT dynamically and reports honest metric-wiring status (never fabricates scores).",
+   "extracted_ideas": []
+  },
+  {
+   "source_id": "V2_README",
+   "source_type": "doc",
+   "title": "README_v2.md (uploaded)",
+   "url": "upload:README_v2.md",
+   "repo": null,
+   "path": null,
+   "relevance_score": 0.99,
+   "summary": "v2 README: candidate-graph re-solve rationale, LinkConfig fields, no-link/two-stage linking, sparse kNN, CV harness.",
+   "extracted_ideas": []
   }
  ]
 }

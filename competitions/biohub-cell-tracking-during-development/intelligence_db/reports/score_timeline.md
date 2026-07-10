@@ -1,6 +1,6 @@
 # Score Timeline
 
-_Generated 2026-07-10 16:58 UTC from intelligence.duckdb._
+_Generated 2026-07-10 20:41 UTC from intelligence.duckdb._
 
 Baseline **0.874** · best so far **0.8800**.
 
@@ -49,6 +49,12 @@ Delta = step change vs the previous **scored** experiment (chronological).
 | 39 | 2026-07-10 | `M29_C_ENGINE_LINEFIT_ON` | pending | — | — | pending |
 | 40 | 2026-07-10 | `M29_D_ENGINE_RELINK_ON` | pending | — | — | pending |
 | 41 | 2026-07-10 | `M29_E_ENGINE_DET095_SAFE` | pending | — | — | pending |
+| 42 | 2026-07-10 | `M30_A_V2_FULL_CANDIDATES_BALANCED` | pending | — | — | pending |
+| 43 | 2026-07-10 | `M30_B_V2_FULL_CANDIDATES_GAP123` | pending | — | — | pending |
+| 44 | 2026-07-10 | `M30_CANDIDATE_DIAGNOSTIC` | pending | — | — | diagnostic |
+| 45 | 2026-07-10 | `M30_C_V2_AUTO_SPARSE_KNN_TIGHT` | pending | — | — | pending |
+| 46 | 2026-07-10 | `M30_D_V2_AUTO_DET095` | pending | — | — | pending |
+| 47 | 2026-07-10 | `M30_E_V2_DIVISION_RELAXED` | pending | — | — | pending |
 
 ## Notes per experiment
 
@@ -93,3 +99,9 @@ Delta = step change vs the previous **scored** experiment (chronological).
 - **M29_C_ENGINE_LINEFIT_ON** (pending, pending): PENDING (experimental). A + linefit (window 2, weight 0.75) - compare with M19-C where linefit may have helped. Submit after A unless diagnostics indicate A malformed.
 - **M29_D_ENGINE_RELINK_ON** (pending, pending): PENDING (experimental, RISKY). A + motion relink (min 7.0um, alt 4.5um): replace long learned edges with a closer per-frame Hungarian assignment. Reports n_relinked + fails. Submit after A/B/C only if diagnostics sane.
 - **M29_E_ENGINE_DET095_SAFE** (pending, pending): PENDING (experimental). A but det-threshold 0.95 - cautious detection-recall sweep. Safety: n_node_rows<=165000, n_edge_rows<=155000 else DO_NOT_SUBMIT_NODE_EXPLOSION; synthetic cap 18000. Do NOT build det 0.90/0.80 until 0.95 lands.
+- **M30_A_V2_FULL_CANDIDATES_BALANCED** (pending, pending): PENDING (experimental). v2 global relinker, RAW candidates only, balanced (null_link_cost 4.5, w_dist 1.0, w_motion 0.4, max_link 7.5um, min_prob 0.05, max_cost 12.0, div min_prob 0.20/child 6.5/sister 9.0/global 0.020, gaps (1,2)). Two-stage Hungarian with explicit no-link. ONLY valid if Stage-0 = FULL_CANDIDATE_GRAPH (else DO_NOT_SUBMIT_WRONG_CANDIDATE_MODE). final_source=metric_aware_global_relinker_v2. Submit first when class is FULL. Keep M19-C 0.880 final unless it beats.
+- **M30_B_V2_FULL_CANDIDATES_GAP123** (pending, pending): PENDING (experimental). A + gap3 (gap_sizes (1,2,3)). FULL graph only. Submit after A.
+- **M30_CANDIDATE_DIAGNOSTIC** (pending, diagnostic): STAGE 0 (non-scoring). Runs det=0.99 predict on the 400ep artifact and profiles the RAW candidate graph (read WITHOUT the edge solution mask): edge_prob availability+quantiles+degeneracy, candidates/source & /target distributions, per-frame & per-dataset stats. Classifies FULL_CANDIDATE_GRAPH / MODERATELY_SPARSE / ILP_SOLUTION_LIKE / EDGE_PROB_UNAVAILABLE and recommends which submit variant is valid. Writes m30_candidate_graph_report.json + table.csv. RUN FIRST - selects A/B (full) vs C/D (sparse). No submission.
+- **M30_C_V2_AUTO_SPARSE_KNN_TIGHT** (pending, pending): PENDING (experimental). v2 with raw + tight kNN augmentation (top-k<=3 within 4.5um, conservative knn_default_prob 0.20, no duplicates; null_link_cost 4.2, max_link 7.0, gaps (1,2)). PRIMARY variant when Stage-0 is ILP_SOLUTION_LIKE / MODERATELY_SPARSE. Reports raw vs augmented candidate counts and links_selected_from_raw/knn.
+- **M30_D_V2_AUTO_DET095** (pending, pending): PENDING (experimental). Auto candidate mode (raw if FULL, tight kNN if sparse) at det 0.95 - cautious detection-recall expansion. Node-explosion guard (n_node_rows<=165000/n_edge_rows<=155000). Do NOT build det 0.90/0.80 yet.
+- **M30_E_V2_DIVISION_RELAXED** (pending, pending): PENDING (experimental). Auto mode, relaxed division gates (div_min_prob 0.15, div_global_cap_frac 0.030). Tests the 0.1-weight division term. Hard division-explosion guard (divisions_total<=4000).

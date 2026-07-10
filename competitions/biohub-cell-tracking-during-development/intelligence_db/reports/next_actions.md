@@ -1,38 +1,39 @@
 # Next Actions
 
-_Generated 2026-07-10 16:58 UTC from intelligence.duckdb._
+_Generated 2026-07-10 20:41 UTC from intelligence.duckdb._
 
 **Best scored experiment:** `M19_C_FULL_CHAIN_PENDING` at **0.8800**.
 **M19-C full_chain:** final (score 0.8800).
-**Open (pending):** 13 · **blocked:** 13 · **unsafe/superseded:** 2.
+**Open (pending):** 18 · **blocked:** 13 · **unsafe/superseded:** 2.
 
 ## Recommendation
 
-**Integrate the full uploaded WINNING ENGINE (M29).** M28 was only a partial recall expansion
-(M28-A: nodes=132166, gap1=1604, gap2=1386, synthetic=4376). The uploaded engine
-(winning_postprocess.py) is a fuller recall recovery - motion relink + slot-Hungarian division
-rescue + per-timepoint Hungarian gap 1/2/3 stitching (constant velocity) + optional linefit +
-prune - profiling (submission(3).csv) to nodes=139418, edges=132871, divisions~2382, all invariants
-clean. It is EMBEDDED self-contained so each M29 runner is a standalone Kaggle cell (no external
-utility-dataset import). The uploaded submission(3).csv is never submitted.
+**Metric-aware GLOBAL RELINKER v2 (M30) - run the candidate diagnostic FIRST.** A new v2 package
+re-solves unit-timepoint linking from the RAW GEFF candidate graph (v1/M29 only patched the ILP
+solution) with a fused cost `-log(edge_prob) + w_dist*(dist/7) + w_motion*motion_dev`, a two-stage
+Hungarian (primary + division) with EXPLICIT no-link dummies, and sparse kNN augmentation. Whether
+it can help depends entirely on candidate richness.
 
-Submit each only if its report prints `OK_TO_SUBMIT_EXPERIMENTAL` (valid, no fallback, no NaN,
-consecutive id, no dangling, all edges t->t+1, in<=1/out<=2, 125000<=node_rows<=165000,
-110000<=edge_rows<=155000, synthetic<=12000 [E 18000], divisions_total<=4000,
-final_source=winning_postprocess_engine_reproduced).
+1. **Run `M30_CANDIDATE_GRAPH_DIAGNOSTIC_NOT_SUBMIT` first (non-submit).** It profiles the raw
+   candidate graph (reading edges WITHOUT the ILP solution mask) and classifies it:
+   `FULL_CANDIDATE_GRAPH` / `MODERATELY_SPARSE` / `ILP_SOLUTION_LIKE` / `EDGE_PROB_UNAVAILABLE`.
+2. **Submit order depends on the class:**
+   - `FULL_CANDIDATE_GRAPH` -> `M30_A_V2_FULL_CANDIDATES_BALANCED` -> `M30_B_V2_FULL_CANDIDATES_GAP123`
+     -> `M30_E_V2_DIVISION_RELAXED` -> `M30_D_V2_AUTO_DET095`.
+   - `ILP_SOLUTION_LIKE` / `MODERATELY_SPARSE` -> `M30_C_V2_AUTO_SPARSE_KNN_TIGHT` ->
+     `M30_D_V2_AUTO_DET095` -> `M30_E_V2_DIVISION_RELAXED` (skip A/B - their guard reports
+     `DO_NOT_SUBMIT_WRONG_CANDIDATE_MODE`).
+   - `EDGE_PROB_UNAVAILABLE` -> submit nothing (`DO_NOT_SUBMIT_EDGE_PROB_UNAVAILABLE`).
 
-**Submit order recommendation:**
-1. `M29_A_WINNING_ENGINE_DEFAULT` (full engine default - PRIMARY; soft-WARN vs the 139418/132871/2382 profile)
-2. `M29_B_ENGINE_GAP12_ONLY` (gaps 1,2 only - isolate whether gap3 over-adds synthetic/FP)
-3. `M29_C_ENGINE_LINEFIT_ON` (default + linefit window 2 weight 0.75 - compare with M19-C)
-4. `M29_D_ENGINE_RELINK_ON` (default + motion relink 7.0/4.5 - RISKY; reports n_relinked/fails)
-5. `M29_E_ENGINE_DET095_SAFE` (det 0.95 - cautious detection sweep; DO_NOT_SUBMIT_NODE_EXPLOSION guard)
+Submit each only on `OK_TO_SUBMIT_EXPERIMENTAL` (artifact guard, edge_prob present + non-degenerate,
+candidate mode matches the class, valid, no fallback, unit-timepoint edges, in<=1/out<=2, sane
+counts, synthetic<=12000, divisions_total<=4000, final_source=metric_aware_global_relinker_v2).
+**Never submit the diagnostic or the v2 CV harness.** The v2 CV harness
+(`M30_V2_LOCAL_CV_HARNESS_NOT_SUBMIT`) reports honest metric-wiring status (no faked CV).
 
-**Decision rules:** if M29-A > 0.880, make it the new candidate and continue B/C; if A in
-[0.875, 0.880) test B and C; if A < 0.875 test B only, then **PAUSE and run the non-submit local-CV
-harness** (`M29_LOCAL_CV_HARNESS_INTEGRATION_NOT_SUBMIT`) before more submits.
-**Keep `M19_C_FULL_CHAIN_PENDING` at 0.8800 as final** unless an M29 variant beats 0.880.
-Do NOT build det 0.90/0.80 until M29-E (0.95) lands. M28/M26 variants remain secondary pending tracks.
+**Keep `M19_C_FULL_CHAIN_PENDING` at 0.8800 as final** unless an M30 variant beats 0.880.
+M29-A (v1) remains pending on Kaggle; M28/M26 remain secondary pending tracks. Do NOT build det
+0.90/0.80 until the M30-D 0.95 result lands.
 
 ## Recorded decisions (history)
 
@@ -78,3 +79,6 @@ Do NOT build det 0.90/0.80 until M29-E (0.95) lands. M28/M26 variants remain sec
 - **after `M28_A_M19C_GAP_CAPS_OPEN`** (2026-07-10, risk medium):
   - observation: M28 was only a PARTIAL recall expansion (M28-A: nodes=132166, gap1=1604, gap2=1386, synthetic=4376). The uploaded winning-engine package (winning_postprocess.py / integration_cell.py) is a FULLER recall engine: motion relink + slot-Hungarian division rescue + per-timepoint Hungarian gap 1/2/3 stitching (constant velocity) + optional linefit + prune. Its submission(3).csv profiles to nodes=139418, edges=132871, divisions~2382, all invariants clean. M27 pruning path already failed (0.859).
   - recommendation: Integrate the full engine as M29, EMBEDDED self-contained (no external utility-dataset import) so each runner is a standalone Kaggle cell. Submit order A (default) -> B (gap12 only) -> C (linefit) -> D (relink) -> E (det 0.95), each only if its report prints OK_TO_SUBMIT_EXPERIMENTAL. If A>0.880 make it the new candidate and continue B/C; if A in [0.875,0.880) test B and C; if A<0.875 test B only, then PAUSE and run the local-CV harness before more submits. Keep M19-C version 12 0.880 final until beaten. Do not submit the uploaded submission(3).csv.  → next: `M29_A -> M29_B -> M29_C -> M29_D -> M29_E (then local_cv_harness)`
+- **after `M29_A_WINNING_ENGINE_DEFAULT`** (2026-07-10, risk medium):
+  - observation: A new v2 package (winning_postprocess_v2.py / integration_v2.py) RE-SOLVES unit-timepoint linking from the RAW GEFF candidate graph rather than patching the ILP solution (v1/M29). CRITICAL: the reused read_geff_graph applies the edge solution mask and returns only the ILP solution, so v2 needs read_candidate_geff (no mask). Whether v2 can help depends entirely on candidate richness - a full candidate graph enables global relinking, an ILP-solution-like store does not. M29-A is still pending on Kaggle; M30 is built in parallel.
+  - recommendation: Integrate v2 as M30, embedded self-contained. RUN THE STAGE-0 CANDIDATE DIAGNOSTIC FIRST to classify the graph. If FULL_CANDIDATE_GRAPH submit A -> B -> E -> D; if ILP_SOLUTION_LIKE/MODERATELY_SPARSE submit C -> D -> E (skip A/B). Every submit requires edge_prob present+non-degenerate, the candidate mode matching the Stage-0 class, and OK_TO_SUBMIT_EXPERIMENTAL. Never submit the diagnostic or the v2 CV harness. Keep M19-C 0.880 final; keep M29-A pending until the user supplies its score.  → next: `M30_CANDIDATE_DIAGNOSTIC -> (FULL: A,B,E,D | SPARSE: C,D,E) + v2 CV harness`
