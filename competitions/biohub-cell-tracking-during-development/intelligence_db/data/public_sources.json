@@ -312,6 +312,36 @@
     "DeepCenter shadow-then-gate (add-only) before trusting it",
     "reference-first: resolve-or-refuse, never approximate"
    ]
+  },
+  {
+   "source_id": "LOCAL_METRIC_PROXY",
+   "source_type": "code_proxy",
+   "title": "local_metric.py (repo, reviewed PROXY)",
+   "url": "repo:local_metric.py",
+   "repo": null,
+   "path": null,
+   "relevance_score": 0.6,
+   "summary": "In-repo scorer with a CTC-style edge Jaccard approximation + proxy division diagnostics + node penalty. USEFUL design ideas (7um node matching, edge_jaccard=TP/(TP+FP+FN), out-degree>=2 division) but NOT authoritative: its division implementation is a proxy and its aggregation/node-penalty are not the official summariser. M32 NEVER uses it as the scorer.",
+   "extracted_ideas": [
+    "7um node matching",
+    "edge_jaccard=TP/(TP+FP+FN)",
+    "out-degree>=2 division"
+   ]
+  },
+  {
+   "source_id": "PP_SWEEP_V2_PROXY",
+   "source_type": "code_proxy",
+   "title": "pp_sweep_v2.py (reviewed PROXY)",
+   "url": "upload:pp_sweep_v2.py",
+   "repo": null,
+   "path": null,
+   "relevance_score": 0.6,
+   "summary": "Postprocess-sweep helper reviewed for design ideas only; not the authoritative official scorer. Never used to score in M32.",
+   "extracted_ideas": [
+    "7um node matching",
+    "edge_jaccard=TP/(TP+FP+FN)",
+    "out-degree>=2 division"
+   ]
   }
  ]
 }

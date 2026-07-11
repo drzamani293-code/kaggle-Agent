@@ -2652,6 +2652,182 @@
     "edges_after": null,
     "per_dataset": []
    }
+  },
+  {
+   "experiment_id": "M32_A_OFFICIAL_CV_AUDIT",
+   "milestone": "M32",
+   "variant": "A",
+   "label": "official_cv_audit",
+   "notebook_name": "milestone32_official_local_cv_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M32_A_OFFICIAL_CV_AUDIT_NOT_SUBMIT.txt",
+   "command": {
+    "det_threshold": 0.99,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [],
+   "public_score": null,
+   "status": "diagnostic",
+   "created_at": "2026-07-11",
+   "notes": "NON-SUBMIT STAGE 0. Resolves the OFFICIAL metric (tracking_cellmot.metrics / scripts/evaluate.py) with source path + functions + SHA256; local_metric.py / pp_sweep_v2.py recorded as reviewed PROXIES, NEVER used as the scorer. Resolves train GT (no solution mask), split_0 train vs held-out with a leakage guard, and the exact 400ep artifact. Emits AUDIT_PASS / OFFICIAL_METRIC_NOT_FOUND / CLEAN_HOLDOUT_UNRESOLVED / DATA_LEAKAGE_DETECTED / WRONG_ARTIFACT / GT_NOT_FOUND. Writes m32_official_cv_audit.json + inventory csv + split json. RUN FIRST. No submission.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M32_B_OFFICIAL_CV_REPLAY",
+   "milestone": "M32",
+   "variant": "B",
+   "label": "official_cv_replay",
+   "notebook_name": "milestone32_official_local_cv_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M32_B_OFFICIAL_CV_REPLAY_NOT_SUBMIT.txt",
+   "command": {
+    "det_threshold": 0.99,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [],
+   "public_score": null,
+   "status": "diagnostic",
+   "created_at": "2026-07-11",
+   "notes": "NON-SUBMIT STAGE 2. Common held-out prediction cache -> replay P0 raw-ILP / P1 M19-C-style (M19C_REPLAY_NOT_EXACT) / P2 M29-A engine-v1 / P3 M30-C sparse-kNN -> verified adapter (invariants) -> OFFICIAL scoring -> official aggregation -> robust ranking (strong/weak/inconclusive/no-improvement) with per-dataset wins + leave-one-out stability. If the official metric / clean holdout are unresolved -> CV_NOT_WIRED (no fabricated score). Writes m32_official_cv_results.*.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M32_C_OFFICIAL_SMALL_SWEEP",
+   "milestone": "M32",
+   "variant": "C",
+   "label": "official_small_sweep",
+   "notebook_name": "milestone32_official_local_cv_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M32_C_OFFICIAL_SMALL_SWEEP_NOT_SUBMIT.txt",
+   "command": {
+    "det_threshold": 0.99,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [],
+   "public_score": null,
+   "status": "diagnostic",
+   "created_at": "2026-07-11",
+   "notes": "NON-SUBMIT STAGE 3. Deliberately SMALL staged sweep (<=10 configs; baseline -> gap family -> division cap -> kNN mode -> null-link cost) on the OFFICIAL metric, one-factor-at-a-time, with leave-one-dataset-out ranking stability. No DeepCenter/TTA/ensemble. Only meaningful after M32_B succeeds.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M32_D_DET_THRESHOLD_PILOT",
+   "milestone": "M32",
+   "variant": "D",
+   "label": "det_threshold_pilot",
+   "notebook_name": "milestone32_official_local_cv_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M32_D_DET_THRESHOLD_PILOT_NOT_SUBMIT.txt",
+   "command": {
+    "det_threshold": 0.99,
+    "ilp_edge_weight": -1.0,
+    "ilp_appearance_weight": 0.1,
+    "ilp_disappearance_weight": 0.1,
+    "ilp_division_weight": 1.0,
+    "use_ilp": true
+   },
+   "postprocess_ops": [],
+   "public_score": null,
+   "status": "diagnostic",
+   "created_at": "2026-07-11",
+   "notes": "NON-SUBMIT STAGE 4. Tiny predict-time pilot (det 0.99 vs 0.95, separate cache each) with the selected best postprocessor and LOO stability. 0.93/0.90/0.85/DeepCenter/TTA explicitly NOT run yet. Only after clean CV + cache are proven.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
   }
  ],
  "decisions": [
@@ -2798,6 +2974,15 @@
    "next_variant": "M31_REFERENCE_AUDIT -> A -> B(shadow) -> C -> D/E -> CV",
    "risk_level": "medium",
    "created_at": "2026-07-10"
+  },
+  {
+   "decision_id": "DEC_M32_OFFICIAL_LOCAL_CV_FIRST",
+   "after_experiment_id": "M31_A_EXACT_09_REPRO",
+   "observation": "Blind LB sweeps have stalled: M19-C 0.880 remains best; M29-A scored 0.876 (< 0.880); M30-C pending; M31 blocked (missing TTA6/DeepCenter reference assets). No principled way to choose the next pipeline without a real local CV on the OFFICIAL metric. local_metric.py is only a proxy (non-authoritative division/aggregation/node-penalty).",
+   "recommendation": "Build M32 as a NON-SUBMIT official local-CV & model-selection pack: resolve the OFFICIAL metric + clean split_0 holdout from mounted source (else CV_NOT_WIRED / CLEAN_HOLDOUT_UNRESOLVED - never a proxy/fake score), replay P0/P1/P2/P3 on one common cache, score officially, and rank robustly (strong/weak/inconclusive) with LOO stability. Then a <=10-config staged sweep and a det 0.99-vs-0.95 pilot. Order: M32_A audit -> M32_B replay -> M32_C sweep -> optional M32_D det pilot. NEVER recommend a blind LB submit before official CV succeeds. Keep M19-C 0.880 final; M29-A failed; M30-C pending; M31 blocked.",
+   "next_variant": "M32_A -> M32_B -> M32_C -> (optional) M32_D",
+   "risk_level": "low",
+   "created_at": "2026-07-11"
   }
  ],
  "lessons": [

@@ -1,6 +1,6 @@
 # Lessons Learned
 
-_Generated 2026-07-10 22:31 UTC from intelligence.duckdb._
+_Generated 2026-07-11 02:00 UTC from intelligence.duckdb._
 
 Distilled, evidence-linked findings driving strategy.
 
@@ -36,11 +36,11 @@ Distilled, evidence-linked findings driving strategy.
 
 ## Public sources consulted (by relevance)
 
-- [1.00] Cell-tracking competition metric specification — https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/metrics.md
 - [1.00] lb893 learned-graph tracker with micro-safe divisions — https://github.com/dalloliogm/kaggle_competitions
+- [1.00] Cell-tracking competition metric specification — https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/metrics.md
+- [0.99] winning_postprocess.py (uploaded engine) — upload:winning_postprocess.py
 - [0.99] biohub-cell-tracking-v4-unet-ilp-reproduction (public high-score notebook) — kaggle:notebook/biohub-cell-tracking-v4-unet-ilp-reproduction
 - [0.99] biohub_winning_strategy(1).md (uploaded) — upload:biohub_winning_strategy(1).md
-- [0.99] winning_postprocess.py (uploaded engine) — upload:winning_postprocess.py
 - [0.99] integration_cell.py (uploaded) — upload:integration_cell.py
 - [0.99] local_cv_harness.py (uploaded) — upload:local_cv_harness.py
 - [0.99] README_engine.md (uploaded) — upload:README_engine.md
@@ -58,4 +58,6 @@ Distilled, evidence-linked findings driving strategy.
 - [0.90] evaluate.py scoring entrypoint — https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/scripts/evaluate.py
 - [0.85] gap2 velocity ablation — https://github.com/dalloliogm/kaggle_competitions
 - [0.70] top notebooks analysis — https://github.com/dalloliogm/kaggle_competitions
+- [0.60] local_metric.py (repo, reviewed PROXY) — repo:local_metric.py
+- [0.60] pp_sweep_v2.py (reviewed PROXY) — upload:pp_sweep_v2.py
 - [0.20] nms38 candidate — https://github.com/dalloliogm/kaggle_competitions

@@ -1,12 +1,32 @@
 # Next Actions
 
-_Generated 2026-07-10 22:31 UTC from intelligence.duckdb._
+_Generated 2026-07-11 02:00 UTC from intelligence.duckdb._
 
 **Best scored experiment:** `M19_C_FULL_CHAIN_PENDING` at **0.8800**.
 **M19-C full_chain:** final (score 0.8800).
 **Open (pending):** 19 · **blocked:** 16 · **unsafe/superseded:** 2.
 
 ## Recommendation
+
+**Run the OFFICIAL local CV first (M32) - stop blind leaderboard sweeps.** Blind sweeps have stalled
+(M19-C **0.880** best; M29-A 0.876 < 0.880; M30-C pending; M31 blocked on missing reference assets),
+so choose the next pipeline with a REAL held-out CV on the OFFICIAL metric rather than more LB spends.
+M32 is entirely NON-SUBMIT.
+
+1. **`M32_A_OFFICIAL_CV_AUDIT_NOT_SUBMIT`** - resolve the OFFICIAL metric
+   (tracking_cellmot.metrics / scripts/evaluate.py; local_metric.py is a PROXY, never the scorer),
+   train GT, split_0 clean holdout (+ leakage guard), and the 400ep artifact. `AUDIT_PASS` or a
+   specific status (`OFFICIAL_METRIC_NOT_FOUND` / `CLEAN_HOLDOUT_UNRESOLVED` / `DATA_LEAKAGE_DETECTED`).
+2. **`M32_B_OFFICIAL_CV_REPLAY_NOT_SUBMIT`** - one common cache -> replay P0 raw-ILP / P1 M19-C-style /
+   P2 M29-A / P3 M30-C -> OFFICIAL scoring -> robust ranking (strong/weak/inconclusive) + leave-one-out
+   stability. If unresolved -> `CV_NOT_WIRED` (never a fabricated/proxy score).
+3. **`M32_C_OFFICIAL_SMALL_SWEEP_NOT_SUBMIT`** (<=10 staged configs) then optional
+   **`M32_D_DET_THRESHOLD_PILOT_NOT_SUBMIT`** (det 0.99 vs 0.95).
+
+**Never recommend a leaderboard submit before official CV succeeds** (metric verified, clean holdout
+proven, same inputs, challenger valid, CV_WINNER_STRONG or a documented CV_WINNER_WEAK).
+**Keep `M19_C_FULL_CHAIN_PENDING` at 0.8800 as final.** M31-A remains a pending reference-first
+candidate; M30-C / M29-A stay pending on Kaggle - but resolve M32 CV before spending more submissions.
 
 **TTA6 + DeepCenter REFERENCE-FIRST reproduction (M31) - run the reference audit FIRST.** The
 analysis_09_strategy.md near-0.900 pipeline (400ep, 6-way TTA, det 0.97, div 0.7, pool ~2.0um,
@@ -84,3 +104,6 @@ M29-A / M30-C remain pending on Kaggle; M30 diagnostic gates that family.
 - **after `M30_A_V2_FULL_CANDIDATES_BALANCED`** (2026-07-10, risk medium):
   - observation: analysis_09_strategy.md describes a near-0.900 TTA6 + learned-motion_relink + DeepCenter pipeline on 400ep. The exact reference (TTA transforms, pool-kernel flag, motion_relink params, DeepCenter model class/weights/call signature) is NOT locatable in this environment. The critical rule forbids inventing any of it or substituting M27/M28/M29/M30 logic.
   - recommendation: Build M31 REFERENCE-FIRST: resolve every field from mounted source with provenance (grounded in the actual predict script via discover_predict_flags), and REFUSE (REFERENCE_CONFIG_UNRESOLVED / DO_NOT_SUBMIT_*) rather than approximate. Operational order: audit -> A exact repro -> B DeepCenter shadow (must prove loaded+checked>0+shadow==baseline) -> C gate -> D gap2 / E division (isolated ablations) -> CV. Never submit audit/B/CV. Keep M19-C 0.880 final; M29-A and M30-C pending.  → next: `M31_REFERENCE_AUDIT -> A -> B(shadow) -> C -> D/E -> CV`
+- **after `M31_A_EXACT_09_REPRO`** (2026-07-11, risk low):
+  - observation: Blind LB sweeps have stalled: M19-C 0.880 remains best; M29-A scored 0.876 (< 0.880); M30-C pending; M31 blocked (missing TTA6/DeepCenter reference assets). No principled way to choose the next pipeline without a real local CV on the OFFICIAL metric. local_metric.py is only a proxy (non-authoritative division/aggregation/node-penalty).
+  - recommendation: Build M32 as a NON-SUBMIT official local-CV & model-selection pack: resolve the OFFICIAL metric + clean split_0 holdout from mounted source (else CV_NOT_WIRED / CLEAN_HOLDOUT_UNRESOLVED - never a proxy/fake score), replay P0/P1/P2/P3 on one common cache, score officially, and rank robustly (strong/weak/inconclusive) with LOO stability. Then a <=10-config staged sweep and a det 0.99-vs-0.95 pilot. Order: M32_A audit -> M32_B replay -> M32_C sweep -> optional M32_D det pilot. NEVER recommend a blind LB submit before official CV succeeds. Keep M19-C 0.880 final; M29-A failed; M30-C pending; M31 blocked.  → next: `M32_A -> M32_B -> M32_C -> (optional) M32_D`

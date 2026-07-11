@@ -41,10 +41,10 @@ def test_db_initializes_and_seeds(tmp: Path) -> None:
         ids = {r[0] for r in con.execute("SELECT experiment_id FROM experiments").fetchall()}
     finally:
         con.close()
-    assert n_exp == 54, f"expected 54 seed experiments, got {n_exp}"
-    assert n_sub == 54 and n_pp == 54, f"expected stats for all 54 (sub={n_sub}, pp={n_pp})"
-    assert n_src == 23, f"expected 23 public sources (incl analysis_09), got {n_src}"
-    assert n_dec >= 15 and n_les >= 5, f"expected seed decisions/lessons (dec={n_dec}, les={n_les})"
+    assert n_exp == 58, f"expected 58 seed experiments, got {n_exp}"
+    assert n_sub == 58 and n_pp == 58, f"expected stats for all 58 (sub={n_sub}, pp={n_pp})"
+    assert n_src == 25, f"expected 25 public sources (incl proxy metrics), got {n_src}"
+    assert n_dec >= 16 and n_les >= 5, f"expected seed decisions/lessons (dec={n_dec}, les={n_les})"
     for e in ["M16_BASELINE", "M19_C_FULL_CHAIN_PENDING",
               "M21_A_PILKWANG350_M19C_GATES", "M22_ARTIFACT_FORENSIC",
               "M23_B_PILKWANG350_NODE_PRUNE_SAFE_DIV_ONLY", "M23_C_PILKWANG350_EDGE_NODE_BALANCED",
@@ -62,7 +62,9 @@ def test_db_initializes_and_seeds(tmp: Path) -> None:
               "M30_C_V2_AUTO_SPARSE_KNN_TIGHT", "M30_D_V2_AUTO_DET095", "M30_E_V2_DIVISION_RELAXED",
               "M31_REFERENCE_AUDIT", "M31_A_EXACT_09_REPRO", "M31_B_DEEPCENTER_SHADOW",
               "M31_C_DEEPCENTER_GATE_BASE_CAPS", "M31_D_DEEPCENTER_GATE_GAP2_OPEN",
-              "M31_E_DEEPCENTER_GATE_DIVISION_RELAXED", "M31_LOCAL_CV_HARNESS"]:
+              "M31_E_DEEPCENTER_GATE_DIVISION_RELAXED", "M31_LOCAL_CV_HARNESS",
+              "M32_A_OFFICIAL_CV_AUDIT", "M32_B_OFFICIAL_CV_REPLAY", "M32_C_OFFICIAL_SMALL_SWEEP",
+              "M32_D_DET_THRESHOLD_PILOT"]:
         assert e in ids, f"missing seed experiment {e}"
     print("  ok: db initializes and seeds")
 
@@ -88,10 +90,10 @@ def test_reports_generated(tmp: Path) -> None:
     # next_actions is the "global relinker v2 (M30) - run diagnostic first" branch.
     nxt = (tmp_reports / "next_actions.md").read_text()
     assert "0.880" in nxt and "final" in nxt.lower(), "final score/marker should appear"
-    assert "M31_A_EXACT_09_REPRO" in nxt and "OK_TO_SUBMIT_EXPERIMENTAL" in nxt
-    assert "M31_REFERENCE_AUDIT_NOT_SUBMIT" in nxt and "reference_config_resolved" in nxt.lower() or "reference-first" in nxt.lower()
-    assert "tta6_motion_relink_reference_reproduced" in nxt and "DeepCenter" in nxt
-    print("  ok: reports generated with M31 reference-first recommendation (M19-C 0.880 kept final)")
+    assert "M32_A_OFFICIAL_CV_AUDIT_NOT_SUBMIT" in nxt and "OFFICIAL local CV" in nxt
+    assert "CV_NOT_WIRED" in nxt and "local_metric.py is a PROXY" in nxt
+    assert "Never recommend a leaderboard submit before official CV" in nxt
+    print("  ok: reports generated with M32 official-CV-first recommendation (M19-C 0.880 kept final)")
 
 
 def test_scored_and_best(tmp: Path) -> None:

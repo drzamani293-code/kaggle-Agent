@@ -160,6 +160,29 @@ def report_next_actions(con) -> str:
     m22_order = [e for e in ["M22_A_TRUEBASE_SAFE_DIV_TUNE", "M22_B_TRUEBASE_LIGHT_GAP",
                              "M22_C_TRUEBASE_DIV_PLUS_GAP1_ONLY"] if e in blocked_m22]
 
+    if "M32_A_OFFICIAL_CV_AUDIT" in rows:
+        out += [
+            "**Run the OFFICIAL local CV first (M32) - stop blind leaderboard sweeps.** Blind sweeps have stalled",
+            f"(M19-C **0.880** best; M29-A 0.876 < 0.880; M30-C pending; M31 blocked on missing reference assets),",
+            "so choose the next pipeline with a REAL held-out CV on the OFFICIAL metric rather than more LB spends.",
+            "M32 is entirely NON-SUBMIT.",
+            "",
+            "1. **`M32_A_OFFICIAL_CV_AUDIT_NOT_SUBMIT`** - resolve the OFFICIAL metric",
+            "   (tracking_cellmot.metrics / scripts/evaluate.py; local_metric.py is a PROXY, never the scorer),",
+            "   train GT, split_0 clean holdout (+ leakage guard), and the 400ep artifact. `AUDIT_PASS` or a",
+            "   specific status (`OFFICIAL_METRIC_NOT_FOUND` / `CLEAN_HOLDOUT_UNRESOLVED` / `DATA_LEAKAGE_DETECTED`).",
+            "2. **`M32_B_OFFICIAL_CV_REPLAY_NOT_SUBMIT`** - one common cache -> replay P0 raw-ILP / P1 M19-C-style /",
+            "   P2 M29-A / P3 M30-C -> OFFICIAL scoring -> robust ranking (strong/weak/inconclusive) + leave-one-out",
+            "   stability. If unresolved -> `CV_NOT_WIRED` (never a fabricated/proxy score).",
+            "3. **`M32_C_OFFICIAL_SMALL_SWEEP_NOT_SUBMIT`** (<=10 staged configs) then optional",
+            "   **`M32_D_DET_THRESHOLD_PILOT_NOT_SUBMIT`** (det 0.99 vs 0.95).",
+            "",
+            "**Never recommend a leaderboard submit before official CV succeeds** (metric verified, clean holdout",
+            "proven, same inputs, challenger valid, CV_WINNER_STRONG or a documented CV_WINNER_WEAK).",
+            f"**Keep `{best_id}` at {_fmt_score(best_score)} as final.** M31-A remains a pending reference-first",
+            "candidate; M30-C / M29-A stay pending on Kaggle - but resolve M32 CV before spending more submissions.",
+            "",
+        ]
     if final_row and not pending:
         fid, fscore = final_row[0][0], final_row[0][1]
         out += [
