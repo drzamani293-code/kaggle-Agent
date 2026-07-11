@@ -41,10 +41,10 @@ def test_db_initializes_and_seeds(tmp: Path) -> None:
         ids = {r[0] for r in con.execute("SELECT experiment_id FROM experiments").fetchall()}
     finally:
         con.close()
-    assert n_exp == 60, f"expected 60 seed experiments, got {n_exp}"
-    assert n_sub == 60 and n_pp == 60, f"expected stats for all 60 (sub={n_sub}, pp={n_pp})"
-    assert n_src == 26, f"expected 26 public sources (incl vendored official-metric snapshot), got {n_src}"
-    assert n_dec >= 18 and n_les >= 5, f"expected seed decisions/lessons (dec={n_dec}, les={n_les})"
+    assert n_exp == 65, f"expected 65 seed experiments, got {n_exp}"
+    assert n_sub == 65 and n_pp == 65, f"expected stats for all 65 (sub={n_sub}, pp={n_pp})"
+    assert n_src == 30, f"expected 30 public sources (incl M33 ensemble sources), got {n_src}"
+    assert n_dec >= 19 and n_les >= 5, f"expected seed decisions/lessons (dec={n_dec}, les={n_les})"
     for e in ["M16_BASELINE", "M19_C_FULL_CHAIN_PENDING",
               "M21_A_PILKWANG350_M19C_GATES", "M22_ARTIFACT_FORENSIC",
               "M23_B_PILKWANG350_NODE_PRUNE_SAFE_DIV_ONLY", "M23_C_PILKWANG350_EDGE_NODE_BALANCED",
@@ -65,7 +65,10 @@ def test_db_initializes_and_seeds(tmp: Path) -> None:
               "M31_E_DEEPCENTER_GATE_DIVISION_RELAXED", "M31_LOCAL_CV_HARNESS",
               "M32_A_OFFICIAL_CV_AUDIT", "M32_B_OFFICIAL_CV_REPLAY", "M32_C_OFFICIAL_SMALL_SWEEP",
               "M32_D_DET_THRESHOLD_PILOT",
-              "M32_1_A_OFFICIAL_METRIC_VENDOR_AUDIT", "M32_1_B_OFFICIAL_CV_REAUDIT"]:
+              "M32_1_A_OFFICIAL_METRIC_VENDOR_AUDIT", "M32_1_B_OFFICIAL_CV_REAUDIT",
+              "M33_A_ENSEMBLE_INPUT_AUDIT", "M33_B_CORRECTED_OUTPUT_BLEND_DIAG",
+              "M33_C_CORRECTED_OUTPUT_BLEND_CANDIDATE", "M33_D_PROBABILITY_FUSION_AUDIT",
+              "M33_E_CORRECTED_PROBABILITY_ENSEMBLE"]:
         assert e in ids, f"missing seed experiment {e}"
     print("  ok: db initializes and seeds")
 
@@ -91,10 +94,10 @@ def test_reports_generated(tmp: Path) -> None:
     # next_actions is the "global relinker v2 (M30) - run diagnostic first" branch.
     nxt = (tmp_reports / "next_actions.md").read_text()
     assert "0.880" in nxt and "final" in nxt.lower(), "final score/marker should appear"
-    # M32.1 vendor branch now leads (metric could not import in M32) -> vendor + re-audit first.
-    assert "M32_1_A_OFFICIAL_METRIC_VENDOR_AUDIT_NOT_SUBMIT" in nxt and "vendor" in nxt.lower()
-    assert "OFFICIAL_METRIC_DEPENDENCY_MISSING" in nxt and "AUDIT_PASS" in nxt
-    assert "never submit before official CV succeeds" in nxt
+    # M33 corrected-ensemble branch now leads.
+    assert "M33_A_ENSEMBLE_INPUT_AUDIT_NOT_SUBMIT" in nxt and "corrected ensemble" in nxt.lower()
+    assert "winning_postprocess_v2" in nxt and "OK_TO_SUBMIT_" in nxt
+    assert "NEVER the official scorer" in nxt or "never the official scorer" in nxt.lower()
     print("  ok: reports generated with M32 official-CV-first recommendation (M19-C 0.880 kept final)")
 
 

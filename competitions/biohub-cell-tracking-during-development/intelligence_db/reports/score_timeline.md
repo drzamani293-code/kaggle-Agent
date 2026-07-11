@@ -1,6 +1,6 @@
 # Score Timeline
 
-_Generated 2026-07-11 06:33 UTC from intelligence.duckdb._
+_Generated 2026-07-11 07:38 UTC from intelligence.duckdb._
 
 Baseline **0.874** · best so far **0.8800**.
 
@@ -68,6 +68,11 @@ Delta = step change vs the previous **scored** experiment (chronological).
 | 58 | 2026-07-11 | `M32_B_OFFICIAL_CV_REPLAY` | pending | — | — | diagnostic |
 | 59 | 2026-07-11 | `M32_C_OFFICIAL_SMALL_SWEEP` | pending | — | — | diagnostic |
 | 60 | 2026-07-11 | `M32_D_DET_THRESHOLD_PILOT` | pending | — | — | diagnostic |
+| 61 | 2026-07-11 | `M33_A_ENSEMBLE_INPUT_AUDIT` | pending | — | — | diagnostic |
+| 62 | 2026-07-11 | `M33_B_CORRECTED_OUTPUT_BLEND_DIAG` | pending | — | — | diagnostic |
+| 63 | 2026-07-11 | `M33_C_CORRECTED_OUTPUT_BLEND_CANDIDATE` | pending | — | — | blocked |
+| 64 | 2026-07-11 | `M33_D_PROBABILITY_FUSION_AUDIT` | pending | — | — | diagnostic |
+| 65 | 2026-07-11 | `M33_E_CORRECTED_PROBABILITY_ENSEMBLE` | pending | — | — | blocked |
 
 ## Notes per experiment
 
@@ -131,3 +136,8 @@ Delta = step change vs the previous **scored** experiment (chronological).
 - **M32_B_OFFICIAL_CV_REPLAY** (pending, diagnostic): NON-SUBMIT STAGE 2. Common held-out prediction cache -> replay P0 raw-ILP / P1 M19-C-style (M19C_REPLAY_NOT_EXACT) / P2 M29-A engine-v1 / P3 M30-C sparse-kNN -> verified adapter (invariants) -> OFFICIAL scoring -> official aggregation -> robust ranking (strong/weak/inconclusive/no-improvement) with per-dataset wins + leave-one-out stability. If the official metric / clean holdout are unresolved -> CV_NOT_WIRED (no fabricated score). Writes m32_official_cv_results.*.
 - **M32_C_OFFICIAL_SMALL_SWEEP** (pending, diagnostic): NON-SUBMIT STAGE 3. Deliberately SMALL staged sweep (<=10 configs; baseline -> gap family -> division cap -> kNN mode -> null-link cost) on the OFFICIAL metric, one-factor-at-a-time, with leave-one-dataset-out ranking stability. No DeepCenter/TTA/ensemble. Only meaningful after M32_B succeeds.
 - **M32_D_DET_THRESHOLD_PILOT** (pending, diagnostic): NON-SUBMIT STAGE 4. Tiny predict-time pilot (det 0.99 vs 0.95, separate cache each) with the selected best postprocessor and LOO stability. 0.93/0.90/0.85/DeepCenter/TTA explicitly NOT run yet. Only after clean CV + cache are proven.
+- **M33_A_ENSEMBLE_INPUT_AUDIT** (pending, diagnostic): NON-SCORING. Dynamically discovers mounted tracking outputs (submission CSVs / report JSONs / prediction GEFF / manifests), reports per-run structure (sha256, graph validity, global node-id uniqueness, degree caps, GEFF candidate class, edge_prob availability) + pairwise submission/GEFF diversity, and classifies ensemble potential (INSUFFICIENT_INPUTS / NEAR_DUPLICATE_VARIANTS / MODERATE / STRONG_DIVERSITY / INCOMPATIBLE / INVALID). No leaderboard score inferred from filenames. Writes m33_ensemble_input_audit.json + 2 diversity CSVs. RUN FIRST. No submission.
+- **M33_B_CORRECTED_OUTPUT_BLEND_DIAG** (pending, diagnostic): NON-SCORING. Requires >=3 valid submissions. Runs B0 (M19-C-alone reproduction), B1 (weighted consensus 2/1/1, primary>=2 div>=2 fork>=2), B2 (stricter >=3), B3 (controlled union preserving M19-C on conflict) through the CORRECTED one-to-one canonicalization + per-variant vote dedup + two-stage linker. Reports collisions (0), duplicate votes removed, order-invariance, M19-C retained/removed/replaced/new, per-dataset invariants, support histograms. local_metric.py never used as official (NON_AUTHORITATIVE_PROXY_DIAGNOSTIC only). Writes m33_output_blend_diagnostic.json + edge-changes CSV.
+- **M33_C_CORRECTED_OUTPUT_BLEND_CANDIDATE** (pending, blocked): BLOCKED until M33_A/B pass. EXPERIMENTAL output-level weighted-ensemble submission, hard-gated: >=3 valid + not NEAR_DUPLICATE + zero canonicalization collisions + order-invariant + no duplicate votes + valid graph + sane delta vs M19-C (node -5..+8%, edge -5..+10%, M19-C retained>=0.90, divisions<=3000). Dynamically loads inputs (no static rows); GLOBAL unique node ids + running row id across datasets. final_source=corrected_output_level_weighted_ensemble. Recommendation OK_TO_SUBMIT_EXPERIMENTAL or a specific DO_NOT_SUBMIT_* reason. Writes submission.csv + report + manifest + fallback report. User reviews before any submit; M19-C 0.880 stays final.
+- **M33_D_PROBABILITY_FUSION_AUDIT** (pending, diagnostic): NON-SCORING. Per GEFF variant: raw/solution/candidate edge counts, candidate graph class (FULL_PRE_ILP_CANDIDATES / MODERATELY_SPARSE / ILP_SOLUTION_LIKE / EDGE_PROB_UNAVAILABLE), edge_prob quantiles/non-degeneracy, candidates/source, endpoint eligibility universe, calibration diffs, node stability. Corrected consensus denominator: support_fraction = proposer_count / eligible_model_count (a model is eligible only if both canonical endpoints exist; a missing endpoint is NOT a zero-prob vote). Reports calibration options (raw/logit/rank/weighted-logit) but selects NONE without CV. Writes m33_probability_fusion_audit.json + calibration CSV.
+- **M33_E_CORRECTED_PROBABILITY_ENSEMBLE** (pending, blocked): BLOCKED (hard-gated). Corrected probability-level ensemble using one-to-one canonicalization + eligible-model denominator + per-model edge dedup + corrected M30 two-stage linker (explicit no-link dummies, independent division). NEVER uses winning_postprocess_v2. Refuses on ILP_SOLUTION_LIKE (DO_NOT_SUBMIT_CANDIDATE_GRAPH_TOO_SPARSE), EDGE_PROB_UNAVAILABLE, insufficient diversity, or unresolved calibration (DO_NOT_SUBMIT_CALIBRATION_UNRESOLVED - never auto-selects calibration without CV). final_source=corrected_probability_level_ensemble.

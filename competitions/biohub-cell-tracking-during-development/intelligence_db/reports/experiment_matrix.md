@@ -1,6 +1,6 @@
 # Experiment Matrix
 
-_Generated 2026-07-11 06:33 UTC from intelligence.duckdb._
+_Generated 2026-07-11 07:38 UTC from intelligence.duckdb._
 
 Command differences, post-processing ops, submission stats, and score for every variant.
 All variants share ILP weights (edge -1.0, appearance 0.1, disappearance 0.1, division 1.0, --use-ilp);
@@ -68,6 +68,11 @@ only `det_threshold` and the post-processing chain differ.
 | `M32_B_OFFICIAL_CV_REPLAY` | 0.99 | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M32_C_OFFICIAL_SMALL_SWEEP` | 0.99 | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M32_D_DET_THRESHOLD_PILOT` | 0.99 | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M33_A_ENSEMBLE_INPUT_AUDIT` | None | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M33_B_CORRECTED_OUTPUT_BLEND_DIAG` | None | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M33_C_CORRECTED_OUTPUT_BLEND_CANDIDATE` | None | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M33_D_PROBABILITY_FUSION_AUDIT` | None | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M33_E_CORRECTED_PROBABILITY_ENSEMBLE` | None | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 
 Legend: div+ = safe divisions added, gap1 = single-frame gaps closed, 
 gap2 = two-frame gaps recovered, synth = synthetic nodes added, prune = isolated nodes pruned, 

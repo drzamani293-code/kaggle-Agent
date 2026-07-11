@@ -1,30 +1,31 @@
 # Next Actions
 
-_Generated 2026-07-11 06:33 UTC from intelligence.duckdb._
+_Generated 2026-07-11 07:38 UTC from intelligence.duckdb._
 
 **Best scored experiment:** `M19_C_FULL_CHAIN_PENDING` at **0.8800**.
 **M19-C full_chain:** final (score 0.8800).
-**Open (pending):** 19 · **blocked:** 16 · **unsafe/superseded:** 2.
+**Open (pending):** 19 · **blocked:** 18 · **unsafe/superseded:** 2.
 
 ## Recommendation
 
-**M32 official CV was blocked on the metric itself (M32_1) - vendor it, then re-audit.** On Kaggle
-`M32_A` passed the 400ep artifact guard and found ~200 train GEFF, but the OFFICIAL scorer would not
-import (`OFFICIAL_METRIC_NOT_FOUND`) and no split config was present (`CLEAN_HOLDOUT_UNRESOLVED`).
-M32.1 fixes this with an OFFLINE byte-identical vendor of the authoritative scorer - never a rewrite,
-never `local_metric.py`. Entirely NON-SUBMIT.
+**Run the corrected ensemble audit first (M33) - do NOT assume an ensemble beats the leaderboard.**
+The uploaded blend_submissions.py / geff_ensemble.py have structural defects (per-dataset node-id
+resets, nearest-neighbour node collapse that double-votes edges, min_votes=1 forks, order-dependent
+coords; the GEFF ensemble scores ILP_SOLUTION_LIKE graphs, uses the OLD winning_postprocess_v2 linker,
+and divides consensus by all models regardless of eligibility). M33 fixes every one and gates hard.
 
-1. **`M32_1_A_OFFICIAL_METRIC_VENDOR_AUDIT_NOT_SUBMIT`** - materialise + sha256-verify the vendored
-   `tracking_cellmot` (royerlab @ `7396b7e9`), import `tracking_cellmot.metrics`, run 10 synthetic
-   OFFICIAL fixtures. `OFFICIAL_METRIC_VENDOR_PASS` / `OFFICIAL_METRIC_VERIFICATION_FAILED` /
-   `OFFICIAL_METRIC_DEPENDENCY_MISSING` (tracksdata/geff/polars absent -> no proxy/fake score).
-2. **`M32_1_B_OFFICIAL_CV_REAUDIT_NOT_SUBMIT`** - normalized train inventory + EXACT split_0 recovery
-   (OBSERVED file/checkpoint only; reconstruction FORBIDDEN because the repo READS `dataset_splits.json`)
-   + leakage guard + 400ep SHA. `AUDIT_PASS` only when metric imports + all fixtures pass + inventory
-   valid + clean holdout proven + zero overlap + SHA passes; else a specific unresolved status.
-3. **Only when `M32_1_B` = `AUDIT_PASS`** may `M32_B` official replay run.
+1. **`M33_A_ENSEMBLE_INPUT_AUDIT_NOT_SUBMIT`** - dynamic input discovery + per-run structure +
+   pairwise diversity + ensemble-potential class (INSUFFICIENT / NEAR_DUPLICATE / MODERATE / STRONG).
+2. **`M33_B_CORRECTED_OUTPUT_BLEND_DIAGNOSTIC_NOT_SUBMIT`** - B0..B3 through the corrected one-to-one
+   canonicalization + per-variant vote dedup + two-stage linker (zero collisions, order-invariant).
+3. **`M33_C_CORRECTED_OUTPUT_BLEND_CANDIDATE`** - EXPERIMENTAL, hard-gated (>=3 valid, not near-
+   duplicate, zero collisions, order-invariant, valid graph, sane delta vs M19-C). `OK_TO_SUBMIT_
+   EXPERIMENTAL` or a specific `DO_NOT_SUBMIT_*`. User reviews before any submit.
+4. **`M33_D_PROBABILITY_FUSION_AUDIT_NOT_SUBMIT`** - eligible-model denominator + calibration
+   diagnostics; **`M33_E`** stays blocked without FULL_PRE_ILP candidates + CV-justified calibration.
 
-**Keep `M19_C_FULL_CHAIN_PENDING` at 0.8800 as final** and never submit before official CV succeeds.
+local_metric.py is NEVER the official scorer (NON_AUTHORITATIVE_PROXY_DIAGNOSTIC only); official CV
+integrates with M32.1's vendored metric. **Keep `M19-C` 0.880 final until an OBSERVED score beats it.**
 
 **TTA6 + DeepCenter REFERENCE-FIRST reproduction (M31) - run the reference audit FIRST.** The
 analysis_09_strategy.md near-0.900 pipeline (400ep, 6-way TTA, det 0.97, div 0.7, pool ~2.0um,
@@ -108,3 +109,6 @@ M29-A / M30-C remain pending on Kaggle; M30 diagnostic gates that family.
 - **after `M32_A_OFFICIAL_CV_AUDIT`** (2026-07-11, risk low):
   - observation: M32_A on Kaggle passed the 400ep artifact guard and found ~200 train GEFF, but the OFFICIAL metric could not be imported (tracking_cellmot not on the image / no mounted source) and no split config was present -> OFFICIAL_METRIC_NOT_FOUND + CLEAN_HOLDOUT_UNRESOLVED. Official CV cannot run without the authoritative scorer and a provably clean split_0.
   - recommendation: Vendor the authoritative scorer OFFLINE (royerlab @ 7396b7e9, 12 files + PROVENANCE, per-file sha256; NEVER rewrite/approximate, NEVER use local_metric.py). M32_1_A materialises+verifies+imports it and runs 10 official fixtures; if tracksdata/geff/polars absent -> OFFICIAL_METRIC_DEPENDENCY_MISSING (no fake score). M32_1_B re-audits: normalized inventory + EXACT split_0 recovery (OBSERVED file/checkpoint only; reconstruction forbidden because the repo READS dataset_splits.json) + leakage guard + 400ep SHA. Only when M32_1_B=AUDIT_PASS may M32_B replay run. Keep M19-C 0.880 final; no submit before official CV succeeds.  → next: `M32_1_A -> M32_1_B -> (only if AUDIT_PASS) M32_B`
+- **after `M32_1_B_OFFICIAL_CV_REAUDIT`** (2026-07-11, risk low):
+  - observation: The uploaded ensemble sources (blend_submissions.py, geff_ensemble.py) have structural defects: per-dataset node-id resets, nearest-neighbour node collapse that lets one variant double-vote a canonical edge, min_votes=1 forks, order-dependent canonical coords; and the GEFF ensemble scores ILP_SOLUTION_LIKE graphs, uses the OLD winning_postprocess_v2 linker, and divides consensus by all models regardless of eligibility. An ensemble is not assumed to beat the leaderboard.
+  - recommendation: Build M33 as a CORRECTED, honesty-gated ensemble pack. Fix canonicalization (deterministic input-order-invariant one-to-one per-frame Hungarian gated at eps_um, weighted-mean coords, zero same-variant collapse), edge voting (per-variant dedup, weighted support), and linking (corrected M30 two-stage: primary min-cost assignment with explicit no-link dummies + independent division). Probability fusion uses support_fraction = proposer / eligible_model_count (missing endpoint != zero vote) and stays blocked without FULL_PRE_ILP candidate graphs + CV-justified calibration. Order: M33_A input/diversity audit -> M33_B output-blend diagnostic -> optionally M33_C (gated experimental) -> M33_D probability audit -> M33_E only if full candidates + calibration resolved. local_metric.py is never the official scorer; official CV integrates with M32.1's vendored metric. Keep M19-C 0.880 final until an OBSERVED score beats it; M29-A 0.876 failed; M30-C pending; M31 blocked; M32/M32.1 official CV unresolved.  → next: `M33_A -> M33_B -> (optional) M33_C -> M33_D -> (only if resolved) M33_E`

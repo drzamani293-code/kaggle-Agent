@@ -357,6 +357,67 @@
     "dataset_splits.json is READ (not deterministically regenerated) -> split_0 must be OBSERVED; reconstruction forbidden"
    ],
    "relevance_score": 1.0
+  },
+  {
+   "source_id": "BLEND_SUBMISSIONS_PY",
+   "source_type": "code",
+   "title": "blend_submissions.py (output-level ensemble, REVIEWED PROXY)",
+   "url": "upload:blend_submissions.py",
+   "repo": "",
+   "path": "",
+   "summary": "Output-level submission blender. M33 audit found: next_id=0 per dataset (repeated global node ids); nearest-neighbour node snapping (not one-to-one, same-variant nodes collapse); one variant double-votes a canonical edge after collapse; min_votes=1 admits single-model forks; canonical coords depend on variant order; no fork-level consensus. Corrected in M33 (Hungarian one-to-one canonicalization, per-variant vote dedup, weighted support, two-stage linker).",
+   "extracted_ideas": [
+    "repeated global node ids bug",
+    "nearest-neighbour collapse bug",
+    "single-model fork risk",
+    "order-dependence"
+   ],
+   "relevance_score": 0.9
+  },
+  {
+   "source_id": "GEFF_ENSEMBLE_PY",
+   "source_type": "code",
+   "title": "geff_ensemble.py (probability-level ensemble, REVIEWED PROXY)",
+   "url": "upload:geff_ensemble.py",
+   "repo": "",
+   "path": "",
+   "summary": "Probability-level GEFF ensemble. M33 audit found: scores ILP_SOLUTION_LIKE graphs as full candidate graphs; imports OLD winning_postprocess_v2 (not corrected M30 two-stage linker); consensus divides by ALL models even when a model was not eligible to propose the edge; uncalibrated probabilities; det-threshold variants strongly correlated; inherits node-canonicalization bugs. Corrected in M33 (candidate-graph classification, eligible-model denominator, corrected M30 linker, calibration diagnostics, hard gating).",
+   "extracted_ideas": [
+    "ILP_SOLUTION_LIKE misuse",
+    "wrong consensus denominator",
+    "old v2 linker dependency",
+    "calibration/diversity gaps"
+   ],
+   "relevance_score": 0.9
+  },
+  {
+   "source_id": "LOCAL_METRIC_1_PY",
+   "source_type": "code",
+   "title": "local_metric(1).py (PROXY scorer variant, NEVER official)",
+   "url": "upload:local_metric(1).py",
+   "repo": "",
+   "path": "",
+   "summary": "A second local proxy scorer variant. M33 NEVER treats it as the official metric; a proxy result may be printed only under NON_AUTHORITATIVE_PROXY_DIAGNOSTIC and never drives a submit recommendation. Official CV integrates with M32.1's vendored tracking_cellmot scorer.",
+   "extracted_ideas": [
+    "proxy only",
+    "non-authoritative division/aggregation"
+   ],
+   "relevance_score": 0.9
+  },
+  {
+   "source_id": "MODEL_LEVEL_ROADMAP_MD",
+   "source_type": "doc",
+   "title": "model_level_roadmap.md (ensemble roadmap)",
+   "url": "upload:model_level_roadmap.md",
+   "repo": "",
+   "path": "",
+   "summary": "Roadmap motivating output-level and probability-level ensembling. M33 implements the corrected, honesty-gated version: structural diagnostics before any experimental submission; probability ensemble blocked without rich pre-ILP candidate graphs + justified calibration.",
+   "extracted_ideas": [
+    "output vs probability ensemble",
+    "diversity prerequisites",
+    "gate before submit"
+   ],
+   "relevance_score": 0.9
   }
  ]
 }

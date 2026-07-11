@@ -160,7 +160,29 @@ def report_next_actions(con) -> str:
     m22_order = [e for e in ["M22_A_TRUEBASE_SAFE_DIV_TUNE", "M22_B_TRUEBASE_LIGHT_GAP",
                              "M22_C_TRUEBASE_DIV_PLUS_GAP1_ONLY"] if e in blocked_m22]
 
-    if "M32_1_A_OFFICIAL_METRIC_VENDOR_AUDIT" in rows:
+    if "M33_A_ENSEMBLE_INPUT_AUDIT" in rows:
+        out += [
+            "**Run the corrected ensemble audit first (M33) - do NOT assume an ensemble beats the leaderboard.**",
+            "The uploaded blend_submissions.py / geff_ensemble.py have structural defects (per-dataset node-id",
+            "resets, nearest-neighbour node collapse that double-votes edges, min_votes=1 forks, order-dependent",
+            "coords; the GEFF ensemble scores ILP_SOLUTION_LIKE graphs, uses the OLD winning_postprocess_v2 linker,",
+            "and divides consensus by all models regardless of eligibility). M33 fixes every one and gates hard.",
+            "",
+            "1. **`M33_A_ENSEMBLE_INPUT_AUDIT_NOT_SUBMIT`** - dynamic input discovery + per-run structure +",
+            "   pairwise diversity + ensemble-potential class (INSUFFICIENT / NEAR_DUPLICATE / MODERATE / STRONG).",
+            "2. **`M33_B_CORRECTED_OUTPUT_BLEND_DIAGNOSTIC_NOT_SUBMIT`** - B0..B3 through the corrected one-to-one",
+            "   canonicalization + per-variant vote dedup + two-stage linker (zero collisions, order-invariant).",
+            "3. **`M33_C_CORRECTED_OUTPUT_BLEND_CANDIDATE`** - EXPERIMENTAL, hard-gated (>=3 valid, not near-",
+            "   duplicate, zero collisions, order-invariant, valid graph, sane delta vs M19-C). `OK_TO_SUBMIT_",
+            "   EXPERIMENTAL` or a specific `DO_NOT_SUBMIT_*`. User reviews before any submit.",
+            "4. **`M33_D_PROBABILITY_FUSION_AUDIT_NOT_SUBMIT`** - eligible-model denominator + calibration",
+            "   diagnostics; **`M33_E`** stays blocked without FULL_PRE_ILP candidates + CV-justified calibration.",
+            "",
+            "local_metric.py is NEVER the official scorer (NON_AUTHORITATIVE_PROXY_DIAGNOSTIC only); official CV",
+            "integrates with M32.1's vendored metric. **Keep `M19-C` 0.880 final until an OBSERVED score beats it.**",
+            "",
+        ]
+    elif "M32_1_A_OFFICIAL_METRIC_VENDOR_AUDIT" in rows:
         out += [
             "**M32 official CV was blocked on the metric itself (M32_1) - vendor it, then re-audit.** On Kaggle",
             "`M32_A` passed the 400ep artifact guard and found ~200 train GEFF, but the OFFICIAL scorer would not",
