@@ -342,6 +342,21 @@
     "edge_jaccard=TP/(TP+FP+FN)",
     "out-degree>=2 division"
    ]
+  },
+  {
+   "source_id": "ROYERLAB_VENDORED_SNAPSHOT",
+   "source_type": "code",
+   "title": "Vendored offline snapshot: tracking_cellmot @ 7396b7e9 (12 files)",
+   "url": "https://github.com/royerlab/kaggle-cell-tracking-competition/tree/7396b7e98e61844e799152ddda7e5493084cc8f3",
+   "repo": "royerlab/kaggle-cell-tracking-competition",
+   "path": "competitions/biohub-cell-tracking-during-development/vendor/royerlab_cellmot/",
+   "summary": "Byte-identical offline vendor of the AUTHORITATIVE official scorer (src/tracking_cellmot/{__init__,metrics,division_metrics,io,img_proc,models/*}, scripts/{evaluate,dataspec}, metrics.md, LICENSE) plus PROVENANCE.json with per-file sha256. metrics.py sha256 700906a6c1cf..., division_metrics.py d1cf1e0a4300..., __init__.py f9df2098dd85.... M32.1 materialises + sha256-verifies these at runtime and imports tracking_cellmot.metrics; the scorer is NEVER rewritten or approximated. compatibility_patches=[] (none needed).",
+   "extracted_ideas": [
+    "official evaluate(graph, gt_graph, max_distance=7.0) -> EvaluationResult; per_sample_metrics; summarise; evaluate_datasets",
+    "adj_edge_jaccard=max(0, edge_jaccard*(1-0.1*total_node_ratio)); score=adj_edge_jaccard+0.1*division_jaccard",
+    "dataset_splits.json is READ (not deterministically regenerated) -> split_0 must be OBSERVED; reconstruction forbidden"
+   ],
+   "relevance_score": 1.0
   }
  ]
 }

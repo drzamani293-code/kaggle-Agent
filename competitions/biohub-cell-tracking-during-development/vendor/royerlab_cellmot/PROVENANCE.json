@@ -1,0 +1,119 @@
+{
+  "upstream_repository": "https://github.com/royerlab/kaggle-cell-tracking-competition",
+  "upstream_branch": "main",
+  "upstream_commit": "7396b7e98e61844e799152ddda7e5493084cc8f3",
+  "vendored_at": "2026-07-11",
+  "license": "see LICENSE (vendored verbatim)",
+  "purpose": "Pinned OFFLINE snapshot of the AUTHORITATIVE official metric so Kaggle can score with Internet OFF. Vendored VERBATIM - metric logic is never rewritten or approximated. local_metric.py is never used.",
+  "official_metric_module": "tracking_cellmot.metrics",
+  "official_metric_api": [
+    "evaluate",
+    "evaluate_datasets",
+    "per_sample_metrics",
+    "summarise",
+    "node_recall",
+    "EvaluationResult",
+    "DatasetsResult"
+  ],
+  "division_module": "tracking_cellmot.division_metrics",
+  "scoring_constants": {
+    "ADJUSTMENT_ALPHA": 0.1,
+    "SCORE_DIVISION_WEIGHT": 0.1,
+    "adj_edge_jaccard": "max(0, edge_jaccard*(1-ALPHA*total_node_ratio))",
+    "total_node_ratio": "(N_pred - N_total)/N_total",
+    "score": "adj_edge_jaccard + 0.1*division_jaccard",
+    "max_distance_um": 7.0
+  },
+  "import_graph": {
+    "tracking_cellmot.metrics": [
+      "polars",
+      "tracksdata",
+      "scipy (SparseEfficiencyWarning)",
+      ".division_metrics (lazy)",
+      "tracksdata.metrics.DistanceMatching"
+    ],
+    "tracking_cellmot.division_metrics": [
+      "polars",
+      "tracksdata",
+      "collections.deque",
+      "tracksdata.metrics.DistanceMatching"
+    ],
+    "tracking_cellmot.io": [
+      "dask",
+      "numpy",
+      "polars",
+      "torch",
+      "tracksdata",
+      "zarr"
+    ],
+    "scripts/evaluate.py": [
+      "tracking_cellmot.io",
+      "tracking_cellmot.metrics",
+      "geff.GeffMetadata",
+      "dataspec.DATASET_PATH"
+    ]
+  },
+  "required_dependencies_for_graph_scoring": [
+    "tracksdata",
+    "polars",
+    "scipy",
+    "geff"
+  ],
+  "note_io_deps": "io.py needs torch/dask/zarr but is NOT imported by tracking_cellmot.metrics; pure graph scoring avoids it.",
+  "split_generation": {
+    "dataset_splits_json": "READ as data_dir/dataset_splits.json by scripts/train_unet_transformer.py and predict_unet_transformer.py",
+    "deterministic_generator_in_repo": false,
+    "note": "The shipped dataset_splits.json is authoritative; the repo READS it (does not deterministically regenerate it from an observable seed+algorithm). Split_0 must be OBSERVED from that file; reconstruction is FORBIDDEN unless the exact ordering+folds+seed+shuffle+train/test rule+input set are all observed."
+  },
+  "compatibility_patches": [],
+  "files": {
+    "LICENSE": {
+      "sha256": "3910a8b578783928cbbf981c1b204591ab3368e70017dc695d6536f71d272796",
+      "bytes": 1507
+    },
+    "metrics.md": {
+      "sha256": "41a6cf2f6113fc5b169539e8b67e7edce9a92b33d1333e97c212df2a3fede88e",
+      "bytes": 5045
+    },
+    "scripts/dataspec.py": {
+      "sha256": "aea837b0a97a9285f38ce3414d0801626177f19c90932e016843f451c7c4b6a9",
+      "bytes": 1223
+    },
+    "scripts/evaluate.py": {
+      "sha256": "03ad4049530d3682c77435194e5d921981f331df3462abcde4a7156d1a57b7d3",
+      "bytes": 5219
+    },
+    "src/tracking_cellmot/__init__.py": {
+      "sha256": "f9df2098dd85934d0b0d48d477420b1f9ed20a9a55ca6294a1874b964e9166e6",
+      "bytes": 79
+    },
+    "src/tracking_cellmot/division_metrics.py": {
+      "sha256": "d1cf1e0a43009d02174f1699ce2aa28458a2220ac4b521731d3bcf31cf8c76be",
+      "bytes": 15872
+    },
+    "src/tracking_cellmot/img_proc.py": {
+      "sha256": "00e8ef0adc8b39f1aaaa547ea6197b906bf9e8c009e339d3e95f8f8dbf31be3f",
+      "bytes": 5319
+    },
+    "src/tracking_cellmot/io.py": {
+      "sha256": "efae135b088cecaab463d889f16c885ef6da3ad27b0747327d8ddc28d866b7bd",
+      "bytes": 13485
+    },
+    "src/tracking_cellmot/metrics.py": {
+      "sha256": "700906a6c1cf5db6c2347d3fe169905d9b17fc6480c5b91b540d825145e7fa91",
+      "bytes": 15844
+    },
+    "src/tracking_cellmot/models/__init__.py": {
+      "sha256": "0861b0bf0d5a574dd0d582c529b763e75c8d271f4df48df15fae3cf5b5fbb127",
+      "bytes": 248
+    },
+    "src/tracking_cellmot/models/simple_node_transformer.py": {
+      "sha256": "b97209edeb03840e80d903e3e2a8c81c520641c8ef343f6ca2904d0f80db064e",
+      "bytes": 7229
+    },
+    "src/tracking_cellmot/models/temporal_unet.py": {
+      "sha256": "d809c35d42f504161074ddeaaa7aee5b407e5bca7f9b4e1d5f9b2ff345666cac",
+      "bytes": 5112
+    }
+  }
+}

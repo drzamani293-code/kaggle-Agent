@@ -2672,7 +2672,7 @@
    "public_score": null,
    "status": "diagnostic",
    "created_at": "2026-07-11",
-   "notes": "NON-SUBMIT STAGE 0. Resolves the OFFICIAL metric (tracking_cellmot.metrics / scripts/evaluate.py) with source path + functions + SHA256; local_metric.py / pp_sweep_v2.py recorded as reviewed PROXIES, NEVER used as the scorer. Resolves train GT (no solution mask), split_0 train vs held-out with a leakage guard, and the exact 400ep artifact. Emits AUDIT_PASS / OFFICIAL_METRIC_NOT_FOUND / CLEAN_HOLDOUT_UNRESOLVED / DATA_LEAKAGE_DETECTED / WRONG_ARTIFACT / GT_NOT_FOUND. Writes m32_official_cv_audit.json + inventory csv + split json. RUN FIRST. No submission.",
+   "notes": "NON-SUBMIT STAGE 0. Resolves the OFFICIAL metric (tracking_cellmot.metrics / scripts/evaluate.py) with source path + functions + SHA256; local_metric.py / pp_sweep_v2.py recorded as reviewed PROXIES, NEVER used as the scorer. Resolves train GT (no solution mask), split_0 train vs held-out with a leakage guard, and the exact 400ep artifact. Emits AUDIT_PASS / OFFICIAL_METRIC_NOT_FOUND / CLEAN_HOLDOUT_UNRESOLVED / DATA_LEAKAGE_DETECTED / WRONG_ARTIFACT / GT_NOT_FOUND. Writes m32_official_cv_audit.json + inventory csv + split json. RUN FIRST. No submission. OBSERVED KAGGLE RESULT (2026-07-11): artifact_guard_passed=True; ~200 train GEFF discovered; official metric IMPORT FAILED (tracking_cellmot not importable, no mounted source) and split_config_path=None -> recommendation OFFICIAL_METRIC_NOT_FOUND + CLEAN_HOLDOUT_UNRESOLVED. Fixed in M32.1 by vendoring the scorer offline.",
    "submission_stats": {
     "n_rows": null,
     "n_nodes": null,
@@ -2805,6 +2805,80 @@
    "status": "diagnostic",
    "created_at": "2026-07-11",
    "notes": "NON-SUBMIT STAGE 4. Tiny predict-time pilot (det 0.99 vs 0.95, separate cache each) with the selected best postprocessor and LOO stability. 0.93/0.90/0.85/DeepCenter/TTA explicitly NOT run yet. Only after clean CV + cache are proven.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M32_1_A_OFFICIAL_METRIC_VENDOR_AUDIT",
+   "milestone": "M32.1",
+   "variant": "A",
+   "label": "official_metric_vendor_audit",
+   "notebook_name": "milestone32_1_official_metric_vendor_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M32_1_A_OFFICIAL_METRIC_VENDOR_AUDIT_NOT_SUBMIT.txt",
+   "command": {},
+   "postprocess_ops": [],
+   "public_score": null,
+   "status": "diagnostic",
+   "created_at": "2026-07-11",
+   "notes": "NON-SCORING vendor audit. Materialises the byte-identical VENDORED official scorer (royerlab @ 7396b7e9), sha256-verifies metrics.py/division_metrics.py/__init__.py, imports tracking_cellmot.metrics, and runs 10 synthetic OFFICIAL fixtures via the real evaluate()/per_sample_metrics()/summarise(). Emits OFFICIAL_METRIC_VENDOR_PASS / OFFICIAL_METRIC_VERIFICATION_FAILED / OFFICIAL_METRIC_DEPENDENCY_MISSING (when tracksdata/geff/polars absent - NO proxy/fake score, never local_metric.py). Writes m32_1_metric_vendor_report.json. No submission.",
+   "submission_stats": {
+    "n_rows": null,
+    "n_nodes": null,
+    "n_edges": null,
+    "max_in_degree": null,
+    "max_out_degree": null,
+    "fallback_used": null,
+    "valid": null,
+    "final_source": null
+   },
+   "postprocess_stats": {
+    "safe_divisions_added": 0,
+    "gap1_closed": 0,
+    "gap2_recovered": 0,
+    "synthetic_nodes_added": 0,
+    "isolated_nodes_pruned": 0,
+    "edges_removed": 0,
+    "nodes_before": null,
+    "nodes_after": null,
+    "edges_before": null,
+    "edges_after": null,
+    "per_dataset": []
+   }
+  },
+  {
+   "experiment_id": "M32_1_B_OFFICIAL_CV_REAUDIT",
+   "milestone": "M32.1",
+   "variant": "B",
+   "label": "official_cv_reaudit",
+   "notebook_name": "milestone32_1_official_metric_vendor_runner",
+   "raw_file": "competitions/biohub-cell-tracking-during-development/M32_1_B_OFFICIAL_CV_REAUDIT_NOT_SUBMIT.txt",
+   "command": {},
+   "postprocess_ops": [],
+   "public_score": null,
+   "status": "diagnostic",
+   "created_at": "2026-07-11",
+   "notes": "NON-SCORING combined re-audit. AUDIT_PASS only when vendored metric imports + all 10 fixtures pass + normalized train inventory valid + clean split_0 holdout proven (OBSERVED file/checkpoint, zero overlap) + 400ep SHA passes. Recovers split_0 via cascade (dataset_splits.json/manifests -> checkpoint metadata -> deterministic reconstruction FORBIDDEN since the repo READS the split); leakage guard. Emits AUDIT_PASS / OFFICIAL_METRIC_DEPENDENCY_MISSING / OFFICIAL_METRIC_VERIFICATION_FAILED / DATA_LEAKAGE_DETECTED / CLEAN_HOLDOUT_UNRESOLVED / WRONG_ARTIFACT. Writes m32_1_official_cv_reaudit.json + m32_1_split_recovery.json + normalized inventory csv. m32_b_replay_allowed=(AUDIT_PASS). No submission.",
    "submission_stats": {
     "n_rows": null,
     "n_nodes": null,
@@ -2981,6 +3055,15 @@
    "observation": "Blind LB sweeps have stalled: M19-C 0.880 remains best; M29-A scored 0.876 (< 0.880); M30-C pending; M31 blocked (missing TTA6/DeepCenter reference assets). No principled way to choose the next pipeline without a real local CV on the OFFICIAL metric. local_metric.py is only a proxy (non-authoritative division/aggregation/node-penalty).",
    "recommendation": "Build M32 as a NON-SUBMIT official local-CV & model-selection pack: resolve the OFFICIAL metric + clean split_0 holdout from mounted source (else CV_NOT_WIRED / CLEAN_HOLDOUT_UNRESOLVED - never a proxy/fake score), replay P0/P1/P2/P3 on one common cache, score officially, and rank robustly (strong/weak/inconclusive) with LOO stability. Then a <=10-config staged sweep and a det 0.99-vs-0.95 pilot. Order: M32_A audit -> M32_B replay -> M32_C sweep -> optional M32_D det pilot. NEVER recommend a blind LB submit before official CV succeeds. Keep M19-C 0.880 final; M29-A failed; M30-C pending; M31 blocked.",
    "next_variant": "M32_A -> M32_B -> M32_C -> (optional) M32_D",
+   "risk_level": "low",
+   "created_at": "2026-07-11"
+  },
+  {
+   "decision_id": "DEC_M32_1_VENDOR_AND_SPLIT_RECOVERY",
+   "after_experiment_id": "M32_A_OFFICIAL_CV_AUDIT",
+   "observation": "M32_A on Kaggle passed the 400ep artifact guard and found ~200 train GEFF, but the OFFICIAL metric could not be imported (tracking_cellmot not on the image / no mounted source) and no split config was present -> OFFICIAL_METRIC_NOT_FOUND + CLEAN_HOLDOUT_UNRESOLVED. Official CV cannot run without the authoritative scorer and a provably clean split_0.",
+   "recommendation": "Vendor the authoritative scorer OFFLINE (royerlab @ 7396b7e9, 12 files + PROVENANCE, per-file sha256; NEVER rewrite/approximate, NEVER use local_metric.py). M32_1_A materialises+verifies+imports it and runs 10 official fixtures; if tracksdata/geff/polars absent -> OFFICIAL_METRIC_DEPENDENCY_MISSING (no fake score). M32_1_B re-audits: normalized inventory + EXACT split_0 recovery (OBSERVED file/checkpoint only; reconstruction forbidden because the repo READS dataset_splits.json) + leakage guard + 400ep SHA. Only when M32_1_B=AUDIT_PASS may M32_B replay run. Keep M19-C 0.880 final; no submit before official CV succeeds.",
+   "next_variant": "M32_1_A -> M32_1_B -> (only if AUDIT_PASS) M32_B",
    "risk_level": "low",
    "created_at": "2026-07-11"
   }

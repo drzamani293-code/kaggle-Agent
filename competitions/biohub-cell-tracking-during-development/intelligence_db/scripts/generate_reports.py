@@ -160,7 +160,28 @@ def report_next_actions(con) -> str:
     m22_order = [e for e in ["M22_A_TRUEBASE_SAFE_DIV_TUNE", "M22_B_TRUEBASE_LIGHT_GAP",
                              "M22_C_TRUEBASE_DIV_PLUS_GAP1_ONLY"] if e in blocked_m22]
 
-    if "M32_A_OFFICIAL_CV_AUDIT" in rows:
+    if "M32_1_A_OFFICIAL_METRIC_VENDOR_AUDIT" in rows:
+        out += [
+            "**M32 official CV was blocked on the metric itself (M32_1) - vendor it, then re-audit.** On Kaggle",
+            "`M32_A` passed the 400ep artifact guard and found ~200 train GEFF, but the OFFICIAL scorer would not",
+            "import (`OFFICIAL_METRIC_NOT_FOUND`) and no split config was present (`CLEAN_HOLDOUT_UNRESOLVED`).",
+            "M32.1 fixes this with an OFFLINE byte-identical vendor of the authoritative scorer - never a rewrite,",
+            "never `local_metric.py`. Entirely NON-SUBMIT.",
+            "",
+            "1. **`M32_1_A_OFFICIAL_METRIC_VENDOR_AUDIT_NOT_SUBMIT`** - materialise + sha256-verify the vendored",
+            "   `tracking_cellmot` (royerlab @ `7396b7e9`), import `tracking_cellmot.metrics`, run 10 synthetic",
+            "   OFFICIAL fixtures. `OFFICIAL_METRIC_VENDOR_PASS` / `OFFICIAL_METRIC_VERIFICATION_FAILED` /",
+            "   `OFFICIAL_METRIC_DEPENDENCY_MISSING` (tracksdata/geff/polars absent -> no proxy/fake score).",
+            "2. **`M32_1_B_OFFICIAL_CV_REAUDIT_NOT_SUBMIT`** - normalized train inventory + EXACT split_0 recovery",
+            "   (OBSERVED file/checkpoint only; reconstruction FORBIDDEN because the repo READS `dataset_splits.json`)",
+            "   + leakage guard + 400ep SHA. `AUDIT_PASS` only when metric imports + all fixtures pass + inventory",
+            "   valid + clean holdout proven + zero overlap + SHA passes; else a specific unresolved status.",
+            "3. **Only when `M32_1_B` = `AUDIT_PASS`** may `M32_B` official replay run.",
+            "",
+            f"**Keep `{best_id}` at {_fmt_score(best_score)} as final** and never submit before official CV succeeds.",
+            "",
+        ]
+    elif "M32_A_OFFICIAL_CV_AUDIT" in rows:
         out += [
             "**Run the OFFICIAL local CV first (M32) - stop blind leaderboard sweeps.** Blind sweeps have stalled",
             f"(M19-C **0.880** best; M29-A 0.876 < 0.880; M30-C pending; M31 blocked on missing reference assets),",

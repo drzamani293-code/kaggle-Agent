@@ -1,6 +1,6 @@
 # Score Timeline
 
-_Generated 2026-07-11 02:00 UTC from intelligence.duckdb._
+_Generated 2026-07-11 06:33 UTC from intelligence.duckdb._
 
 Baseline **0.874** · best so far **0.8800**.
 
@@ -62,10 +62,12 @@ Delta = step change vs the previous **scored** experiment (chronological).
 | 52 | 2026-07-10 | `M31_E_DEEPCENTER_GATE_DIVISION_RELAXED` | pending | — | — | blocked |
 | 53 | 2026-07-10 | `M31_LOCAL_CV_HARNESS` | pending | — | — | diagnostic |
 | 54 | 2026-07-10 | `M31_REFERENCE_AUDIT` | pending | — | — | diagnostic |
-| 55 | 2026-07-11 | `M32_A_OFFICIAL_CV_AUDIT` | pending | — | — | diagnostic |
-| 56 | 2026-07-11 | `M32_B_OFFICIAL_CV_REPLAY` | pending | — | — | diagnostic |
-| 57 | 2026-07-11 | `M32_C_OFFICIAL_SMALL_SWEEP` | pending | — | — | diagnostic |
-| 58 | 2026-07-11 | `M32_D_DET_THRESHOLD_PILOT` | pending | — | — | diagnostic |
+| 55 | 2026-07-11 | `M32_1_A_OFFICIAL_METRIC_VENDOR_AUDIT` | pending | — | — | diagnostic |
+| 56 | 2026-07-11 | `M32_1_B_OFFICIAL_CV_REAUDIT` | pending | — | — | diagnostic |
+| 57 | 2026-07-11 | `M32_A_OFFICIAL_CV_AUDIT` | pending | — | — | diagnostic |
+| 58 | 2026-07-11 | `M32_B_OFFICIAL_CV_REPLAY` | pending | — | — | diagnostic |
+| 59 | 2026-07-11 | `M32_C_OFFICIAL_SMALL_SWEEP` | pending | — | — | diagnostic |
+| 60 | 2026-07-11 | `M32_D_DET_THRESHOLD_PILOT` | pending | — | — | diagnostic |
 
 ## Notes per experiment
 
@@ -123,7 +125,9 @@ Delta = step change vs the previous **scored** experiment (chronological).
 - **M31_E_DEEPCENTER_GATE_DIVISION_RELAXED** (pending, blocked): BLOCKED until B shadow passes. Base C + relaxed divisions (div weight 0.7->1.0, max_um ~4.66->5.2, sister ~8.0->9.0, global cap ~0.00375->0.010, frame cap ~0.0076->0.020); hard division-explosion guard (divisions_total<=3000, rate<=0.025). Isolated ablation. final_source tta6_deepcenter_gate_division_relaxed.
 - **M31_LOCAL_CV_HARNESS** (pending, diagnostic): NON-SUBMIT. Compares A/C/D/E on held-out train GT via the OFFICIAL metric (tracking_cellmot.metrics / evaluate); never fabricates a score - reports CV_NOT_WIRED with the exact missing import/path/format if wiring fails. Writes m31_local_cv_report.json.
 - **M31_REFERENCE_AUDIT** (pending, diagnostic): STAGE 0 (non-scoring). Resolves EVERY reference field from mounted source with provenance (observed vs inferred vs unresolved): reference notebook, predict flags (det/division/pool-kernel via discover_predict_flags), TTA flag+transforms, motion_relink function+params, DeepCenter code/weights/class/polarity/thresholds. AUDIT_PASS only if the source-only items (TTA flag, pool-kernel flag, motion_relink function, reference notebook) are OBSERVED; else REFERENCE_CONFIG_UNRESOLVED. Writes m31_reference_audit.json. RUN FIRST. No submission.
-- **M32_A_OFFICIAL_CV_AUDIT** (pending, diagnostic): NON-SUBMIT STAGE 0. Resolves the OFFICIAL metric (tracking_cellmot.metrics / scripts/evaluate.py) with source path + functions + SHA256; local_metric.py / pp_sweep_v2.py recorded as reviewed PROXIES, NEVER used as the scorer. Resolves train GT (no solution mask), split_0 train vs held-out with a leakage guard, and the exact 400ep artifact. Emits AUDIT_PASS / OFFICIAL_METRIC_NOT_FOUND / CLEAN_HOLDOUT_UNRESOLVED / DATA_LEAKAGE_DETECTED / WRONG_ARTIFACT / GT_NOT_FOUND. Writes m32_official_cv_audit.json + inventory csv + split json. RUN FIRST. No submission.
+- **M32_1_A_OFFICIAL_METRIC_VENDOR_AUDIT** (pending, diagnostic): NON-SCORING vendor audit. Materialises the byte-identical VENDORED official scorer (royerlab @ 7396b7e9), sha256-verifies metrics.py/division_metrics.py/__init__.py, imports tracking_cellmot.metrics, and runs 10 synthetic OFFICIAL fixtures via the real evaluate()/per_sample_metrics()/summarise(). Emits OFFICIAL_METRIC_VENDOR_PASS / OFFICIAL_METRIC_VERIFICATION_FAILED / OFFICIAL_METRIC_DEPENDENCY_MISSING (when tracksdata/geff/polars absent - NO proxy/fake score, never local_metric.py). Writes m32_1_metric_vendor_report.json. No submission.
+- **M32_1_B_OFFICIAL_CV_REAUDIT** (pending, diagnostic): NON-SCORING combined re-audit. AUDIT_PASS only when vendored metric imports + all 10 fixtures pass + normalized train inventory valid + clean split_0 holdout proven (OBSERVED file/checkpoint, zero overlap) + 400ep SHA passes. Recovers split_0 via cascade (dataset_splits.json/manifests -> checkpoint metadata -> deterministic reconstruction FORBIDDEN since the repo READS the split); leakage guard. Emits AUDIT_PASS / OFFICIAL_METRIC_DEPENDENCY_MISSING / OFFICIAL_METRIC_VERIFICATION_FAILED / DATA_LEAKAGE_DETECTED / CLEAN_HOLDOUT_UNRESOLVED / WRONG_ARTIFACT. Writes m32_1_official_cv_reaudit.json + m32_1_split_recovery.json + normalized inventory csv. m32_b_replay_allowed=(AUDIT_PASS). No submission.
+- **M32_A_OFFICIAL_CV_AUDIT** (pending, diagnostic): NON-SUBMIT STAGE 0. Resolves the OFFICIAL metric (tracking_cellmot.metrics / scripts/evaluate.py) with source path + functions + SHA256; local_metric.py / pp_sweep_v2.py recorded as reviewed PROXIES, NEVER used as the scorer. Resolves train GT (no solution mask), split_0 train vs held-out with a leakage guard, and the exact 400ep artifact. Emits AUDIT_PASS / OFFICIAL_METRIC_NOT_FOUND / CLEAN_HOLDOUT_UNRESOLVED / DATA_LEAKAGE_DETECTED / WRONG_ARTIFACT / GT_NOT_FOUND. Writes m32_official_cv_audit.json + inventory csv + split json. RUN FIRST. No submission. OBSERVED KAGGLE RESULT (2026-07-11): artifact_guard_passed=True; ~200 train GEFF discovered; official metric IMPORT FAILED (tracking_cellmot not importable, no mounted source) and split_config_path=None -> recommendation OFFICIAL_METRIC_NOT_FOUND + CLEAN_HOLDOUT_UNRESOLVED. Fixed in M32.1 by vendoring the scorer offline.
 - **M32_B_OFFICIAL_CV_REPLAY** (pending, diagnostic): NON-SUBMIT STAGE 2. Common held-out prediction cache -> replay P0 raw-ILP / P1 M19-C-style (M19C_REPLAY_NOT_EXACT) / P2 M29-A engine-v1 / P3 M30-C sparse-kNN -> verified adapter (invariants) -> OFFICIAL scoring -> official aggregation -> robust ranking (strong/weak/inconclusive/no-improvement) with per-dataset wins + leave-one-out stability. If the official metric / clean holdout are unresolved -> CV_NOT_WIRED (no fabricated score). Writes m32_official_cv_results.*.
 - **M32_C_OFFICIAL_SMALL_SWEEP** (pending, diagnostic): NON-SUBMIT STAGE 3. Deliberately SMALL staged sweep (<=10 configs; baseline -> gap family -> division cap -> kNN mode -> null-link cost) on the OFFICIAL metric, one-factor-at-a-time, with leave-one-dataset-out ranking stability. No DeepCenter/TTA/ensemble. Only meaningful after M32_B succeeds.
 - **M32_D_DET_THRESHOLD_PILOT** (pending, diagnostic): NON-SUBMIT STAGE 4. Tiny predict-time pilot (det 0.99 vs 0.95, separate cache each) with the selected best postprocessor and LOO stability. 0.93/0.90/0.85/DeepCenter/TTA explicitly NOT run yet. Only after clean CV + cache are proven.

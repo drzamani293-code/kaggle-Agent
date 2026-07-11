@@ -1,6 +1,6 @@
 # Lessons Learned
 
-_Generated 2026-07-11 02:00 UTC from intelligence.duckdb._
+_Generated 2026-07-11 06:33 UTC from intelligence.duckdb._
 
 Distilled, evidence-linked findings driving strategy.
 
@@ -36,25 +36,26 @@ Distilled, evidence-linked findings driving strategy.
 
 ## Public sources consulted (by relevance)
 
+- [1.00] Vendored offline snapshot: tracking_cellmot @ 7396b7e9 (12 files) — https://github.com/royerlab/kaggle-cell-tracking-competition/tree/7396b7e98e61844e799152ddda7e5493084cc8f3
 - [1.00] lb893 learned-graph tracker with micro-safe divisions — https://github.com/dalloliogm/kaggle_competitions
 - [1.00] Cell-tracking competition metric specification — https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/metrics.md
-- [0.99] winning_postprocess.py (uploaded engine) — upload:winning_postprocess.py
+- [0.99] local_cv_harness(1).py (uploaded) — upload:local_cv_harness(1).py
 - [0.99] biohub-cell-tracking-v4-unet-ilp-reproduction (public high-score notebook) — kaggle:notebook/biohub-cell-tracking-v4-unet-ilp-reproduction
 - [0.99] biohub_winning_strategy(1).md (uploaded) — upload:biohub_winning_strategy(1).md
-- [0.99] integration_cell.py (uploaded) — upload:integration_cell.py
+- [0.99] winning_postprocess.py (uploaded engine) — upload:winning_postprocess.py
 - [0.99] local_cv_harness.py (uploaded) — upload:local_cv_harness.py
 - [0.99] README_engine.md (uploaded) — upload:README_engine.md
 - [0.99] submission(3).csv sanity profile (uploaded) — upload:submission(3).csv
 - [0.99] winning_postprocess_v2.py (uploaded v2 engine) — upload:winning_postprocess_v2.py
 - [0.99] winning_postprocess.py (v1, shipped alongside v2) — upload:winning_postprocess.py
 - [0.99] integration_v2.py (uploaded) — upload:integration_v2.py
-- [0.99] local_cv_harness(1).py (uploaded) — upload:local_cv_harness(1).py
+- [0.99] integration_cell.py (uploaded) — upload:integration_cell.py
 - [0.99] README_v2.md (uploaded) — upload:README_v2.md
 - [0.99] analysis_09_strategy.md (uploaded) — upload:analysis_09_strategy.md
 - [0.97] biohub_winning_strategy.md (uploaded) — upload:biohub_winning_strategy.md
-- [0.95] tracking_cellmot/metrics.py — https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/src/tracking_cellmot/metrics.py
 - [0.95] tracking_cellmot/division_metrics.py — https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/src/tracking_cellmot/division_metrics.py
 - [0.95] biohub-tracking-support-pack-400ep-snapshot-v1 (discovered via M23-C guard failure) — kaggle:/kaggle/input/datasets/pilkwang/biohub-tracking-support-pack-50ep-v1
+- [0.95] tracking_cellmot/metrics.py — https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/src/tracking_cellmot/metrics.py
 - [0.90] evaluate.py scoring entrypoint — https://github.com/royerlab/kaggle-cell-tracking-competition/blob/main/scripts/evaluate.py
 - [0.85] gap2 velocity ablation — https://github.com/dalloliogm/kaggle_competitions
 - [0.70] top notebooks analysis — https://github.com/dalloliogm/kaggle_competitions

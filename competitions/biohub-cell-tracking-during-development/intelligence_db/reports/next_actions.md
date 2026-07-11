@@ -1,6 +1,6 @@
 # Next Actions
 
-_Generated 2026-07-11 02:00 UTC from intelligence.duckdb._
+_Generated 2026-07-11 06:33 UTC from intelligence.duckdb._
 
 **Best scored experiment:** `M19_C_FULL_CHAIN_PENDING` at **0.8800**.
 **M19-C full_chain:** final (score 0.8800).
@@ -8,25 +8,23 @@ _Generated 2026-07-11 02:00 UTC from intelligence.duckdb._
 
 ## Recommendation
 
-**Run the OFFICIAL local CV first (M32) - stop blind leaderboard sweeps.** Blind sweeps have stalled
-(M19-C **0.880** best; M29-A 0.876 < 0.880; M30-C pending; M31 blocked on missing reference assets),
-so choose the next pipeline with a REAL held-out CV on the OFFICIAL metric rather than more LB spends.
-M32 is entirely NON-SUBMIT.
+**M32 official CV was blocked on the metric itself (M32_1) - vendor it, then re-audit.** On Kaggle
+`M32_A` passed the 400ep artifact guard and found ~200 train GEFF, but the OFFICIAL scorer would not
+import (`OFFICIAL_METRIC_NOT_FOUND`) and no split config was present (`CLEAN_HOLDOUT_UNRESOLVED`).
+M32.1 fixes this with an OFFLINE byte-identical vendor of the authoritative scorer - never a rewrite,
+never `local_metric.py`. Entirely NON-SUBMIT.
 
-1. **`M32_A_OFFICIAL_CV_AUDIT_NOT_SUBMIT`** - resolve the OFFICIAL metric
-   (tracking_cellmot.metrics / scripts/evaluate.py; local_metric.py is a PROXY, never the scorer),
-   train GT, split_0 clean holdout (+ leakage guard), and the 400ep artifact. `AUDIT_PASS` or a
-   specific status (`OFFICIAL_METRIC_NOT_FOUND` / `CLEAN_HOLDOUT_UNRESOLVED` / `DATA_LEAKAGE_DETECTED`).
-2. **`M32_B_OFFICIAL_CV_REPLAY_NOT_SUBMIT`** - one common cache -> replay P0 raw-ILP / P1 M19-C-style /
-   P2 M29-A / P3 M30-C -> OFFICIAL scoring -> robust ranking (strong/weak/inconclusive) + leave-one-out
-   stability. If unresolved -> `CV_NOT_WIRED` (never a fabricated/proxy score).
-3. **`M32_C_OFFICIAL_SMALL_SWEEP_NOT_SUBMIT`** (<=10 staged configs) then optional
-   **`M32_D_DET_THRESHOLD_PILOT_NOT_SUBMIT`** (det 0.99 vs 0.95).
+1. **`M32_1_A_OFFICIAL_METRIC_VENDOR_AUDIT_NOT_SUBMIT`** - materialise + sha256-verify the vendored
+   `tracking_cellmot` (royerlab @ `7396b7e9`), import `tracking_cellmot.metrics`, run 10 synthetic
+   OFFICIAL fixtures. `OFFICIAL_METRIC_VENDOR_PASS` / `OFFICIAL_METRIC_VERIFICATION_FAILED` /
+   `OFFICIAL_METRIC_DEPENDENCY_MISSING` (tracksdata/geff/polars absent -> no proxy/fake score).
+2. **`M32_1_B_OFFICIAL_CV_REAUDIT_NOT_SUBMIT`** - normalized train inventory + EXACT split_0 recovery
+   (OBSERVED file/checkpoint only; reconstruction FORBIDDEN because the repo READS `dataset_splits.json`)
+   + leakage guard + 400ep SHA. `AUDIT_PASS` only when metric imports + all fixtures pass + inventory
+   valid + clean holdout proven + zero overlap + SHA passes; else a specific unresolved status.
+3. **Only when `M32_1_B` = `AUDIT_PASS`** may `M32_B` official replay run.
 
-**Never recommend a leaderboard submit before official CV succeeds** (metric verified, clean holdout
-proven, same inputs, challenger valid, CV_WINNER_STRONG or a documented CV_WINNER_WEAK).
-**Keep `M19_C_FULL_CHAIN_PENDING` at 0.8800 as final.** M31-A remains a pending reference-first
-candidate; M30-C / M29-A stay pending on Kaggle - but resolve M32 CV before spending more submissions.
+**Keep `M19_C_FULL_CHAIN_PENDING` at 0.8800 as final** and never submit before official CV succeeds.
 
 **TTA6 + DeepCenter REFERENCE-FIRST reproduction (M31) - run the reference audit FIRST.** The
 analysis_09_strategy.md near-0.900 pipeline (400ep, 6-way TTA, det 0.97, div 0.7, pool ~2.0um,
@@ -107,3 +105,6 @@ M29-A / M30-C remain pending on Kaggle; M30 diagnostic gates that family.
 - **after `M31_A_EXACT_09_REPRO`** (2026-07-11, risk low):
   - observation: Blind LB sweeps have stalled: M19-C 0.880 remains best; M29-A scored 0.876 (< 0.880); M30-C pending; M31 blocked (missing TTA6/DeepCenter reference assets). No principled way to choose the next pipeline without a real local CV on the OFFICIAL metric. local_metric.py is only a proxy (non-authoritative division/aggregation/node-penalty).
   - recommendation: Build M32 as a NON-SUBMIT official local-CV & model-selection pack: resolve the OFFICIAL metric + clean split_0 holdout from mounted source (else CV_NOT_WIRED / CLEAN_HOLDOUT_UNRESOLVED - never a proxy/fake score), replay P0/P1/P2/P3 on one common cache, score officially, and rank robustly (strong/weak/inconclusive) with LOO stability. Then a <=10-config staged sweep and a det 0.99-vs-0.95 pilot. Order: M32_A audit -> M32_B replay -> M32_C sweep -> optional M32_D det pilot. NEVER recommend a blind LB submit before official CV succeeds. Keep M19-C 0.880 final; M29-A failed; M30-C pending; M31 blocked.  → next: `M32_A -> M32_B -> M32_C -> (optional) M32_D`
+- **after `M32_A_OFFICIAL_CV_AUDIT`** (2026-07-11, risk low):
+  - observation: M32_A on Kaggle passed the 400ep artifact guard and found ~200 train GEFF, but the OFFICIAL metric could not be imported (tracking_cellmot not on the image / no mounted source) and no split config was present -> OFFICIAL_METRIC_NOT_FOUND + CLEAN_HOLDOUT_UNRESOLVED. Official CV cannot run without the authoritative scorer and a provably clean split_0.
+  - recommendation: Vendor the authoritative scorer OFFLINE (royerlab @ 7396b7e9, 12 files + PROVENANCE, per-file sha256; NEVER rewrite/approximate, NEVER use local_metric.py). M32_1_A materialises+verifies+imports it and runs 10 official fixtures; if tracksdata/geff/polars absent -> OFFICIAL_METRIC_DEPENDENCY_MISSING (no fake score). M32_1_B re-audits: normalized inventory + EXACT split_0 recovery (OBSERVED file/checkpoint only; reconstruction forbidden because the repo READS dataset_splits.json) + leakage guard + 400ep SHA. Only when M32_1_B=AUDIT_PASS may M32_B replay run. Keep M19-C 0.880 final; no submit before official CV succeeds.  → next: `M32_1_A -> M32_1_B -> (only if AUDIT_PASS) M32_B`

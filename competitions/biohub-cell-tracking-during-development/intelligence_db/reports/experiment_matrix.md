@@ -1,6 +1,6 @@
 # Experiment Matrix
 
-_Generated 2026-07-11 02:00 UTC from intelligence.duckdb._
+_Generated 2026-07-11 06:33 UTC from intelligence.duckdb._
 
 Command differences, post-processing ops, submission stats, and score for every variant.
 All variants share ILP weights (edge -1.0, appearance 0.1, disappearance 0.1, division 1.0, --use-ilp);
@@ -62,6 +62,8 @@ only `det_threshold` and the post-processing chain differ.
 | `M31_E_DEEPCENTER_GATE_DIVISION_RELAXED` | 0.97 | tta6, motion_relink, gap1, deepcenter_gate, safe_divisions_relaxed, short_track_min6, linefit0.8, prune | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M31_LOCAL_CV_HARNESS` | 0.97 | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M31_REFERENCE_AUDIT` | 0.97 | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M32_1_A_OFFICIAL_METRIC_VENDOR_AUDIT` | None | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M32_1_B_OFFICIAL_CV_REAUDIT` | None | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M32_A_OFFICIAL_CV_AUDIT` | 0.99 | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M32_B_OFFICIAL_CV_REPLAY` | 0.99 | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M32_C_OFFICIAL_SMALL_SWEEP` | 0.99 | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
