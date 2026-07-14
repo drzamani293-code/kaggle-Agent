@@ -41,10 +41,10 @@ def test_db_initializes_and_seeds(tmp: Path) -> None:
         ids = {r[0] for r in con.execute("SELECT experiment_id FROM experiments").fetchall()}
     finally:
         con.close()
-    assert n_exp == 65, f"expected 65 seed experiments, got {n_exp}"
-    assert n_sub == 65 and n_pp == 65, f"expected stats for all 65 (sub={n_sub}, pp={n_pp})"
-    assert n_src == 30, f"expected 30 public sources (incl M33 ensemble sources), got {n_src}"
-    assert n_dec >= 19 and n_les >= 5, f"expected seed decisions/lessons (dec={n_dec}, les={n_les})"
+    assert n_exp == 69, f"expected 69 seed experiments, got {n_exp}"
+    assert n_sub == 69 and n_pp == 69, f"expected stats for all 69 (sub={n_sub}, pp={n_pp})"
+    assert n_src == 31, f"expected 31 public sources (incl M34 self-contained TTA), got {n_src}"
+    assert n_dec >= 20 and n_les >= 5, f"expected seed decisions/lessons (dec={n_dec}, les={n_les})"
     for e in ["M16_BASELINE", "M19_C_FULL_CHAIN_PENDING",
               "M21_A_PILKWANG350_M19C_GATES", "M22_ARTIFACT_FORENSIC",
               "M23_B_PILKWANG350_NODE_PRUNE_SAFE_DIV_ONLY", "M23_C_PILKWANG350_EDGE_NODE_BALANCED",
@@ -68,7 +68,9 @@ def test_db_initializes_and_seeds(tmp: Path) -> None:
               "M32_1_A_OFFICIAL_METRIC_VENDOR_AUDIT", "M32_1_B_OFFICIAL_CV_REAUDIT",
               "M33_A_ENSEMBLE_INPUT_AUDIT", "M33_B_CORRECTED_OUTPUT_BLEND_DIAG",
               "M33_C_CORRECTED_OUTPUT_BLEND_CANDIDATE", "M33_D_PROBABILITY_FUSION_AUDIT",
-              "M33_E_CORRECTED_PROBABILITY_ENSEMBLE"]:
+              "M33_E_CORRECTED_PROBABILITY_ENSEMBLE",
+              "M34_A_TTA_GEOMETRY_SOURCE_AUDIT", "M34_B_TTA4_FUSION_DIAGNOSTIC",
+              "M34_C_TTA4_CONSERVATIVE_CANDIDATE", "M34_D_TTA8_D4_OPTIONAL_CANDIDATE"]:
         assert e in ids, f"missing seed experiment {e}"
     print("  ok: db initializes and seeds")
 
@@ -94,10 +96,10 @@ def test_reports_generated(tmp: Path) -> None:
     # next_actions is the "global relinker v2 (M30) - run diagnostic first" branch.
     nxt = (tmp_reports / "next_actions.md").read_text()
     assert "0.880" in nxt and "final" in nxt.lower(), "final score/marker should appear"
-    # M33 corrected-ensemble branch now leads.
-    assert "M33_A_ENSEMBLE_INPUT_AUDIT_NOT_SUBMIT" in nxt and "corrected ensemble" in nxt.lower()
-    assert "winning_postprocess_v2" in nxt and "OK_TO_SUBMIT_" in nxt
-    assert "NEVER the official scorer" in nxt or "never the official scorer" in nxt.lower()
+    # M34 self-contained TTA branch now leads.
+    assert "M34_A_TTA_GEOMETRY_AND_SOURCE_AUDIT_NOT_SUBMIT" in nxt and "self-contained" in nxt.lower()
+    assert "USE_TTA4_ONLY" in nxt and "identity backbone" in nxt.lower()
+    assert "never the official scorer" in nxt.lower()
     print("  ok: reports generated with M32 official-CV-first recommendation (M19-C 0.880 kept final)")
 
 

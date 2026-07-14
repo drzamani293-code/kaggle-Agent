@@ -1,6 +1,6 @@
 # Lessons Learned
 
-_Generated 2026-07-11 07:38 UTC from intelligence.duckdb._
+_Generated 2026-07-14 20:16 UTC from intelligence.duckdb._
 
 Distilled, evidence-linked findings driving strategy.
 
@@ -61,6 +61,7 @@ Distilled, evidence-linked findings driving strategy.
 - [0.90] geff_ensemble.py (probability-level ensemble, REVIEWED PROXY) — upload:geff_ensemble.py
 - [0.90] local_metric(1).py (PROXY scorer variant, NEVER official) — upload:local_metric(1).py
 - [0.90] model_level_roadmap.md (ensemble roadmap) — upload:model_level_roadmap.md
+- [0.90] Self-contained geometric TTA (M34, no external outputs) — internal:M34
 - [0.85] gap2 velocity ablation — https://github.com/dalloliogm/kaggle_competitions
 - [0.70] top notebooks analysis — https://github.com/dalloliogm/kaggle_competitions
 - [0.60] local_metric.py (repo, reviewed PROXY) — repo:local_metric.py

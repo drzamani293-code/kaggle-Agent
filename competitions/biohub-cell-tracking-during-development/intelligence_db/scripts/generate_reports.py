@@ -160,7 +160,29 @@ def report_next_actions(con) -> str:
     m22_order = [e for e in ["M22_A_TRUEBASE_SAFE_DIV_TUNE", "M22_B_TRUEBASE_LIGHT_GAP",
                              "M22_C_TRUEBASE_DIV_PLUS_GAP1_ONLY"] if e in blocked_m22]
 
-    if "M33_A_ENSEMBLE_INPUT_AUDIT" in rows:
+    if "M34_A_TTA_GEOMETRY_SOURCE_AUDIT" in rows:
+        out += [
+            "**Run the self-contained geometric TTA audit first (M34) - one notebook, no external outputs.**",
+            "M33 external-output ensembling is operationally paused (needs multiple notebook-output inputs; first",
+            "audit was contaminated by sample_submission + duplicate aliases). M34 runs the controlled 400ep model",
+            "under exactly-invertible XY transforms (Z never touched), inverse-transforms + fuses detections/edges",
+            "with an identity backbone, and applies the exact M19-C postprocess. Requires only the competition",
+            "dataset + the 400ep support pack.",
+            "",
+            "1. **`M34_A_TTA_GEOMETRY_AND_SOURCE_AUDIT_NOT_SUBMIT`** - locate+sha256 the mounted model/axis/postprocess",
+            "   source, verify the exact 400ep artifact, verify every transform via synthetic roundtrips, decide",
+            "   `USE_TTA4_ONLY` vs TTA8 (D4-XY only when X==Y scale + invertible shape/pad + roundtrips pass).",
+            "2. **`M34_B_TTA4_FUSION_DIAGNOSTIC_NOT_SUBMIT`** - identity reproduction gate vs the M19-C fingerprint,",
+            "   then TTA4 (identity/flip_x/flip_y/flip_xy) node+edge fusion (zero collisions, order-invariant).",
+            "3. **`M34_C_TTA4_CONSERVATIVE_FUSION_CANDIDATE`** - hard-gated experimental submission (artifact +",
+            "   baseline repro + geometry + valid graph + sane delta vs M19-C). User reviews before any submit.",
+            "4. **`M34_D_TTA8_D4_OPTIONAL_CANDIDATE`** - blocked unless TTA8 is proven safe; XY D4 only, stricter gates.",
+            "",
+            "M34 is NOT a reproduction of the missing ~0.900 reference and makes no claim of matching M31.",
+            "local_metric.py is never the official scorer. **Keep `M19-C` 0.880 final until an OBSERVED score beats it.**",
+            "",
+        ]
+    elif "M33_A_ENSEMBLE_INPUT_AUDIT" in rows:
         out += [
             "**Run the corrected ensemble audit first (M33) - do NOT assume an ensemble beats the leaderboard.**",
             "The uploaded blend_submissions.py / geff_ensemble.py have structural defects (per-dataset node-id",

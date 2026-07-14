@@ -418,6 +418,22 @@
     "gate before submit"
    ],
    "relevance_score": 0.9
+  },
+  {
+   "source_id": "M34_TTA_SELF_CONTAINED",
+   "source_type": "method",
+   "title": "Self-contained geometric TTA (M34, no external outputs)",
+   "url": "internal:M34",
+   "repo": "",
+   "path": "competitions/biohub-cell-tracking-during-development/milestone34_self_contained_tta_runner.py",
+   "summary": "Model-level TTA ensemble in ONE notebook: the controlled 400ep model run under exactly-invertible XY transforms (identity/flip_x/flip_y/flip_xy; optional D4-XY TTA8), inverse-transformed + fused (identity backbone protected, one-to-one Hungarian node consensus, per-variant edge-vote dedup, strong-consensus replacement, independent division), then the EXACT M19-C postprocess. Z is never flipped/rotated (anisotropic scale). Requires only the competition dataset + the 400ep support pack; no M19/M29/M30 notebook outputs.",
+   "extracted_ideas": [
+    "exactly-invertible XY-only transforms",
+    "identity backbone protection",
+    "one-to-one Hungarian TTA consensus",
+    "eligible/strong-consensus edge replacement"
+   ],
+   "relevance_score": 0.9
   }
  ]
 }

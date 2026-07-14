@@ -1,31 +1,31 @@
 # Next Actions
 
-_Generated 2026-07-11 07:38 UTC from intelligence.duckdb._
+_Generated 2026-07-14 20:16 UTC from intelligence.duckdb._
 
 **Best scored experiment:** `M19_C_FULL_CHAIN_PENDING` at **0.8800**.
 **M19-C full_chain:** final (score 0.8800).
-**Open (pending):** 19 · **blocked:** 18 · **unsafe/superseded:** 2.
+**Open (pending):** 19 · **blocked:** 20 · **unsafe/superseded:** 2.
 
 ## Recommendation
 
-**Run the corrected ensemble audit first (M33) - do NOT assume an ensemble beats the leaderboard.**
-The uploaded blend_submissions.py / geff_ensemble.py have structural defects (per-dataset node-id
-resets, nearest-neighbour node collapse that double-votes edges, min_votes=1 forks, order-dependent
-coords; the GEFF ensemble scores ILP_SOLUTION_LIKE graphs, uses the OLD winning_postprocess_v2 linker,
-and divides consensus by all models regardless of eligibility). M33 fixes every one and gates hard.
+**Run the self-contained geometric TTA audit first (M34) - one notebook, no external outputs.**
+M33 external-output ensembling is operationally paused (needs multiple notebook-output inputs; first
+audit was contaminated by sample_submission + duplicate aliases). M34 runs the controlled 400ep model
+under exactly-invertible XY transforms (Z never touched), inverse-transforms + fuses detections/edges
+with an identity backbone, and applies the exact M19-C postprocess. Requires only the competition
+dataset + the 400ep support pack.
 
-1. **`M33_A_ENSEMBLE_INPUT_AUDIT_NOT_SUBMIT`** - dynamic input discovery + per-run structure +
-   pairwise diversity + ensemble-potential class (INSUFFICIENT / NEAR_DUPLICATE / MODERATE / STRONG).
-2. **`M33_B_CORRECTED_OUTPUT_BLEND_DIAGNOSTIC_NOT_SUBMIT`** - B0..B3 through the corrected one-to-one
-   canonicalization + per-variant vote dedup + two-stage linker (zero collisions, order-invariant).
-3. **`M33_C_CORRECTED_OUTPUT_BLEND_CANDIDATE`** - EXPERIMENTAL, hard-gated (>=3 valid, not near-
-   duplicate, zero collisions, order-invariant, valid graph, sane delta vs M19-C). `OK_TO_SUBMIT_
-   EXPERIMENTAL` or a specific `DO_NOT_SUBMIT_*`. User reviews before any submit.
-4. **`M33_D_PROBABILITY_FUSION_AUDIT_NOT_SUBMIT`** - eligible-model denominator + calibration
-   diagnostics; **`M33_E`** stays blocked without FULL_PRE_ILP candidates + CV-justified calibration.
+1. **`M34_A_TTA_GEOMETRY_AND_SOURCE_AUDIT_NOT_SUBMIT`** - locate+sha256 the mounted model/axis/postprocess
+   source, verify the exact 400ep artifact, verify every transform via synthetic roundtrips, decide
+   `USE_TTA4_ONLY` vs TTA8 (D4-XY only when X==Y scale + invertible shape/pad + roundtrips pass).
+2. **`M34_B_TTA4_FUSION_DIAGNOSTIC_NOT_SUBMIT`** - identity reproduction gate vs the M19-C fingerprint,
+   then TTA4 (identity/flip_x/flip_y/flip_xy) node+edge fusion (zero collisions, order-invariant).
+3. **`M34_C_TTA4_CONSERVATIVE_FUSION_CANDIDATE`** - hard-gated experimental submission (artifact +
+   baseline repro + geometry + valid graph + sane delta vs M19-C). User reviews before any submit.
+4. **`M34_D_TTA8_D4_OPTIONAL_CANDIDATE`** - blocked unless TTA8 is proven safe; XY D4 only, stricter gates.
 
-local_metric.py is NEVER the official scorer (NON_AUTHORITATIVE_PROXY_DIAGNOSTIC only); official CV
-integrates with M32.1's vendored metric. **Keep `M19-C` 0.880 final until an OBSERVED score beats it.**
+M34 is NOT a reproduction of the missing ~0.900 reference and makes no claim of matching M31.
+local_metric.py is never the official scorer. **Keep `M19-C` 0.880 final until an OBSERVED score beats it.**
 
 **TTA6 + DeepCenter REFERENCE-FIRST reproduction (M31) - run the reference audit FIRST.** The
 analysis_09_strategy.md near-0.900 pipeline (400ep, 6-way TTA, det 0.97, div 0.7, pool ~2.0um,
@@ -112,3 +112,6 @@ M29-A / M30-C remain pending on Kaggle; M30 diagnostic gates that family.
 - **after `M32_1_B_OFFICIAL_CV_REAUDIT`** (2026-07-11, risk low):
   - observation: The uploaded ensemble sources (blend_submissions.py, geff_ensemble.py) have structural defects: per-dataset node-id resets, nearest-neighbour node collapse that lets one variant double-vote a canonical edge, min_votes=1 forks, order-dependent canonical coords; and the GEFF ensemble scores ILP_SOLUTION_LIKE graphs, uses the OLD winning_postprocess_v2 linker, and divides consensus by all models regardless of eligibility. An ensemble is not assumed to beat the leaderboard.
   - recommendation: Build M33 as a CORRECTED, honesty-gated ensemble pack. Fix canonicalization (deterministic input-order-invariant one-to-one per-frame Hungarian gated at eps_um, weighted-mean coords, zero same-variant collapse), edge voting (per-variant dedup, weighted support), and linking (corrected M30 two-stage: primary min-cost assignment with explicit no-link dummies + independent division). Probability fusion uses support_fraction = proposer / eligible_model_count (missing endpoint != zero vote) and stays blocked without FULL_PRE_ILP candidate graphs + CV-justified calibration. Order: M33_A input/diversity audit -> M33_B output-blend diagnostic -> optionally M33_C (gated experimental) -> M33_D probability audit -> M33_E only if full candidates + calibration resolved. local_metric.py is never the official scorer; official CV integrates with M32.1's vendored metric. Keep M19-C 0.880 final until an OBSERVED score beats it; M29-A 0.876 failed; M30-C pending; M31 blocked; M32/M32.1 official CV unresolved.  → next: `M33_A -> M33_B -> (optional) M33_C -> M33_D -> (only if resolved) M33_E`
+- **after `M33_A_ENSEMBLE_INPUT_AUDIT`** (2026-07-11, risk low):
+  - observation: M33 external-output ensembling is operationally cumbersome (multiple notebook-output inputs; first audit contaminated by sample_submission + duplicate aliases). A model-level ensemble that needs no prior submissions is cleaner and more reproducible.
+  - recommendation: Build M34 as a fully SELF-CONTAINED geometric TTA + graph-fusion pack in ONE notebook: run the controlled 400ep model under exactly-invertible XY transforms (Z never touched; anisotropic scale), inverse-transform + fuse detections/edges (identity backbone protected, one-to-one Hungarian node consensus, per-variant edge dedup, strong-consensus replacement, independent division), apply the EXACT M19-C postprocess, and write one conservative experimental submission only when every structural + geometry gate passes. Not a reproduction of the missing ~0.900 reference and no claim of matching M31. Requires only the competition dataset + the 400ep support pack; no M19/M29/M30 outputs. local_metric.py never official; no Kaggle-API submit. Order: M34_A geometry/source audit -> M34_B TTA4 diagnostic -> M34_C conservative candidate -> M34_D only if TTA8 proven safe. Keep M19-C 0.880 confirmed best/final; M29-A 0.876; M30-C pending; M31 blocked; M32/M32.1 unresolved; M33 operationally paused (not disproven).  → next: `M34_A -> M34_B -> M34_C -> (only if TTA8 safe) M34_D`

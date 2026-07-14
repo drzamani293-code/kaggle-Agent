@@ -1,6 +1,6 @@
 # Experiment Matrix
 
-_Generated 2026-07-11 07:38 UTC from intelligence.duckdb._
+_Generated 2026-07-14 20:16 UTC from intelligence.duckdb._
 
 Command differences, post-processing ops, submission stats, and score for every variant.
 All variants share ILP weights (edge -1.0, appearance 0.1, disappearance 0.1, division 1.0, --use-ilp);
@@ -73,6 +73,10 @@ only `det_threshold` and the post-processing chain differ.
 | `M33_C_CORRECTED_OUTPUT_BLEND_CANDIDATE` | None | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M33_D_PROBABILITY_FUSION_AUDIT` | None | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M33_E_CORRECTED_PROBABILITY_ENSEMBLE` | None | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M34_A_TTA_GEOMETRY_SOURCE_AUDIT` | None | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M34_B_TTA4_FUSION_DIAGNOSTIC` | None | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M34_C_TTA4_CONSERVATIVE_CANDIDATE` | None | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M34_D_TTA8_D4_OPTIONAL_CANDIDATE` | None | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 
 Legend: div+ = safe divisions added, gap1 = single-frame gaps closed, 
 gap2 = two-frame gaps recovered, synth = synthetic nodes added, prune = isolated nodes pruned, 
