@@ -136,7 +136,7 @@ def report_next_actions(con) -> str:
     # Genuinely-open work vs superseded/unsafe/blocked attempts.
     pending = _fetch(con, """
         SELECT experiment_id, created_at FROM experiments
-        WHERE public_score IS NULL AND status NOT IN ('unsafe', 'blocked', 'diagnostic', 'wrong_artifact') ORDER BY created_at
+        WHERE public_score IS NULL AND status NOT IN ('unsafe', 'blocked', 'diagnostic', 'wrong_artifact', 'superseded') ORDER BY created_at
     """)
     unsafe = _fetch(con, """
         SELECT e.experiment_id, p.nodes_before, p.edges_before
@@ -160,7 +160,27 @@ def report_next_actions(con) -> str:
     m22_order = [e for e in ["M22_A_TRUEBASE_SAFE_DIV_TUNE", "M22_B_TRUEBASE_LIGHT_GAP",
                              "M22_C_TRUEBASE_DIV_PLUS_GAP1_ONLY"] if e in blocked_m22]
 
-    if "M34_A_TTA_GEOMETRY_SOURCE_AUDIT" in rows:
+    if "M35_A_REFERENCE_BUNDLE_AUDIT" in rows:
+        out += [
+            "**Audit the supplied 0.902 reference bundle first (M35) - highest-priority path.**",
+            "M34 (self-contained TTA on the M19-C 0.880 baseline) is technically complete but **superseded** by a",
+            "newly supplied 0.902 reference (preset `public_0902_motion_division_calibration`: det 0.97, D4-XY",
+            "detection TTA already active, motion relink, gap2 disabled; fingerprint 128511/124002/252513). M35",
+            "reproduces and builds on it, reusing only M34's D4 geometry + fusion machinery.",
+            "",
+            "1. **`M35_A_REFERENCE_BUNDLE_AUDIT_NOT_SUBMIT`** - locate+sha256 the notebook/log/results-repo + its",
+            "   OFFICIAL metric, verify the preset + fingerprint. **HARD RULE:** if any asset is missing, print the",
+            "   exact missing paths and STOP with `REFERENCE_ASSETS_NOT_ACCESSIBLE` (never reconstruct from prompt).",
+            "2. **`M35_B_REFERENCE_0902_REPRO_NOT_SUBMIT`** - reproduce the exact 128511/124002/252513 reference.",
+            "3. **`M35_C_CANDIDATE_EDGE_EXPORT_NOT_SUBMIT`** - export full pre-ILP candidate edges + probabilities.",
+            "4. **`M35_D_EDGE_TTA_D4_DIAGNOSTIC_NOT_SUBMIT`** - feature-map/edge-logit D4 vs detector-only D4 via the",
+            "   bundle's OFFICIAL metric (never local_metric.py). **`M35_E`** joint solver only after official CV.",
+            "",
+            "The 0.902 is recorded USER-OBSERVED (not yet independently Kaggle-verified here). No claim of 0.975.",
+            "**`M19-C` 0.880 stays the historical confirmed result.** Do not build a submission before M35_A passes.",
+            "",
+        ]
+    elif "M34_A_TTA_GEOMETRY_SOURCE_AUDIT" in rows:
         out += [
             "**Run the self-contained geometric TTA audit first (M34) - one notebook, no external outputs.**",
             "M33 external-output ensembling is operationally paused (needs multiple notebook-output inputs; first",

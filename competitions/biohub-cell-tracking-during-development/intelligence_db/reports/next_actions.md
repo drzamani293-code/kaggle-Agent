@@ -1,31 +1,29 @@
 # Next Actions
 
-_Generated 2026-07-14 20:16 UTC from intelligence.duckdb._
+_Generated 2026-07-14 20:33 UTC from intelligence.duckdb._
 
 **Best scored experiment:** `M19_C_FULL_CHAIN_PENDING` at **0.8800**.
 **M19-C full_chain:** final (score 0.8800).
-**Open (pending):** 19 · **blocked:** 20 · **unsafe/superseded:** 2.
+**Open (pending):** 19 · **blocked:** 22 · **unsafe/superseded:** 2.
 
 ## Recommendation
 
-**Run the self-contained geometric TTA audit first (M34) - one notebook, no external outputs.**
-M33 external-output ensembling is operationally paused (needs multiple notebook-output inputs; first
-audit was contaminated by sample_submission + duplicate aliases). M34 runs the controlled 400ep model
-under exactly-invertible XY transforms (Z never touched), inverse-transforms + fuses detections/edges
-with an identity backbone, and applies the exact M19-C postprocess. Requires only the competition
-dataset + the 400ep support pack.
+**Audit the supplied 0.902 reference bundle first (M35) - highest-priority path.**
+M34 (self-contained TTA on the M19-C 0.880 baseline) is technically complete but **superseded** by a
+newly supplied 0.902 reference (preset `public_0902_motion_division_calibration`: det 0.97, D4-XY
+detection TTA already active, motion relink, gap2 disabled; fingerprint 128511/124002/252513). M35
+reproduces and builds on it, reusing only M34's D4 geometry + fusion machinery.
 
-1. **`M34_A_TTA_GEOMETRY_AND_SOURCE_AUDIT_NOT_SUBMIT`** - locate+sha256 the mounted model/axis/postprocess
-   source, verify the exact 400ep artifact, verify every transform via synthetic roundtrips, decide
-   `USE_TTA4_ONLY` vs TTA8 (D4-XY only when X==Y scale + invertible shape/pad + roundtrips pass).
-2. **`M34_B_TTA4_FUSION_DIAGNOSTIC_NOT_SUBMIT`** - identity reproduction gate vs the M19-C fingerprint,
-   then TTA4 (identity/flip_x/flip_y/flip_xy) node+edge fusion (zero collisions, order-invariant).
-3. **`M34_C_TTA4_CONSERVATIVE_FUSION_CANDIDATE`** - hard-gated experimental submission (artifact +
-   baseline repro + geometry + valid graph + sane delta vs M19-C). User reviews before any submit.
-4. **`M34_D_TTA8_D4_OPTIONAL_CANDIDATE`** - blocked unless TTA8 is proven safe; XY D4 only, stricter gates.
+1. **`M35_A_REFERENCE_BUNDLE_AUDIT_NOT_SUBMIT`** - locate+sha256 the notebook/log/results-repo + its
+   OFFICIAL metric, verify the preset + fingerprint. **HARD RULE:** if any asset is missing, print the
+   exact missing paths and STOP with `REFERENCE_ASSETS_NOT_ACCESSIBLE` (never reconstruct from prompt).
+2. **`M35_B_REFERENCE_0902_REPRO_NOT_SUBMIT`** - reproduce the exact 128511/124002/252513 reference.
+3. **`M35_C_CANDIDATE_EDGE_EXPORT_NOT_SUBMIT`** - export full pre-ILP candidate edges + probabilities.
+4. **`M35_D_EDGE_TTA_D4_DIAGNOSTIC_NOT_SUBMIT`** - feature-map/edge-logit D4 vs detector-only D4 via the
+   bundle's OFFICIAL metric (never local_metric.py). **`M35_E`** joint solver only after official CV.
 
-M34 is NOT a reproduction of the missing ~0.900 reference and makes no claim of matching M31.
-local_metric.py is never the official scorer. **Keep `M19-C` 0.880 final until an OBSERVED score beats it.**
+The 0.902 is recorded USER-OBSERVED (not yet independently Kaggle-verified here). No claim of 0.975.
+**`M19-C` 0.880 stays the historical confirmed result.** Do not build a submission before M35_A passes.
 
 **TTA6 + DeepCenter REFERENCE-FIRST reproduction (M31) - run the reference audit FIRST.** The
 analysis_09_strategy.md near-0.900 pipeline (400ep, 6-way TTA, det 0.97, div 0.7, pool ~2.0um,
@@ -115,3 +113,6 @@ M29-A / M30-C remain pending on Kaggle; M30 diagnostic gates that family.
 - **after `M33_A_ENSEMBLE_INPUT_AUDIT`** (2026-07-11, risk low):
   - observation: M33 external-output ensembling is operationally cumbersome (multiple notebook-output inputs; first audit contaminated by sample_submission + duplicate aliases). A model-level ensemble that needs no prior submissions is cleaner and more reproducible.
   - recommendation: Build M34 as a fully SELF-CONTAINED geometric TTA + graph-fusion pack in ONE notebook: run the controlled 400ep model under exactly-invertible XY transforms (Z never touched; anisotropic scale), inverse-transform + fuse detections/edges (identity backbone protected, one-to-one Hungarian node consensus, per-variant edge dedup, strong-consensus replacement, independent division), apply the EXACT M19-C postprocess, and write one conservative experimental submission only when every structural + geometry gate passes. Not a reproduction of the missing ~0.900 reference and no claim of matching M31. Requires only the competition dataset + the 400ep support pack; no M19/M29/M30 outputs. local_metric.py never official; no Kaggle-API submit. Order: M34_A geometry/source audit -> M34_B TTA4 diagnostic -> M34_C conservative candidate -> M34_D only if TTA8 proven safe. Keep M19-C 0.880 confirmed best/final; M29-A 0.876; M30-C pending; M31 blocked; M32/M32.1 unresolved; M33 operationally paused (not disproven).  → next: `M34_A -> M34_B -> M34_C -> (only if TTA8 safe) M34_D`
+- **after `M34_A_TTA_GEOMETRY_SOURCE_AUDIT`** (2026-07-14, risk low):
+  - observation: M34 is technically complete but built on the M19-C 0.880 baseline. A newly supplied 0.902 reference (preset public_0902_motion_division_calibration: det 0.97, D4-XY detection TTA already active, motion relink, gap2 disabled, calibrated safe division; fingerprint 128511/124002/252513) is stronger and different. M34's TTA4-as-primary and 'detection-TTA-missing' assumptions no longer hold.
+  - recommendation: Do NOT run or promote M34 as the next Kaggle path; mark M34 A-D SUPERSEDED_BY_M35_REFERENCE_0902 (keep files). Build M35 as the reference-0902 reproduction + official-CV + edge-TTA foundation, reusing ONLY M34's D4 geometry/roundtrips/cache/one-to-one Hungarian canonicalization/order-invariance/no-link primary/independent division/validation/sane-delta (rebased on the 0902 fingerprint), and NOT the M19-C config/fingerprint/TTA4-primary/detection-TTA-missing assumption. HARD RULE: if the reference assets are not accessible, print exact missing paths and STOP with REFERENCE_ASSETS_NOT_ACCESSIBLE - never reconstruct from the prompt. Order: M35_A audit -> M35_B exact repro -> M35_C candidate export -> M35_D edge-TTA D4 official CV -> M35_E full-candidate joint solver only after CV. local_metric.py is never official; no claim/guarantee of 0.975. Record the 0.902 as USER-OBSERVED, separate from independently verified Kaggle evidence. Keep M19-C 0.880 as the HISTORICAL confirmed result. In this environment the bundle was NOT accessible (M35_A -> REFERENCE_ASSETS_NOT_ACCESSIBLE).  → next: `M35_A -> M35_B -> M35_C -> M35_D -> (only after CV) M35_E`

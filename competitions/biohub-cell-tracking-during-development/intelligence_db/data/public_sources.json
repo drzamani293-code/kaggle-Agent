@@ -434,6 +434,22 @@
     "eligible/strong-consensus edge replacement"
    ],
    "relevance_score": 0.9
+  },
+  {
+   "source_id": "REF_0902_BUNDLE",
+   "source_type": "reference",
+   "title": "Supplied 0.902 reference bundle (public_0902_motion_division_calibration) - USER-OBSERVED, not yet Kaggle-verified",
+   "url": "user-supplied:0902-reference-bundle",
+   "repo": "",
+   "path": "(to be mounted: notebook + log + extracted results repo w/ official metric)",
+   "summary": "Stronger-than-M19-C reference: preset public_0902_motion_division_calibration; det 0.97; D4-XY DETECTION TTA already active; pool_kernel_um 3.0; ILP edge -1.0/app 0.1/disapp 0.1/div 1.0; motion relink (tight 6.0/relaxed 10.0/vel_w 0.5/learned_bonus 1.0); gap close effective max gap 1; gap2 DISABLED; safe division max 4.66/existing 7.65/sister 8.5/frame cap 0.0076/global 0.00375; min_track_len 6; linefit window 2 weight 0.8; DeepCenter DISABLED. Fingerprint nodes 128511 / edges 124002 / rows 252513, observed public score 0.902. RECORDED AS USER-OBSERVED ONLY - not independently verified on Kaggle in this environment; the bundle assets were NOT accessible here (M35_A -> REFERENCE_ASSETS_NOT_ACCESSIBLE). Values are verification targets, never reconstructed from the prompt.",
+   "extracted_ideas": [
+    "det 0.97 + D4 detection TTA",
+    "motion relink tight/relaxed with learned bonus",
+    "gap2 disabled, single-frame gap close",
+    "calibrated safe-division geometry"
+   ],
+   "relevance_score": 1.0
   }
  ]
 }

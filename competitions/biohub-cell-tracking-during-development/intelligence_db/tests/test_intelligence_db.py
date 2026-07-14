@@ -41,10 +41,10 @@ def test_db_initializes_and_seeds(tmp: Path) -> None:
         ids = {r[0] for r in con.execute("SELECT experiment_id FROM experiments").fetchall()}
     finally:
         con.close()
-    assert n_exp == 69, f"expected 69 seed experiments, got {n_exp}"
-    assert n_sub == 69 and n_pp == 69, f"expected stats for all 69 (sub={n_sub}, pp={n_pp})"
-    assert n_src == 31, f"expected 31 public sources (incl M34 self-contained TTA), got {n_src}"
-    assert n_dec >= 20 and n_les >= 5, f"expected seed decisions/lessons (dec={n_dec}, les={n_les})"
+    assert n_exp == 74, f"expected 74 seed experiments, got {n_exp}"
+    assert n_sub == 74 and n_pp == 74, f"expected stats for all 74 (sub={n_sub}, pp={n_pp})"
+    assert n_src == 32, f"expected 32 public sources (incl 0902 reference bundle), got {n_src}"
+    assert n_dec >= 21 and n_les >= 5, f"expected seed decisions/lessons (dec={n_dec}, les={n_les})"
     for e in ["M16_BASELINE", "M19_C_FULL_CHAIN_PENDING",
               "M21_A_PILKWANG350_M19C_GATES", "M22_ARTIFACT_FORENSIC",
               "M23_B_PILKWANG350_NODE_PRUNE_SAFE_DIV_ONLY", "M23_C_PILKWANG350_EDGE_NODE_BALANCED",
@@ -70,7 +70,10 @@ def test_db_initializes_and_seeds(tmp: Path) -> None:
               "M33_C_CORRECTED_OUTPUT_BLEND_CANDIDATE", "M33_D_PROBABILITY_FUSION_AUDIT",
               "M33_E_CORRECTED_PROBABILITY_ENSEMBLE",
               "M34_A_TTA_GEOMETRY_SOURCE_AUDIT", "M34_B_TTA4_FUSION_DIAGNOSTIC",
-              "M34_C_TTA4_CONSERVATIVE_CANDIDATE", "M34_D_TTA8_D4_OPTIONAL_CANDIDATE"]:
+              "M34_C_TTA4_CONSERVATIVE_CANDIDATE", "M34_D_TTA8_D4_OPTIONAL_CANDIDATE",
+              "M35_A_REFERENCE_BUNDLE_AUDIT", "M35_B_REFERENCE_0902_REPRO",
+              "M35_C_CANDIDATE_EDGE_EXPORT", "M35_D_EDGE_TTA_D4_DIAGNOSTIC",
+              "M35_E_FULL_CANDIDATE_JOINT_SOLVER"]:
         assert e in ids, f"missing seed experiment {e}"
     print("  ok: db initializes and seeds")
 
@@ -96,10 +99,10 @@ def test_reports_generated(tmp: Path) -> None:
     # next_actions is the "global relinker v2 (M30) - run diagnostic first" branch.
     nxt = (tmp_reports / "next_actions.md").read_text()
     assert "0.880" in nxt and "final" in nxt.lower(), "final score/marker should appear"
-    # M34 self-contained TTA branch now leads.
-    assert "M34_A_TTA_GEOMETRY_AND_SOURCE_AUDIT_NOT_SUBMIT" in nxt and "self-contained" in nxt.lower()
-    assert "USE_TTA4_ONLY" in nxt and "identity backbone" in nxt.lower()
-    assert "never the official scorer" in nxt.lower()
+    # M35 reference-0902 branch now leads.
+    assert "M35_A_REFERENCE_BUNDLE_AUDIT_NOT_SUBMIT" in nxt and "0.902" in nxt
+    assert "REFERENCE_ASSETS_NOT_ACCESSIBLE" in nxt and "128511" in nxt
+    assert "local_metric.py" in nxt and "historical confirmed" in nxt.lower()
     print("  ok: reports generated with M32 official-CV-first recommendation (M19-C 0.880 kept final)")
 
 
@@ -111,7 +114,7 @@ def test_scored_and_best(tmp: Path) -> None:
         m25a = con.execute("SELECT status FROM experiments WHERE experiment_id='M25_A_PRUNE_MILD_SAFE_DIV'").fetchone()
         m27a = con.execute("SELECT public_score, status FROM experiments WHERE experiment_id='M27_A_PUBLIC_REPRO_EXACT_SAFETY'").fetchone()
         best = con.execute("SELECT experiment_id, public_score FROM experiments WHERE public_score IS NOT NULL ORDER BY public_score DESC, created_at LIMIT 1").fetchone()
-        pending_ids = {r[0] for r in con.execute("SELECT experiment_id FROM experiments WHERE public_score IS NULL AND status NOT IN ('unsafe','blocked','diagnostic','wrong_artifact')").fetchall()}
+        pending_ids = {r[0] for r in con.execute("SELECT experiment_id FROM experiments WHERE public_score IS NULL AND status NOT IN ('unsafe','blocked','diagnostic','wrong_artifact','superseded')").fetchall()}
         n_final = con.execute("SELECT COUNT(*) FROM experiments WHERE status='final'").fetchone()[0]
     finally:
         con.close()
