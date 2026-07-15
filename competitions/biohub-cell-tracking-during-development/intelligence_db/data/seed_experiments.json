@@ -3248,7 +3248,7 @@
    "public_score": null,
    "status": "diagnostic",
    "created_at": "2026-07-14",
-   "notes": "NON-SCORING, HIGHEST-PRIORITY. Audits the supplied 0.902 bundle: locate+sha256 the notebook/log/results-repo + its OFFICIAL metric; resolve the preset and verify it matches the expected public_0902_motion_division_calibration (det 0.97, D4-XY detection TTA, pool 3.0, motion relink, gap2 disabled, ...); verify the reference fingerprint (128511/124002/252513). HARD RULE: if any required asset is missing -> print exact missing paths + STOP with REFERENCE_ASSETS_NOT_ACCESSIBLE (never reconstruct from the prompt). In THIS environment the bundle is NOT accessible -> REFERENCE_ASSETS_NOT_ACCESSIBLE. RUN FIRST; nothing downstream builds a submission before this passes.",
+   "notes": "NON-SCORING, HIGHEST-PRIORITY. MANIFEST-DRIVEN audit (REFERENCE_BUNDLE_MANIFEST.json, exact relative paths, no filename aliases, no arbitrary config*.json): verifies critical-file SHA256 vs the manifest, the preset from the real notebook/log/predict source, and the exact submission fingerprint 128511/124002/252513/417 with node IDs scoped per (dataset, node_id) - NOT globally - plus invariants (dangling 0, multiframe 0, in<=1, out<=2, finite coords, consecutive row id). Recommendation REFERENCE_AUDIT_PASS / REFERENCE_AUDIT_FAILED. OBSERVED ON KAGGLE: PASS against /kaggle/input/datasets/mohammadjafarzamani/biohub-0902-reference-bundle (all SHAs matched the manifest). Never writes submission.csv. Off the reference environment (bundle unmounted) it reports REFERENCE_AUDIT_FAILED(bundle_not_accessible).",
    "submission_stats": {
     "n_rows": null,
     "n_nodes": null,
@@ -3285,7 +3285,7 @@
    "public_score": null,
    "status": "blocked",
    "created_at": "2026-07-14",
-   "notes": "BLOCKED until M35_A passes. Reproduces the EXACT reference (128511 nodes / 124002 edges / 252513 rows) by executing the AUDITED bundle in reference mode and checking byte/structure equivalence. Never reconstructs from the prompt. NON-SUBMIT.",
+   "notes": "NON-SCORING, REAL (not a placeholder). Independently reruns the AUDITED reference pipeline via subprocess using the mounted competition data + support-pack 400ep weights (SHA 12f6881e... verified) + the extracted tracking_repo; resolves preset/params + the executed command FROM the audited notebook/log/source; writes m35_b_reference_reproduced.csv (NOT submission.csv, never submitted) and compares to evidence/submission.csv by byte SHA + canonical table (per-dataset counts, node/edge/division, coord tolerance, edge-set equality on (dataset,source_id,target_id), graph invariants). Recommendation REPRO_PASS_EXACT / REPRO_PASS_CANONICAL / REFERENCE_REPRO_MISMATCH / REFERENCE_ASSETS_NOT_ACCESSIBLE / RUNTIME_DEPENDENCY_FAILURE / INVALID_REPRODUCED_GRAPH. Requires GPU T4 x2 + the mounted bundle; off that environment it honestly blocks (REFERENCE_ASSETS_NOT_ACCESSIBLE). M35-C/D/E stay blocked until M35-B genuinely passes. Unit-tested end-to-end (exact/canonical/mismatch/invalid) - proven data-dependent, not hardcoded.",
    "submission_stats": {
     "n_rows": null,
     "n_nodes": null,

@@ -1,6 +1,6 @@
 # Lessons Learned
 
-_Generated 2026-07-14 20:33 UTC from intelligence.duckdb._
+_Generated 2026-07-15 15:52 UTC from intelligence.duckdb._
 
 Distilled, evidence-linked findings driving strategy.
 
