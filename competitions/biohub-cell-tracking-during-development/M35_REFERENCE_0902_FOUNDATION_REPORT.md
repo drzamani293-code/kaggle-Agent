@@ -5,18 +5,38 @@ M34 (self-contained TTA on the M19-C 0.880 baseline) is superseded by the suppli
 remain `SUPERSEDED_BY_M35_REFERENCE_0902` (files kept, not promoted).
 
 ## What was genuinely executed vs. blocked
-- **M35-A — corrected, PASSED on Kaggle.** The manifest-driven audit passed against
-  `/kaggle/input/datasets/mohammadjafarzamani/biohub-0902-reference-bundle`; all
-  critical-file SHA256 matched `REFERENCE_BUNDLE_MANIFEST.json`. (Off the reference
-  environment, e.g. here, it honestly reports `REFERENCE_AUDIT_FAILED` with reason
-  `bundle_not_accessible` — the bundle is only mounted on Kaggle.)
-- **M35-B — now a REAL runner** (no longer a placeholder): it reruns the audited
-  reference pipeline via subprocess and compares the output to the reference. It is
-  unit-tested end-to-end (exact / canonical / mismatch / invalid fixtures) and proven
-  data-dependent. It genuinely runs only where the mounted bundle + support-pack
-  weights + GPU are present; elsewhere it blocks honestly.
-- **M35-C/D/E — blocked** until M35-B genuinely passes (`REPRO_PASS_EXACT` or
+- **M35-A — manifest-driven, PASSED on Kaggle.** All critical-file SHA256 matched
+  `REFERENCE_BUNDLE_MANIFEST.json`. (Off the reference environment it reports
+  `REFERENCE_AUDIT_FAILED`/`bundle_not_accessible` — the bundle is only mounted on Kaggle.)
+- **M35-B — now executes the FULL audited NOTEBOOK** (not predict-only, not a
+  placeholder): it runs `reference/biohub-competition-solution.ipynb` end-to-end in a
+  fresh **nbclient** kernel — inference (4 GEFF stores) → GEFF conversion → motion
+  relink → gap-1 close → calibrated safe divisions → short-track filter → linefit →
+  final CSV — then compares the **freshly generated** CSV to `evidence/submission.csv`.
+  It is unit-tested end-to-end with a **real executed notebook fixture** across
+  full-pass / predict-only-fail / wrong-graph-mismatch / invalid-graph /
+  copied-evidence-provenance-failure / stale-rejected / older-than-start /
+  wrong-cwd / altered-scientific-cell / redirection-only / C-D-E-gating cases —
+  proven data-dependent, never hardcoded. It genuinely runs only where the mounted
+  bundle + support-pack weights + GPU are present; elsewhere it blocks honestly.
+  **Running `predict_unet_transformer.py` alone is no longer accepted.**
+- **M35-C/D/E — blocked** until M35-B genuinely passes (`REPRO_PASS_EXACT` /
   `REPRO_PASS_CANONICAL`).
+
+## Review defects fixed (commit 32abb62 → this commit)
+1. **Predict-only was not reproduction.** M35-B now executes the whole notebook
+   (inference **and** all postprocessing), not just the predict subprocess.
+2. **Correct execution cwd.** The reference repo is materialized to
+   `/kaggle/working/tracking_repo` and the notebook runs with that as cwd, so the
+   notebook's relative paths (`scripts/…`, `weights/…`, split JSON) resolve.
+3. **Full environment.** The notebook itself performs offline dependency install,
+   repo materialization, the D4 detection-TTA patch, inference, conversion, and the
+   complete postprocessing chain in a fresh kernel.
+4. **No stale acceptance.** All stale outputs (`submission.csv`, `run_stats.csv`,
+   `tracking_repo`, exec dir, reproduced CSV) are deleted before the run; a
+   pre-existing `submission.csv` can never become the result; the only accepted
+   output is the redirected `m35_b_reference_reproduced.csv`.
+5. **Anti-cheating provenance** (below).
 
 ## Defects fixed (per the runtime report)
 1. **Ambiguous globs → manifest-driven, exact relative paths.** The bundle is resolved
@@ -45,24 +65,46 @@ dataset-scoped node-id uniqueness; `dangling_edges=0`, `direct_multiframe_edges=
 `/kaggle/working/m35_reference_bundle_audit.json`; recommendation `REFERENCE_AUDIT_PASS`
 / `REFERENCE_AUDIT_FAILED`. Accelerator None, Internet Off, never writes `submission.csv`.
 
-## M35-B (real reproduction)
+## M35-B (real full-notebook reproduction)
 Inputs: competition data, `biohub-tracking-support-pack-50ep-v1` (controlled 400ep
 snapshot, SHA `12f6881e…2fe771` verified), and the 0902 bundle. GPU T4×2, Internet Off.
-Steps: audit-gate → verify the 400ep artifact SHA → resolve preset/params + the executed
-command **from the audited notebook/log/source** → subprocess-run the extracted reference
-pipeline → write `/kaggle/working/m35_b_reference_reproduced.csv` (never `submission.csv`,
-never submitted) → compare to `evidence/submission.csv`:
-- byte SHA256 (exact),
-- canonical table (per-dataset counts, node/edge/division counts, coordinates within an
-  explicitly justified tolerance, edge-set equality on `(dataset, source_id, target_id)`),
-- graph invariants.
+
+**How the full notebook is executed:** M35-B reads
+`reference/biohub-competition-solution.ipynb`, applies an **output-redirection-only**
+patch (see below), writes the patched copy to `/kaggle/working/m35_b_execution/
+reference_repro.ipynb`, materializes the reference repo to `/kaggle/working/tracking_repo`,
+and executes the patched notebook in a **fresh `nbclient` python3 kernel** with
+`cwd=/kaggle/working/tracking_repo` and a 5-hour timeout. The notebook performs the
+entire pipeline (offline deps, D4 detection TTA, inference → 4 GEFF stores, GEFF
+conversion, motion relink, gap-1 close, safe divisions, short-track filter, linefit,
+final CSV). Execution then compares the freshly generated
+`/kaggle/working/m35_b_reference_reproduced.csv` (never `submission.csv`, never submitted)
+to `evidence/submission.csv` by byte SHA256, canonical table (per-dataset counts,
+node/edge/division, coordinates within tolerance, edge-set equality on
+`(dataset, source_id, target_id)`), and graph invariants.
+
+**Output-redirection-only patch (allowlist).** The only permitted change is redirecting
+the two output-target literals (`/kaggle/working/submission.csv` →
+`m35_b_reference_reproduced.csv`, and the run-stats target). A per-cell patch report
+records the changed cells with original/patched text and SHA256. If any non-output cell
+differs, the run fails `PROVENANCE_FAILURE` — scientific parameters/logic are never touched.
+
+**Anti-cheating provenance** (a PASS is impossible without it): stale outputs deleted and
+`execution_start_ns` recorded before the run; the reproduced file must not have existed
+before, must have `mtime ≥ start`, `return code == 0`, ≥4 fresh prediction stores, a
+final-CSV-write marker, no fallback; the generated file is hashed **before** the reference
+is opened; and the executed code/patch is scanned for any read/copy of
+`evidence/submission.csv` into the output → `PROVENANCE_FAILURE` on contamination. The
+reference evidence CSV is read **only after** generation, solely for comparison.
 
 Recommendation ∈ `REPRO_PASS_EXACT` / `REPRO_PASS_CANONICAL` / `REFERENCE_REPRO_MISMATCH`
-/ `REFERENCE_ASSETS_NOT_ACCESSIBLE` / `RUNTIME_DEPENDENCY_FAILURE` / `INVALID_REPRODUCED_GRAPH`.
-Writes `m35_reference_0902_repro.json` (resolved paths, SHAs, artifact verification,
-resolved preset, executed command, return code, runtime, stdout/stderr tail, reproduced
-fingerprint, reference fingerprint, byte + canonical + per-dataset comparisons, graph
-validation, `fallback_used`, recommendation) and `m35_reference_0902_repro.log`.
+/ `REFERENCE_ASSETS_NOT_ACCESSIBLE` / `RUNTIME_DEPENDENCY_FAILURE` / `INVALID_REPRODUCED_GRAPH`
+/ `PROVENANCE_FAILURE`. Writes `m35_reference_0902_repro.json` (resolved paths, SHAs,
+artifact verification, resolved preset, patch report + allowlist result, contamination scan,
+executed cwd, return code, runtime, stdout tail, fresh prediction stores, generation
+provenance, reproduced + reference fingerprints, byte + canonical + per-dataset comparisons,
+graph validation, `fallback_used`, recommendation), `m35_reference_0902_repro.log`, and
+`m35_b_patch_report.json`. **Confirmation: predict-only execution is no longer accepted.**
 
 ## Reused from M34 (only)
 Exact D4 XY geometry + inverse transforms + roundtrip tests; one-to-one Hungarian
