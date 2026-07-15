@@ -1,6 +1,6 @@
 # Experiment Matrix
 
-_Generated 2026-07-15 16:17 UTC from intelligence.duckdb._
+_Generated 2026-07-15 16:36 UTC from intelligence.duckdb._
 
 Command differences, post-processing ops, submission stats, and score for every variant.
 All variants share ILP weights (edge -1.0, appearance 0.1, disappearance 0.1, division 1.0, --use-ilp);

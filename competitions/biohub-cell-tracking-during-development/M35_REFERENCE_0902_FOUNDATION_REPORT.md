@@ -106,6 +106,40 @@ provenance, reproduced + reference fingerprints, byte + canonical + per-dataset 
 graph validation, `fallback_used`, recommendation), `m35_reference_0902_repro.log`, and
 `m35_b_patch_report.json`. **Confirmation: predict-only execution is no longer accepted.**
 
+## AST-anchored output redirection + no-GPU preflight (review of 5f99999)
+The real notebook does **not** contain the literal `/kaggle/working/submission.csv`; it
+assigns `SUBMISSION_PATH = WORKING_DIR / "submission.csv"` (and the run-stats analog). The
+patcher is therefore **AST-anchored**, not literal string replacement: it walks each code
+cell's AST and redirects **only** the assignments whose single target `Name` is exactly
+`SUBMISSION_PATH` or `RUN_STATS_PATH` (handling `WORKING_DIR / "…"`, literals, single/double
+quotes, and optional type annotations), rewriting them to
+`SUBMISSION_PATH = Path("/kaggle/working/m35_b_reference_reproduced.csv")` and
+`RUN_STATS_PATH = Path("/kaggle/working/m35_b_run_stats.csv")`.
+
+**No-GPU patch preflight** (`run_m35_b_patch_preflight` → `m35_b_real_notebook_patch_preflight.json`,
+`PATCH_PREFLIGHT_PASS`/`PATCH_PREFLIGHT_FAILED`) runs **before any GPU execution** and verifies:
+original notebook SHA == manifest; both assignments found; exactly two assignments patched;
+patched targets point to the M35-B files; allowlist passes; scientific cells byte-unchanged.
+If either assignment is not found, M35-B returns `PROVENANCE_FAILURE` /
+`OUTPUT_TARGET_ASSIGNMENTS_NOT_PATCHED` and **no GPU time is spent**. Verified on a
+real-structure notebook: the two exact replacements are
+`SUBMISSION_PATH = WORKING_DIR / 'submission.csv'` → `SUBMISSION_PATH = Path('/kaggle/working/m35_b_reference_reproduced.csv')`
+and `RUN_STATS_PATH = WORKING_DIR / 'run_stats.csv'` → `RUN_STATS_PATH = Path('/kaggle/working/m35_b_run_stats.csv')`
+(2 assignments, cell 0, allowlist ok, scientific cells unchanged).
+
+**GEFF-store counting** now counts fresh `predictions/**/*.geff` **stores** (each `.geff` may be
+a directory — matching paths are counted, with a recursively-derived newest-child mtime after
+`execution_start_ns`), **requires exactly 4**, and records `geff_paths` / per-store mtime +
+dataset / `geff_count_expected=4` / `geff_count_match`. It no longer counts `split_0`
+directories. The stdout message `Saved 4 predictions to …` is parsed only as supporting
+evidence; the GEFF count is authoritative.
+
+**Provenance honesty:** the hardcoded `hashed_before_reading_reference=True` is removed. The
+report now records the real operation order — `audit_reference_read_before_generation`,
+`reference_accessible_to_generation_kernel=False` (the kernel never receives the evidence path),
+`generated_sha_computed_before_comparison_read=True`, `generation_notebook_references_evidence`
+(the contamination-scan result).
+
 ## Reused from M34 (only)
 Exact D4 XY geometry + inverse transforms + roundtrip tests; one-to-one Hungarian
 canonicalization + order-invariance; no-link primary assignment; independent division
