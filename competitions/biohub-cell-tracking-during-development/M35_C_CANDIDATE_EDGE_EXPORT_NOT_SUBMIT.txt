@@ -4418,6 +4418,30 @@ def _m35c_dict_keys(node):
     return set()
 
 
+def _m35c_dict_value_name(node, key):
+    """For a dict literal ``{ "key": <Name>, ... }`` return the id of the Name bound to
+    ``key``, else None. Used to discriminate the two gap edges: the real Cell 4 builds
+    edge DICTS ``e1={"source_id":source_id,"target_id":middle_id,...}`` (first edge,
+    source->middle) and ``e2={"source_id":middle_id,"target_id":target_id,...}`` (second
+    edge, middle->target). The ``middle_id``-valued endpoint tells first from second."""
+    if not isinstance(node, _ast35c.Dict):
+        return None
+    for k, v in zip(node.keys, node.values):
+        if (isinstance(k, _ast35c.Constant) and k.value == key
+                and isinstance(v, _ast35c.Name)):
+            return v.id
+    return None
+
+
+def _m35c_assign_dict_value(stmt):
+    """If stmt is ``<name> = { ... }`` return the Dict node, else None."""
+    if (isinstance(stmt, _ast35c.Assign) and len(stmt.targets) == 1
+            and isinstance(stmt.targets[0], _ast35c.Name)
+            and isinstance(stmt.value, _ast35c.Dict)):
+        return stmt.value
+    return None
+
+
 # ---- event-call templates (each references the EXACT real derivation expressions) --- #
 _EID_MOTION = ("f\"{_m35c_find_dataset()}|motion|{_m35c_ctx_var('t')}"
                "|{_m35c_ctx_var('pass_name')}|{source_id}|{target_id}\"")
@@ -4618,18 +4642,33 @@ def _m35c_inject_body(body, bound, rules, counts, binding_errors, origin):
             elif origin == "motion-relink" and recv == "frame_matches" and {"source_id", "target_id"} <= names:
                 k, tmpl, req = matchers["append:frame_matches"]
                 out.extend(tmpl()); counts[k] = counts.get(k, 0) + 1
-            elif origin == "gap-close" and {"source_id", "middle_id"} <= names and "target_id" not in names:
-                k, tmpl, req = matchers["append:first_edge"]
-                if not _m35c_missing_bindings(req, bound):
-                    out.extend(tmpl()); counts[k] = counts.get(k, 0) + 1
-            elif origin == "gap-close" and {"middle_id", "target_id"} <= names and "source_id" not in names:
-                k, tmpl, req = matchers["append:second_edge"]
-                if not _m35c_missing_bindings(req, bound):
-                    out.extend(tmpl()); counts[k] = counts.get(k, 0) + 1
             elif origin == "safe-division" and recv == "added":
                 k, tmpl, req = matchers["append:added"]
                 if not _m35c_missing_bindings(req, bound):
                     out.extend(tmpl()); counts[k] = counts.get(k, 0) + 1
+
+        # gap-close builds edge DICTS (not tuple appends): e1 with target_id==middle_id
+        # is the first edge (source->middle); e2 with source_id==middle_id is the second
+        # edge (middle->target). Anchor on the middle_id-valued endpoint of the dict.
+        if origin == "gap-close":
+            dnode = _m35c_assign_dict_value(stmt)
+            if dnode is not None and {"source_id", "target_id", "distance_um"} <= _m35c_dict_keys(dnode):
+                first_target = _m35c_dict_value_name(dnode, "target_id")
+                second_source = _m35c_dict_value_name(dnode, "source_id")
+                if first_target == "middle_id" and second_source != "middle_id":
+                    k, tmpl, req = matchers["append:first_edge"]
+                    miss = _m35c_missing_bindings(req, bound)
+                    if miss:
+                        binding_errors.append({"site": k, "missing": sorted(miss)})
+                    else:
+                        out.extend(tmpl()); counts[k] = counts.get(k, 0) + 1
+                elif second_source == "middle_id" and first_target != "middle_id":
+                    k, tmpl, req = matchers["append:second_edge"]
+                    miss = _m35c_missing_bindings(req, bound)
+                    if miss:
+                        binding_errors.append({"site": k, "missing": sorted(miss)})
+                    else:
+                        out.extend(tmpl()); counts[k] = counts.get(k, 0) + 1
 
         # extend bound with this statement's assigned names
         if isinstance(stmt, _ast35c.Assign):
@@ -4637,6 +4676,9 @@ def _m35c_inject_body(body, bound, rules, counts, binding_errors, origin):
                 for n in _ast35c.walk(tgt):
                     if isinstance(n, _ast35c.Name):
                         bound.add(n.id)
+        elif isinstance(stmt, _ast35c.AnnAssign) and stmt.value is not None \
+                and isinstance(stmt.target, _ast35c.Name):
+            bound.add(stmt.target.id)
     return out
 
 
@@ -4770,14 +4812,17 @@ M35C_SELFTEST_CELL4 = (
     "            d[i, j] = float(abs(ep - sp))\n"
     "    rows = [i for i in range(len(end_points)) if float(d[i].min()) <= threshold_um]\n"
     "    row_ind = rows[:1]; col_ind = [int(np.argmin(d[i])) for i in rows[:1]]\n"
-    "    edges = []\n"
+    "    edges = []; new_edges = []\n"
     "    for r, c in zip(row_ind, col_ind):\n"
     "        source_id = end_ids[int(r)]; target_id = start_ids[int(c)]\n"
     "        if float(d[r, c]) > threshold_um:\n"
     "            continue\n"
+    "        middle_id: int | None = None\n"
     "        middle_id = 100 + int(r)\n"
-    "        edges.append((source_id, middle_id))\n"
-    "        edges.append((middle_id, target_id))\n"
+    "        e1 = {'source_id': source_id, 'target_id': middle_id, 'edge_prob': None, 'distance_um': edge_distance_um(source_id, middle_id), 'gap_closed': 1}\n"
+    "        e2 = {'source_id': middle_id, 'target_id': target_id, 'edge_prob': None, 'distance_um': edge_distance_um(middle_id, target_id), 'gap_closed': 1}\n"
+    "        new_edges.extend([e1, e2])\n"
+    "    edges = [*edges, *new_edges]\n"
     "    return edges\n"
     "def add_safe_divisions_postlink(dataset, source_ids, candidate_ids):\n"
     "    proposals = []; added = []\n"
@@ -6705,26 +6750,64 @@ def _m35_t_structural_preflight_no_gpu():
         assert pre["recommendation"] == "M35_C_STRUCTURAL_PREFLIGHT_FAILED"
 
 
-def _m35_t_real_notebook_preflight_if_present():
-    # Runs the structural preflight against the SUPPLIED REAL notebook when it is mounted.
-    # In this environment the 0.902 bundle is NOT mounted, so this asserts the honest
-    # not-accessible path; on Kaggle (real notebook beb17b03...) it asserts PASS.
+def _m35_find_real_notebook():
+    """Locate the audited beb17b03 notebook if it exists here. Searches an env override,
+    the Kaggle mount, KAGGLE_WORKING_DIR, and a repo-local `.local_reference/` bundle
+    discovered by walking up from cwd (the SHA guard rejects any non-audited file)."""
     import os
     cand = [os.environ.get("M35_REAL_NOTEBOOK"),
             "/kaggle/input/biohub-0902-reference-bundle/reference/biohub-competition-solution.ipynb",
             str(Path(KAGGLE_WORKING_DIR) / "reference/biohub-competition-solution.ipynb")]
-    real = next((p for p in cand if p and Path(p).exists()
+    seen = set()
+    for base in [Path.cwd(), *Path.cwd().parents]:
+        for rel in (".local_reference/biohub-competition-solution.ipynb",
+                    ".local_reference/reference/biohub-competition-solution.ipynb"):
+            p = base / rel
+            if str(p) not in seen:
+                seen.add(str(p)); cand.append(str(p))
+    return next((p for p in cand if p and Path(p).exists()
                  and _m35_sha256(p) == M35_REF_NOTEBOOK_SHA), None)
+
+
+def _m35_t_real_notebook_preflight_if_present():
+    # Runs the M35-C structural instrumentation against the SUPPLIED REAL audited
+    # notebook (beb17b03) when it is present. On Kaggle (full mounted bundle) it asserts
+    # the end-to-end preflight PASS; from a repo-local `.local_reference/` bundle (no
+    # manifest / no mounted .zarr test dir) it asserts the exact-site AST result on the
+    # REAL cell 4 directly. When the notebook is absent, it asserts the honest
+    # not-accessible path. NEVER a GPU run; NEVER a fabricated PASS.
+    import json as _json, nbformat as _nbf
+    real = _m35_find_real_notebook()
     if real is None:
-        # honest: the audited notebook is not accessible here -> preflight stops cleanly
         pre = run_m35_c_structural_preflight()
         assert pre["recommendation"] == "M35_C_STRUCTURAL_PREFLIGHT_FAILED"
         assert any("not accessible" in r for r in pre["reasons"]) or pre["notebook_sha256"] != M35_REF_NOTEBOOK_SHA
         return
-    root = str(Path(real).parents[1])                         # <bundle>/reference/<nb> -> <bundle>
-    pre = run_m35_c_structural_preflight(search_roots=[root])
-    assert pre["notebook_sha256"] == M35_REF_NOTEBOOK_SHA
-    assert pre["recommendation"] == "M35_C_STRUCTURAL_PREFLIGHT_PASS"
+    # If the full 0.902 bundle (manifest) sits alongside, run the end-to-end preflight.
+    root = str(Path(real).parents[1])
+    if (Path(root) / M35_MANIFEST_NAME).exists():
+        pre = run_m35_c_structural_preflight(search_roots=[root])
+        assert pre["notebook_sha256"] == M35_REF_NOTEBOOK_SHA
+        assert pre["recommendation"] == "M35_C_STRUCTURAL_PREFLIGHT_PASS"
+        return
+    # Repo-local reference (no bundle manifest): exercise the REAL cell 4 directly.
+    nb = _nbf.read(str(real), as_version=4)
+    code_cells = [(i, c.get("source", "")) for i, c in enumerate(nb.get("cells", []))
+                  if c.get("cell_type") == "code"]
+    assert len(code_cells) == 5, f"expected 5 code cells, got {len(code_cells)}"
+    bound = _m35_bind_cells_by_index(code_cells)
+    patched, report = _m35_instrument_postprocess_source(bound["postprocess"][1])
+    compile(patched, "<real_cell4>", "exec")                  # instrumented source compiles
+    # the two gap edges are DISTINCT graph edges in the REAL source (dict-shaped, not tuples)
+    assert report["site_counts"].get("gap_addition_first_edge", 0) > 0
+    assert report["site_counts"].get("gap_addition_second_edge", 0) > 0
+    for sk in M35_REQUIRED_SITE_KEYS:
+        assert report["site_counts"].get(sk, 0) > 0, f"real cell4 site {sk} == 0"
+    assert report["all_required_exprs_present"], report["required_exprs_present"]
+    assert report["binding_ok"], report["binding_errors"]
+    assert report["no_frame_t_in_ids"]
+    assert report["dataset_propagation_patch_count"] > 0
+    assert _m35c_semantic_selftest()["passed"]
 
 
 def run_milestone35_tests():

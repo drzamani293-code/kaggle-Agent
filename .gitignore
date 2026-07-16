@@ -187,3 +187,9 @@ working/*
 output/
 .langgraph_api
 .ruff_cache
+
+# Audited 0.902 reference notebook bundle (local verification only, NEVER committed)
+.local_reference/
+biohub-competition-solution.ipynb
+biohub_real_cell4_source.py
+biohub_real_notebook_for_claude.zip

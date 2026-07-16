@@ -14,6 +14,16 @@ remain `SUPERSEDED_BY_M35_REFERENCE_0902` (files kept, not promoted).
   graph_valid. Notebook SHA256 **`beb17b03…5437e`**; controlled 400ep weight SHA256
   **`12f6881e…2fe771`**. The public LB **0.902** is USER-OBSERVED — not independently
   verified from the Kaggle leaderboard.
+- **M35-C = `M35_C_REAL_NOTEBOOK_AST_SEMANTIC_PREFLIGHT_PASS` +
+  `M35_C_KAGGLE_DATASET_PREFLIGHT_PENDING` → `M35-C = BLOCKED_NOT_YET_RUN`.** The AST +
+  semantic instrumentation passes against the SUPPLIED audited notebook (`beb17b03…`,
+  verified locally in git-ignored `.local_reference/`): the two gap bridge edges are now
+  detected (`gap_addition_first_edge = 1`, `gap_addition_second_edge = 1`),
+  `binding_errors = []`, `no_frame_t_in_ids = true`, `dataset_propagation_patch_count = 2`,
+  `semantic_selftest.passed = true`, `reasons = []`. The four mounted `.zarr` dataset
+  stems were **not** verifiable locally, so the full `M35_C_STRUCTURAL_PREFLIGHT_PASS` is
+  attainable **only** on Kaggle with the mounted competition `test/`. No candidate export
+  exists; none is claimed.
 
 The verified production runner is
 `M35_B_TWO_PHASE_CURRENT_KERNEL_REPRO_NOT_SUBMIT.txt` (`run_m35_b_two_phase`). It
@@ -213,6 +223,43 @@ notebook, and a real-notebook test asserts SHA `beb17b03…` + `PASS` when the f
 present. The audited notebook is **not mounted** here, so the real `PASS` still requires
 running the preflight where the notebook lives.
 
+*Rev11 — verified directly against the SUPPLIED real audited notebook.* The audited
+notebook was provided and verified locally (`.local_reference/`, git-ignored, never
+committed): SHA256 **`beb17b03682231460c3adab6069815e06c44adc23e427371c364901f8de5437e`**
+— exactly **five** code cells (env / config / dependency / inference / postprocess).
+Running the **unmodified** M35-C AST/semantic instrumentation against the **real** cell 4
+first surfaced a genuine mismatch: `gap_addition_first_edge = 0` and
+`gap_addition_second_edge = 0`. **Root cause:** the real `close_single_frame_gaps` does
+not append tuples — it builds two **dict edges** `e1 = {"source_id": source_id,
+"target_id": middle_id, …, "distance_um": edge_distance_um(source, middle)}` and
+`e2 = {"source_id": middle_id, "target_id": target_id, …, "distance_um":
+edge_distance_um(middle, target)}` and then `new_edges.extend([e1, e2])`; `middle_id` is
+introduced via an `AnnAssign` (`middle_id: int | None = None`). **Fix:** the gap detector
+now anchors on the dict-assignment whose `target_id` value is the Name `middle_id`
+(→ `first_edge_added`, source→middle) and whose `source_id` value is `middle_id`
+(→ `second_edge_added`, middle→target), and the binding tracker recognizes `AnnAssign`
+targets; the deterministic self-test fixture was updated to the identical dict-edge shape.
+**Verified result on the REAL cell 4** (unmodified preflight logic): `instrumented_source_
+compiles = true`; all required real-source sites found; `gap_addition_first_edge = 1`,
+`gap_addition_second_edge = 1`; `binding_errors = []`; `binding_ok = true`;
+`no_frame_t_in_ids = true`; `dataset_propagation_patch_count = 2`;
+`semantic_selftest.passed = true`; `reasons = []`. **49/49** tests pass (the real-notebook
+test now instruments `.local_reference/`'s real cell 4 directly); `py_compile` passes.
+
+**Scoped status — do NOT read this as an unconditional full pass.** The four mounted
+Kaggle `.zarr` dataset stems (`44b6_0113de3b`, `44b6_0b24845f`, `6bba_05b6850b`,
+`6bba_05db0fb1`) were **not** verifiable locally (no mounted competition `test/`).
+Therefore the recorded status is:
+- **`M35_C_REAL_NOTEBOOK_AST_SEMANTIC_PREFLIGHT_PASS`** — the real cell-4 AST + semantic
+  instrumentation passes against the audited `beb17b03…` notebook.
+- **`M35_C_KAGGLE_DATASET_PREFLIGHT_PENDING`** — the exact four `.zarr` stem check has not
+  been run.
+- **`M35-C = BLOCKED_NOT_YET_RUN`** — no candidate export exists; none is claimed.
+The full production preflight may return `M35_C_STRUCTURAL_PREFLIGHT_PASS` **only** after
+running on Kaggle with the mounted competition `test/` directory and confirming the exact
+four `.zarr` stems. No GPU inference, no full M35-C, no M35-D/E were run; no candidate
+export success and no `0.975` are claimed.
+
 ## What was genuinely executed vs. blocked
 - **M35-A — manifest-driven, PASSED on Kaggle.** All critical-file SHA256 matched
   `REFERENCE_BUNDLE_MANIFEST.json`. (Off the reference environment it reports
@@ -229,8 +276,12 @@ running the preflight where the notebook lives.
   proven data-dependent, never hardcoded. It genuinely runs only where the mounted
   bundle + support-pack weights + GPU are present; elsewhere it blocks honestly.
   **Running `predict_unet_transformer.py` alone is no longer accepted.**
-- **M35-C/D/E — blocked** until M35-B genuinely passes (`REPRO_PASS_EXACT` /
-  `REPRO_PASS_CANONICAL`).
+- **M35-C — real-notebook AST/semantic preflight PASSED locally; Kaggle dataset check
+  PENDING; still `BLOCKED_NOT_YET_RUN`.** The AST + semantic instrumentation passes
+  against the audited `beb17b03…` cell 4 (`M35_C_REAL_NOTEBOOK_AST_SEMANTIC_PREFLIGHT_
+  PASS`), but the four mounted `.zarr` stems were not verifiable locally
+  (`M35_C_KAGGLE_DATASET_PREFLIGHT_PENDING`). No candidate export exists; none claimed.
+- **M35-D/E — `BLOCKED_PENDING_M35C_PASS`.**
 
 ## Review defects fixed (commit 32abb62 → this commit)
 1. **Predict-only was not reproduction.** M35-B now executes the whole notebook
@@ -391,8 +442,12 @@ gate**. New this build:
 M19-C 0.880 historical; M29-A 0.876 failed; M30-C pending; M31 blocked; M32/M32.1
 unresolved; M33 operationally paused; M34 A–D superseded. 0.902 recorded user-observed.
 **M35-A = VERIFIED_PASS_ON_KAGGLE; M35-B = VERIFIED_REPRO_PASS_EXACT_ON_KAGGLE;
-M35-C = BLOCKED_NOT_YET_RUN** (machinery genuine; needs the instrumented predict
-subprocess + postprocess re-run on Kaggle); M35-D/E `BLOCKED_PENDING_M35C_PASS`.
-**Next action on Kaggle: run `run_m35_c_production_candidate_export` to re-run the
-instrumented edge/inference stage + postprocess; do not claim M35-C until real export
-files exist with 100 % combined recall; do not run M35-D/E; no 0.975 guarantee.**
+M35-C = BLOCKED_NOT_YET_RUN** (real-notebook AST/semantic preflight PASSED locally
+against the audited `beb17b03…` cell 4 =
+`M35_C_REAL_NOTEBOOK_AST_SEMANTIC_PREFLIGHT_PASS`; the four mounted `.zarr` stem check is
+`M35_C_KAGGLE_DATASET_PREFLIGHT_PENDING`; machinery genuine; still needs the instrumented
+predict subprocess + postprocess re-run on Kaggle); M35-D/E `BLOCKED_PENDING_M35C_PASS`.
+**Next action on Kaggle: run the full `run_m35_c_structural_preflight` (mounted `test/`,
+four exact `.zarr` stems) then `run_m35_c_production_candidate_export`; the full
+`M35_C_STRUCTURAL_PREFLIGHT_PASS` is attainable only there; do not claim M35-C until real
+export files exist with 100 % combined recall; do not run M35-D/E; no 0.975 guarantee.**
