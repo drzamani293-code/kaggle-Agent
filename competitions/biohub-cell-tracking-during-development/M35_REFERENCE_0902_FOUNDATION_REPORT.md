@@ -119,6 +119,31 @@ post-ILP set is a strict subset (GEFF-alone cannot represent rejected); rejected
 motion/gap/division proposals are recorded while a return-value wrapper misses them; and
 the `INSTRUMENTED_POSTPROCESS_MISMATCH` SHA gate fires on a divergent CSV.
 
+*Rev7 corrections (still `BLOCKED_NOT_YET_RUN`).*
+- **GEFF dataset = store stem.** `predictions/unknown/unet_transformer/split_0/<dataset>.geff`
+  → the dataset is the `.geff` **stem** (`44b6_0113de3b` …), not the `unknown` namespace
+  segment (kept as `prediction_namespace`); resume matches the four exact stems.
+- **Predict `--data-dir` = the `test/` dir.** `_m35_resolve_test_dir` appends `test`
+  and requires **exactly four `.zarr`** datasets before launching the subprocess.
+- **Real postprocess namespace.** The instrumented cell 4 runs after executing cell 0,
+  a **patched cell 1** (`REPO_DIR` → `/kaggle/working/tracking_repo`, `SUBMISSION_PATH`/
+  `RUN_STATS_PATH` → isolated `m35_c` paths), the dependency **definitions** +
+  `find_artifacts_root()`/`ensure_dependencies()` (**never materialize**), and
+  reconstructed `test_stems`/`predict_seconds` — not an empty namespace. The four M35-B
+  GEFF are hashed before/after (unchanged) and the final CSV must match the exact SHA.
+- **Real dataset in every proposal** (no `ALL`/empty) — snapshots carry the function's
+  `dataset` argument.
+- **Semantic AST anchors** instrument only the proposal loops by loop-variable name
+  (motion `source_id`/`target_id`; gap `end_id`/`start_id`; safe-division
+  `source_id`/`candidate_id`); `filter_output_graph` is survival-only (never snapshotted).
+- **Non-vacuous postprocess recall:** postprocess-added edges = final graph **minus**
+  the post-ILP learned set; every added edge must have a recorded proposal.
+- **No-GPU structural preflight** (`run_m35_c_structural_preflight`,
+  `M35_C_STRUCTURAL_PREFLIGHT_NOT_SUBMIT.txt`) reports the notebook SHA, five cell
+  bindings, dependency-split status, postprocess functions found, semantic anchor
+  counts, output-patch status, dataset propagation, and test-dir resolution →
+  `M35_C_STRUCTURAL_PREFLIGHT_PASS/FAILED`, launching **no inference**. Run it first.
+
 ## What was genuinely executed vs. blocked
 - **M35-A — manifest-driven, PASSED on Kaggle.** All critical-file SHA256 matched
   `REFERENCE_BUNDLE_MANIFEST.json`. (Off the reference environment it reports
@@ -169,7 +194,7 @@ the `INSTRUMENTED_POSTPROCESS_MISMATCH` SHA gate fires on a divergent CSV.
    with a genuine subprocess reproduction + comparison.
 
 Also: exactly one standalone entry point per module (no stray unconditional runner
-calls); each generated one-cell `.txt` is syntax-checked and self-tests 43/43.
+calls); each generated one-cell `.txt` is syntax-checked and self-tests 47/47.
 
 ## M35-A (manifest-driven audit)
 Verifies: manifest present + complete; every critical file's SHA256 == manifest;
@@ -270,7 +295,7 @@ modification of M16–M34; no claim or guarantee of 0.975; the 0.902 is recorded
 USER-OBSERVED, separate from independently verified Kaggle evidence; the M19-C
 fingerprint (133106/121718) is not reused.
 
-## Tests (43/43)
+## Tests (47/47)
 Geometry roundtrips + TTA8 safety; fusion one-to-one / order-invariance / no-link /
 independent division; **exact path resolution + manifest SHA verification**;
 **dataset-scoped node IDs**; manifest SHA-mismatch → FAIL; **isolated missing-bundle**;

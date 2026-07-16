@@ -6150,4 +6150,4 @@ def run_milestone35_full_candidate_solver(working_dir=KAGGLE_WORKING_DIR):
     return run_m35_e_full_candidate_solver(working_dir)
 
 
-run_milestone35_two_phase_repro()
+run_milestone35_c_structural_preflight()
