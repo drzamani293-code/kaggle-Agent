@@ -4075,7 +4075,24 @@ def _m35_run_instrumented_predict_subprocess(m35c_repo, dump_dir, competition_di
 # 75d. Postprocess proposal recorder + AST instrumentation of cell-4 functions
 # --------------------------------------------------------------------------- #
 def _m35c_scalarish(v):
-    return isinstance(v, (int, float, str, bool)) or v is None
+    # retain Python scalars AND numpy scalars (np.integer / np.floating / np.bool_)
+    if isinstance(v, (int, float, str, bool)) or v is None:
+        return True
+    try:
+        import numpy as _np
+        return isinstance(v, (_np.integer, _np.floating, _np.bool_))
+    except Exception:
+        return False
+
+
+def _m35c_norm(v):
+    """Normalise numpy scalars to Python scalars (JSON-serialisable)."""
+    if hasattr(v, "item") and not isinstance(v, (str, bytes)):
+        try:
+            return v.item()
+        except Exception:
+            return v
+    return v
 
 
 class M35CProposalRecorder:
@@ -4099,7 +4116,8 @@ class M35CProposalRecorder:
         if dataset is None or str(dataset) == "" or str(dataset) == "ALL":
             raise M35CInstrumentationError(f"postprocess snapshot missing a real dataset (got {dataset!r})")
         n = self._ord.get(origin, 0); self._ord[origin] = n + 1
-        keep = {k: v for k, v in (local_vars or {}).items() if _m35c_scalarish(v) and not k.startswith("_m35c")}
+        keep = {k: _m35c_norm(v) for k, v in (local_vars or {}).items()
+                if _m35c_scalarish(v) and not k.startswith("_m35c")}
         self.snapshots.append({"origin": origin, "event": event, "dataset": str(dataset), "ordinal": n, "locals": keep})
 
     def record(self, dataset, origin, source_id, target_id, stage=None, proposal_pass=None,
@@ -4192,15 +4210,28 @@ def _m35_instrument_postprocess_functions(namespace, recorder, function_map):
     return wrapped
 
 
-def _m35c_snapshot_call(origin, event):
-    # snapshot passes the REAL `dataset` local (the function argument) + full locals
+def _m35c_find_dataset():
+    """Resolve the REAL `dataset` from the current frame OR any enclosing frame (so a
+    snapshot inside a nested helper like assign_pass still finds the dataset bound by
+    the enclosing motion_relink_edges / the postprocess driver loop)."""
+    f = _sys35c._getframe(1)
+    while f is not None:
+        v = f.f_locals.get("dataset")
+        if isinstance(v, (str, int)) and str(v) not in ("", "ALL"):
+            return str(v)
+        f = f.f_back
+    return None
+
+
+def _m35c_snapshot_call(origin, site_key):
+    # snapshot passes the REAL dataset (resolved across enclosing frames) + full locals
     return _ast35c.parse(
-        f"_m35c_PROP.snapshot({origin!r}, {event!r}, locals().get('dataset'), locals())").body[0]
+        f"_m35c_PROP.snapshot({origin!r}, {site_key!r}, _m35c_find_dataset(), locals())").body[0]
 
 
 def _m35c_loop_targets(node):
     """The set of Name ids bound by a `for` loop target (handles `for x`,
-    `for i, x`, `for (a, b)`)."""
+    `for i, x`, `for (a, b, ...)`)."""
     names = set()
     tgt = node.target
     if isinstance(tgt, _ast35c.Name):
@@ -4212,68 +4243,134 @@ def _m35c_loop_targets(node):
     return names
 
 
-def _m35c_instrument_semantic_loops(func, origin, loop_vars):
-    """Inject proposal snapshots ONLY into `for` loops whose loop variables intersect
-    `loop_vars` (the semantic proposal loop), at loop-body TOP, before every
-    `continue`, and at loop-body END. Other loops in the function are left untouched.
-    Returns the number of anchored loops."""
-    n_sites = [0]
+# EXACT-STRUCTURE site specs (from the audited cell 4). Each site: (site_key, origin,
+# required loop-target names, EXCLUDED loop-target names). A `for` loop is tagged with
+# a site when required <= its targets and excluded is disjoint. The counts are reported
+# per site by the structural preflight and every one must be > 0 on the real notebook.
+#   motion_relink_edges (incl. nested assign_pass):
+#     for i, source_id in enumerate(source_ids):  for j, target_id in enumerate(target_ids):
+#     for r, c in zip(row_ind, col_ind):          for pass_name, gate_um in passes:
+#   close_single_frame_gaps:
+#     for i, ep in enumerate(end_points):  for j, sp in enumerate(start_points):
+#     for r, c in zip(row_ind, col_ind):
+#   add_safe_divisions_postlink:
+#     for source_id in source_ids:  for candidate_id in candidate_ids:
+#     for _, source_id, candidate_id, parent_dist, _ in proposals:
+M35_POSTPROC_SITE_SPECS = {
+    "motion_relink_edges": [
+        ("motion_pair_evaluation", "motion-relink", {"j", "target_id"}, set()),
+        ("motion_hungarian", "motion-relink", {"r", "c"}, set()),
+        ("motion_addition", "motion-relink", {"pass_name", "gate_um"}, set()),
+    ],
+    "close_single_frame_gaps": [
+        ("gap_matrix_pair", "gap-close", {"j", "sp"}, set()),
+        ("gap_hungarian", "gap-close", {"r", "c"}, set()),
+        ("gap_addition", "gap-close", {"r", "c"}, set()),            # edges are added inside the r/c loop
+    ],
+    "add_safe_divisions_postlink": [
+        ("safe_div_pair", "safe-division", {"candidate_id"}, {"parent_dist"}),
+        ("safe_div_acceptance", "safe-division", {"source_id", "candidate_id", "parent_dist"}, set()),
+    ],
+    "filter_output_graph": [],   # survival-only (not instrumented for proposals)
+}
+# every one of these site counts must be > 0 for the structural preflight to PASS
+M35_REQUIRED_SITE_KEYS = ("motion_pair_evaluation", "motion_hungarian", "motion_addition",
+                          "gap_matrix_pair", "gap_hungarian", "gap_addition",
+                          "safe_div_pair", "safe_div_acceptance")
 
-    def _inject_before_continue(body):
+
+def _m35c_instrument_function_sites(func, specs):
+    """Inject a proposal snapshot at every `for` loop in `func` (incl. nested defs)
+    that matches a site spec - at loop-body TOP, before every `continue`, and at
+    loop-body END. A loop may match multiple specs (e.g. Hungarian + addition). Returns
+    a {site_key: count} dict for this function."""
+    counts = {}
+
+    def _inject_before_continue(body, snaps):
         out = []
         for stmt in body:
             for fld in ("body", "orelse", "finalbody"):
                 child = getattr(stmt, fld, None)
                 if isinstance(child, list) and not isinstance(stmt, _ast35c.For):
-                    setattr(stmt, fld, _inject_before_continue(child))
+                    setattr(stmt, fld, _inject_before_continue(child, snaps))
             if isinstance(stmt, _ast35c.Continue):
-                out.append(_m35c_snapshot_call(origin, "rejected"))
+                out.extend(snaps)
             out.append(stmt)
         return out
 
     class _T(_ast35c.NodeTransformer):
         def visit_For(self, node):
             self.generic_visit(node)
-            if _m35c_loop_targets(node) & loop_vars:                 # SEMANTIC anchor only
-                node.body = ([_m35c_snapshot_call(origin, "evaluated")]
-                             + _inject_before_continue(node.body)
-                             + [_m35c_snapshot_call(origin, "iter_end")])
-                n_sites[0] += 1
+            tgts = _m35c_loop_targets(node)
+            matched = [(sk, org) for (sk, org, req, exc) in specs if req <= tgts and not (exc & tgts)]
+            if matched:
+                tops = [_m35c_snapshot_call(org, sk) for (sk, org) in matched]
+                node.body = tops + _inject_before_continue(node.body, list(tops)) + list(tops)
+                for (sk, _org) in matched:
+                    counts[sk] = counts.get(sk, 0) + 1
             return node
 
     func.body = _T().visit(_ast35c.Module(body=func.body, type_ignores=[])).body
-    return n_sites[0]
+    return counts
 
 
-def _m35_instrument_postprocess_source(cell4_src, anchors=M35_POSTPROC_ANCHORS):
-    """AST-instrument the EXACT cell-4 postprocess functions at their SEMANTIC
-    proposal loops. filter_output_graph is survival_only (never snapshotted). Returns
-    (patched_source, sites_by_function). Raises if the three proposal functions are
-    not all present (a mismatched cell can never masquerade as instrumented)."""
+def _m35c_patch_motion_dataset_propagation(tree):
+    """Patch the INSTRUMENTED COPY ONLY so `dataset` reaches motion_relink_edges:
+      - add a keyword-only `dataset=None` param to `def motion_relink_edges(...)`;
+      - add `dataset=dataset` to the motion_relink_edges(...) call inside
+        filter_output_graph.
+    Never changes graph-generation behaviour. Returns the number of edits (def + call).
+    Does NOT require the original source to already contain `dataset`."""
+    edits = 0
+    for node in _ast35c.walk(tree):
+        if isinstance(node, _ast35c.FunctionDef) and node.name == "motion_relink_edges":
+            if not any(a.arg == "dataset" for a in node.args.kwonlyargs) \
+               and not any(a.arg == "dataset" for a in node.args.args):
+                node.args.kwonlyargs.append(_ast35c.arg(arg="dataset", annotation=None))
+                node.args.kw_defaults.append(_ast35c.Constant(value=None))
+                edits += 1
+    for node in _ast35c.walk(tree):
+        if isinstance(node, _ast35c.FunctionDef) and node.name == "filter_output_graph":
+            for call in _ast35c.walk(node):
+                if (isinstance(call, _ast35c.Call) and _m35c_call_name(call.func) == "motion_relink_edges"
+                        and not any(kw.arg == "dataset" for kw in call.keywords)):
+                    call.keywords.append(_ast35c.keyword(arg="dataset", value=_ast35c.Name(id="dataset", ctx=_ast35c.Load())))
+                    edits += 1
+    return edits
+
+
+def _m35_instrument_postprocess_source(cell4_src, site_specs=M35_POSTPROC_SITE_SPECS):
+    """AST-instrument the EXACT cell-4 postprocess functions at their documented site
+    loops, and patch the instrumented copy so `dataset` propagates into
+    motion_relink_edges. filter_output_graph is survival-only. Returns
+    (patched_source, report) where report has per-site counts + the dataset-propagation
+    patch count. Raises if a proposal function is absent (a mismatched cell can never
+    masquerade as instrumented)."""
     try:
         tree = _ast35c.parse(cell4_src)
     except SyntaxError as exc:
         raise M35CInstrumentationError(f"cell-4 postprocess source unparseable: {exc}")
     funcs = {n.name: n for n in tree.body if isinstance(n, _ast35c.FunctionDef)}
-    proposal_fns = [f for f, a in anchors.items() if not a["survival_only"]]
+    proposal_fns = [f for f, specs in site_specs.items() if specs]
     missing = [f for f in proposal_fns if f not in funcs]
     if missing:
         raise M35CInstrumentationError(f"postprocess proposal functions missing from cell 4: {missing}")
-    sites = {}
-    for name, spec in anchors.items():
-        if name not in funcs:
-            sites[name] = None                                       # e.g. filter_output_graph absent
+    site_counts = {}
+    per_function = {}
+    for name, specs in site_specs.items():
+        if not specs or name not in funcs:
+            per_function[name] = {"survival_only": True} if not specs else None
             continue
-        if spec["survival_only"]:
-            sites[name] = {"survival_only": True, "anchored_loops": 0}
-        else:
-            n = _m35c_instrument_semantic_loops(funcs[name], spec["origin"], spec["loop_vars"])
-            if n == 0:
-                raise M35CInstrumentationError(
-                    f"no semantic proposal loop (vars {sorted(spec['loop_vars'])}) found in {name}")
-            sites[name] = {"survival_only": False, "anchored_loops": n}
+        counts = _m35c_instrument_function_sites(funcs[name], specs)
+        per_function[name] = counts
+        for sk, n in counts.items():
+            site_counts[sk] = site_counts.get(sk, 0) + n
+    dataset_patch = _m35c_patch_motion_dataset_propagation(tree)
+    report = {"site_counts": site_counts, "per_function": per_function,
+              "dataset_propagation_patch_count": dataset_patch,
+              "required_sites_present": {k: bool(site_counts.get(k, 0) > 0) for k in M35_REQUIRED_SITE_KEYS}}
     _ast35c.fix_missing_locations(tree)
-    return _ast35c.unparse(tree), sites
+    return _ast35c.unparse(tree), report
 
 
 def _m35_run_reference_postprocess_instrumented(notebook_path, geff_dir, out_csv, recorder,
@@ -4311,7 +4408,7 @@ def _m35_run_reference_postprocess_instrumented(notebook_path, geff_dir, out_csv
     inst_post, sites = _m35_instrument_postprocess_source(post_src)
     geff_before = _m35_geff_hashes(geff_dir)
     test_stems = [s["dataset"] for s in (count_geff_stores(geff_dir, 0).get("geff_stores") or [])]
-    g = {"__name__": "__m35c_postproc__", "_m35c_PROP": recorder}
+    g = {"__name__": "__m35c_postproc__", "_m35c_PROP": recorder, "_m35c_find_dataset": _m35c_find_dataset}
     old = _os35c.getcwd()
     try:
         _os35c.chdir(repo_dir if Path(repo_dir).is_dir() else str(working_dir))
@@ -4749,9 +4846,10 @@ def run_m35_c_structural_preflight(working_dir=KAGGLE_WORKING_DIR, search_roots=
     out = Path(working_dir); out.mkdir(parents=True, exist_ok=True)
     pre = {"kind": "m35_c_structural_preflight", "submit": False, "runs_gpu": False,
            "notebook_sha256": None, "notebook_sha_matches_expected": None, "cell_bindings": None,
-           "dependency_split_ok": None, "postprocess_functions_found": None, "anchor_counts": None,
-           "output_assignment_patch": None, "dataset_propagation_ok": None, "test_dir": None,
-           "test_zarr": None, "recommendation": "M35_C_STRUCTURAL_PREFLIGHT_FAILED", "reasons": []}
+           "dependency_split_ok": None, "postprocess_functions_found": None,
+           "site_counts": None, "required_sites_present": None, "dataset_propagation_patch_count": None,
+           "output_assignment_patch": None, "test_dir": None, "test_zarr": None, "test_stems_ok": None,
+           "recommendation": "M35_C_STRUCTURAL_PREFLIGHT_FAILED", "reasons": []}
 
     def _fail(msg):
         pre["reasons"].append(msg)
@@ -4761,7 +4859,6 @@ def run_m35_c_structural_preflight(working_dir=KAGGLE_WORKING_DIR, search_roots=
         pre["reasons"].append("reference bundle not accessible / audit not passed")
         _m35_write_json(out, "m35_c_structural_preflight.json", pre); _write_log(out)
         print("=== M35_C STRUCTURAL PREFLIGHT (no GPU) ===\n  REFERENCE_ASSETS_NOT_ACCESSIBLE. STOP.")
-        pre["recommendation"] = "M35_C_STRUCTURAL_PREFLIGHT_FAILED"
         return pre
     bundle_root = audit["bundle_root"]
     nb_path = Path(bundle_root) / M35_REF_NOTEBOOK_REL
@@ -4775,64 +4872,75 @@ def run_m35_c_structural_preflight(working_dir=KAGGLE_WORKING_DIR, search_roots=
         code_cells = [(i, c.get("source", "")) for i, c in enumerate(nb.get("cells", [])) if c.get("cell_type") == "code"]
         bound = _m35_bind_cells_by_index(code_cells)
         pre["cell_bindings"] = {role: idx for role, (idx, _s) in bound.items()}
-        # dependency split
         try:
             _m35_split_dependency_cell(bound["dependency"][1]); pre["dependency_split_ok"] = True
         except AssertionError as exc:
             pre["dependency_split_ok"] = False; _fail(f"dependency split: {exc}")
-        # postprocess functions + semantic anchor counts (no exec)
+        # EXACT-SITE instrumentation report (distinct per-site counts + dataset patch);
+        # does NOT require the original motion signature to already contain `dataset`.
         post_src = bound["postprocess"][1]
         import ast as _a
         tree = _a.parse(post_src)
         funcs = {n.name for n in tree.body if isinstance(n, _a.FunctionDef)}
-        pre["postprocess_functions_found"] = sorted(f for f in M35_POSTPROC_ANCHORS if f in funcs)
+        pre["postprocess_functions_found"] = sorted(f for f in M35_POSTPROC_SITE_SPECS if f in funcs)
         try:
-            _patched, sites = _m35_instrument_postprocess_source(post_src)
-            pre["anchor_counts"] = {k: (v.get("anchored_loops") if isinstance(v, dict) else v) for k, v in sites.items()}
+            _patched, report = _m35_instrument_postprocess_source(post_src)
+            pre["site_counts"] = report["site_counts"]
+            pre["required_sites_present"] = report["required_sites_present"]
+            pre["dataset_propagation_patch_count"] = report["dataset_propagation_patch_count"]
+            for sk in M35_REQUIRED_SITE_KEYS:
+                if report["site_counts"].get(sk, 0) <= 0:
+                    _fail(f"required site {sk} count == 0")
+            if report["dataset_propagation_patch_count"] <= 0:
+                _fail("dataset propagation patch count == 0 (motion def/call not patched)")
         except M35CInstrumentationError as exc:
-            pre["anchor_counts"] = {}; _fail(f"semantic anchors: {exc}")
-        # output-assignment patch status (cell 1)
+            pre["site_counts"] = {}; _fail(f"exact-site instrumentation: {exc}")
+        # ALL THREE cell-1 assignments must be patchable (REPO_DIR/SUBMISSION_PATH/RUN_STATS_PATH)
         _cfgp, cfg_changed = _m35_patch_cell_assignments(
             bound["configuration"][1], {"REPO_DIR": "/kaggle/working/tracking_repo",
                                         "SUBMISSION_PATH": "/kaggle/working/m35_c_instrumented_final.csv",
                                         "RUN_STATS_PATH": "/kaggle/working/m35_c_instrumented_run_stats.csv"})
         patched_targets = sorted(ch["target"] for ch in cfg_changed)
         pre["output_assignment_patch"] = {"patched_targets": patched_targets,
+                                          "repo_dir_patched": "REPO_DIR" in patched_targets,
                                           "submission_patched": "SUBMISSION_PATH" in patched_targets,
                                           "run_stats_patched": "RUN_STATS_PATH" in patched_targets}
-        if "SUBMISSION_PATH" not in patched_targets:
-            _fail("SUBMISSION_PATH assignment not found in configuration cell")
-        # dataset propagation: the proposal functions must accept a `dataset` param
-        dataset_ok = all(any(isinstance(n, _a.FunctionDef) and n.name == fn
-                             and any(a.arg == "dataset" for a in n.args.args) for n in tree.body)
-                         for fn in ("motion_relink_edges", "close_single_frame_gaps", "add_safe_divisions_postlink"))
-        pre["dataset_propagation_ok"] = bool(dataset_ok)
-        if not dataset_ok:
-            _fail("a postprocess proposal function does not take a `dataset` argument")
+        for tgt in ("REPO_DIR", "SUBMISSION_PATH", "RUN_STATS_PATH"):
+            if tgt not in patched_targets:
+                _fail(f"cell-1 assignment {tgt} not found / not patchable")
     except M35CInstrumentationError as exc:
         _fail(f"structural check: {exc}")
     except AssertionError as exc:
         _fail(f"cell binding: {exc}")
     except Exception as exc:
         _fail(f"{type(exc).__name__}: {exc}")
-    # test-directory resolution (no zarr requirement here - structural only)
+    # resolve the real test dir and require EXACTLY the four expected .zarr stems
     try:
-        td, zarrs = _m35_resolve_test_dir(competition_dir, require_zarr=False)
+        td, zarrs = _m35_resolve_test_dir(competition_dir, require_zarr=True)
         pre["test_dir"] = td; pre["test_zarr"] = zarrs
+        stems = set(Path(z).stem for z in zarrs)
+        pre["test_stems_ok"] = bool(stems == set(M35_EXPECTED_DATASETS))
+        if not pre["test_stems_ok"]:
+            _fail(f"test .zarr stems {sorted(stems)} != {list(M35_EXPECTED_DATASETS)}")
     except M35CInstrumentationError as exc:
-        pre["test_dir"] = None; _fail(f"test dir: {exc}")
+        pre["test_dir"] = None; pre["test_stems_ok"] = False; _fail(f"test dir: {exc}")
 
     ok = bool(pre["notebook_sha_matches_expected"] and pre["dependency_split_ok"]
-              and pre["postprocess_functions_found"] and pre["anchor_counts"]
+              and pre["required_sites_present"] and all(pre["required_sites_present"].values())
+              and (pre.get("dataset_propagation_patch_count") or 0) > 0
+              and (pre.get("output_assignment_patch") or {}).get("repo_dir_patched")
               and (pre.get("output_assignment_patch") or {}).get("submission_patched")
-              and pre["dataset_propagation_ok"] and not pre["reasons"])
+              and (pre.get("output_assignment_patch") or {}).get("run_stats_patched")
+              and pre["test_stems_ok"] and not pre["reasons"])
     pre["recommendation"] = "M35_C_STRUCTURAL_PREFLIGHT_PASS" if ok else "M35_C_STRUCTURAL_PREFLIGHT_FAILED"
     _m35_write_json(out, "m35_c_structural_preflight.json", pre); _write_log(out)
     print("=== M35_C STRUCTURAL PREFLIGHT (no GPU) ===")
     print(f"  notebook sha ok: {pre['notebook_sha_matches_expected']}  cells: {pre['cell_bindings']}")
     print(f"  dependency_split_ok: {pre['dependency_split_ok']}  functions: {pre['postprocess_functions_found']}")
-    print(f"  anchor_counts: {pre['anchor_counts']}  dataset_propagation_ok: {pre['dataset_propagation_ok']}")
-    print(f"  output patch: {pre.get('output_assignment_patch')}  test_dir: {pre['test_dir']}")
+    print(f"  site_counts: {pre['site_counts']}")
+    print(f"  dataset_propagation_patch_count: {pre['dataset_propagation_patch_count']}  "
+          f"output patch: {pre.get('output_assignment_patch')}")
+    print(f"  test_dir: {pre['test_dir']}  test_stems_ok: {pre['test_stems_ok']}")
     print(f"  RECOMMENDATION: {pre['recommendation']}  (no GPU, no inference, no submission)")
     return pre
 
@@ -5261,8 +5369,10 @@ def _m35_expected_fp():
     return {"final_nodes": 6, "final_edges": 4, "total_rows": 10, "divisions": 1}
 
 
-def _m35_config_cell(with_sub=True, with_stats=True):
+def _m35_config_cell(with_sub=True, with_stats=True, with_repo=False):
     s = "from pathlib import Path\nWORKING_DIR = Path('/kaggle/working')\nDET_THRESHOLD = 0.97  # scientific\n"
+    if with_repo:
+        s += "REPO_DIR = WORKING_DIR / 'tracking_repo'\n"
     if with_sub:
         s += "SUBMISSION_PATH = WORKING_DIR / 'submission.csv'\n"
     if with_stats:
@@ -5326,9 +5436,10 @@ def _m35_nb_cells(mode):
     if mode == "missing_submission":
         return [environment, _m35_config_cell(with_sub=False), dependency, inference, post_full]
     if mode == "postproc_funcs":
-        # cell 4 defines the exact postprocess functions (dataset args + semantic loops)
-        # then writes to SUBMISSION_PATH (a mismatching CSV, for the SHA-gate test)
-        return [environment, cfg, dependency, inference, _m35_c_postproc_bundle_cell4(mismatch=True)]
+        # cell 1 also assigns REPO_DIR (like the real notebook); cell 4 defines the exact
+        # postprocess functions (documented loop structures) then writes to SUBMISSION_PATH
+        return [environment, _m35_config_cell(with_repo=True), dependency, inference,
+                _m35_c_postproc_bundle_cell4(mismatch=True)]
     raise ValueError(mode)
 
 
@@ -5928,62 +6039,99 @@ def _m35_t_geff_hashes_unchanged_helper():
         assert _m35_geff_hashes(cwd) != before
 
 
-# ---- postprocess SEMANTIC AST instrumentation records REJECTED proposals (D) -- #
-# real cell-4 shape: functions take a `dataset` arg; proposal loops use the exact
-# variable names (source_id/target_id, end_id/start_id, source_id/candidate_id).
+# ---- postprocess EXACT-SITE AST instrumentation records REJECTED proposals (D) -- #
+# fixture structured EXACTLY like the audited cell 4: motion_relink_edges has NO
+# `dataset` param (added by the instrumented copy) with nested assign_pass i/source_id
+# + j/target_id loops, a r/c Hungarian loop and a pass_name/gate_um loop; gap has
+# i/ep + j/sp matrix loops and a r/c Hungarian loop; safe-division has
+# source_id/candidate_id generation + a proposal-acceptance loop.
 _M35C_FIXTURE_CELL4_FUNCS = (
+    "import numpy as np\n"
     "ADDED = []\n"
-    "def motion_relink_edges(dataset, pairs):\n"
-    "    out = []\n"
-    "    for source_id, target_id, raw_distance in pairs:\n"
-    "        within_gate = raw_distance <= 6.0\n"
-    "        if not within_gate:\n"
-    "            continue                       # REJECTED by distance gate (return never sees it)\n"
-    "        added_to_graph = True; out.append((source_id, target_id)); ADDED.append((dataset, source_id, target_id))\n"
-    "    return out\n"
-    "def close_single_frame_gaps(dataset, pairs):\n"
-    "    for end_id, start_id, gap in pairs:\n"
-    "        if gap != 1:\n"
-    "            continue\n"
-    "        added_to_graph = True; ADDED.append((dataset, end_id, start_id))\n"
+    "def motion_relink_edges(nodes_by_id, stats, learned_edge_probs=None):\n"     # NO dataset (patched in)
+    "    frame_matches = []\n"
+    "    def assign_pass(source_ids, target_ids, gate_um):\n"
+    "        cost = {}\n"
+    "        for i, source_id in enumerate(source_ids):\n"
+    "            for j, target_id in enumerate(target_ids):\n"
+    "                raw_distance = np.float64(abs(source_id - target_id))\n"       # numpy scalar (E)
+    "                within_gate = raw_distance <= gate_um\n"
+    "                cost_matrix_i = i; cost_matrix_j = j\n"
+    "                if not within_gate:\n"
+    "                    continue\n"                                                # rejected pair (before continue)
+    "                cost[(i, j)] = float(raw_distance)\n"
+    "        row_ind = list(range(min(len(source_ids), len(target_ids)))); col_ind = list(row_ind)\n"
+    "        selected = []\n"
+    "        for r, c in zip(row_ind, col_ind):\n"
+    "            source_id = source_ids[int(r)]; target_id = target_ids[int(c)]\n"
+    "            selected_by_hungarian = True; cost_val = cost.get((r, c), 999.0); accepted = cost_val < 900\n"
+    "            if accepted: selected.append((source_id, target_id))\n"
+    "        return selected\n"
+    "    for pass_name, gate_um in [('tight', 6.0), ('relaxed', 10.0)]:\n"
+    "        for (source_id, target_id) in assign_pass([0], [1, 20], gate_um):\n"   # (0,20) rejected both passes
+    "            added_to_graph = True; frame_matches.append((source_id, target_id)); ADDED.append((source_id, target_id))\n"
+    "    return frame_matches\n"
+    "def close_single_frame_gaps(dataset, end_points, start_points):\n"
+    "    end_ids = list(range(len(end_points))); start_ids = [10 + k for k in range(len(start_points))]\n"
+    "    d = np.zeros((len(end_points), len(start_points)))\n"
+    "    for i, ep in enumerate(end_points):\n"
+    "        for j, sp in enumerate(start_points):\n"
+    "            d[i, j] = np.float64(abs(ep - sp))\n"
+    "            source_id = end_ids[i]; target_id = start_ids[j]\n"
+    "            distance = d[i, j]; threshold_um = 5.0; within_gate = distance <= threshold_um\n"
+    "            matrix_i = i; matrix_j = j\n"
+    "    row_ind = [0]; col_ind = [0]\n"
+    "    for r, c in zip(row_ind, col_ind):\n"
+    "        source_id = end_ids[int(r)]; target_id = start_ids[int(c)]\n"
+    "        selected_by_hungarian = True; added_to_graph = True; ADDED.append((source_id, target_id))\n"
     "    return ADDED\n"
-    "def add_safe_divisions_postlink(dataset, pairs):\n"
-    "    for source_id, candidate_id, ok in pairs:\n"
-    "        if not ok:\n"
-    "            continue\n"
-    "        added_to_graph = True; ADDED.append((dataset, source_id, candidate_id))\n"
+    "def add_safe_divisions_postlink(dataset, source_ids, candidate_ids):\n"
+    "    proposals = []\n"
+    "    for source_id in source_ids:\n"
+    "        for candidate_id in candidate_ids:\n"
+    "            parent_distance = abs(source_id - candidate_id); child_dist = 1.0; sister_dist = 2.0\n"
+    "            existing_edge_gate = True; parent_distance_gate = parent_distance <= 4.66\n"
+    "            if not parent_distance_gate:\n"
+    "                continue\n"                                                    # rejected candidate
+    "            proposals.append((parent_distance, source_id, candidate_id, parent_distance, None))\n"
+    "    for _, source_id, candidate_id, parent_dist, _ in proposals:\n"
+    "        added_to_graph = True; ADDED.append((source_id, candidate_id))\n"
     "    return ADDED\n"
-    "def filter_output_graph(edges):\n"
-    "    survived = [e for e in edges]\n"          # unrelated loop - MUST NOT be instrumented
+    "def filter_output_graph(dataset, edges):\n"
+    "    motion_edges = motion_relink_edges({}, {}, None)\n"                        # call patched to pass dataset=dataset
+    "    survived = [e for e in edges]\n"                                          # unrelated loop - NOT instrumented
     "    return survived\n"
     "for dataset in ['44b6_0113de3b']:\n"
-    "    motion_relink_edges(dataset, [(0, 1, 3.0), (0, 9, 12.0)])\n"    # (0,9) rejected by gate
-    "    close_single_frame_gaps(dataset, [(2, 3, 1), (2, 8, 4)])\n"     # (2,8) rejected
-    "    add_safe_divisions_postlink(dataset, [(4, 5, True), (4, 7, False)])\n")   # (4,7) rejected
+    "    filter_output_graph(dataset, [(0, 1)])\n"
+    "    close_single_frame_gaps(dataset, [0, 5], [1, 20])\n"                       # (0,11) within_gate False
+    "    add_safe_divisions_postlink(dataset, [4], [5, 70])\n")                     # (4,70) rejected
 
 
 def _m35_t_postprocess_ast_records_rejected_proposals():
-    patched, sites = _m35_instrument_postprocess_source(_M35C_FIXTURE_CELL4_FUNCS)
-    # semantic anchors: exactly one proposal loop per proposal function; final-filter
-    # is survival_only (never snapshotted, its unrelated loop is NOT instrumented)
-    assert sites["motion_relink_edges"]["anchored_loops"] == 1
-    assert sites["close_single_frame_gaps"]["anchored_loops"] == 1
-    assert sites["add_safe_divisions_postlink"]["anchored_loops"] == 1
-    assert sites["filter_output_graph"]["survival_only"] is True and sites["filter_output_graph"]["anchored_loops"] == 0
+    patched, report = _m35_instrument_postprocess_source(_M35C_FIXTURE_CELL4_FUNCS)
+    sc = report["site_counts"]
+    # every documented site is anchored at least once
+    for sk in ("motion_pair_evaluation", "motion_hungarian", "motion_addition",
+               "gap_matrix_pair", "gap_hungarian", "gap_addition", "safe_div_pair", "safe_div_acceptance"):
+        assert sc.get(sk, 0) >= 1, f"site {sk} not anchored"
+    assert report["dataset_propagation_patch_count"] == 2       # motion def + filter_output_graph call
     rec = M35CProposalRecorder()
-    exec(compile(patched, "<cell4>", "exec"), {"_m35c_PROP": rec})
-    props = rec.snapshot_proposals()                              # REAL dataset per snapshot
+    exec(compile(patched, "<cell4>", "exec"), {"_m35c_PROP": rec, "_m35c_find_dataset": _m35c_find_dataset})
+    import json as _j
+    _j.dumps(rec.snapshots)                                     # numpy scalars normalised (E) -> JSON-serialisable
+    props = rec.snapshot_proposals()
     pairs = {(p["dataset"], p["source_id"], p["target_id"], p["candidate_origin"]) for p in props}
     D = "44b6_0113de3b"
     # EVALUATED-but-REJECTED proposals ARE recorded, with the REAL dataset + right origin
-    assert (D, 0, 9, "motion-relink") in pairs and (D, 2, 8, "gap-close") in pairs and (D, 4, 7, "safe-division") in pairs
-    assert (D, 0, 1, "motion-relink") in pairs and (D, 2, 3, "gap-close") in pairs
-    assert all(p["dataset"] == D for p in props)                 # no ALL / empty dataset
-    # a return-value-only wrapper is PROVEN INSUFFICIENT: it sees only ADDED results
+    assert (D, 0, 20, "motion-relink") in pairs           # rejected in both motion passes
+    assert (D, 4, 70, "safe-division") in pairs           # rejected by parent-distance gate
+    assert (D, 0, 11, "gap-close") in pairs               # gap matrix pair with within_gate False
+    assert all(p["dataset"] == D for p in props)          # no ALL / empty dataset
+    # a return-value-only wrapper is PROVEN INSUFFICIENT: ADDED holds only accepted edges
     ns = {}
     exec(compile(_M35C_FIXTURE_CELL4_FUNCS, "<cell4>", "exec"), ns)
-    accepted = {(d, s, t) for (d, s, t) in ns["ADDED"]}
-    assert (D, 0, 9) not in accepted and (D, 2, 8) not in accepted and (D, 4, 7) not in accepted
+    accepted = set(ns["ADDED"])
+    assert (0, 20) not in accepted and (4, 70) not in accepted and (0, 11) not in accepted
 
 
 def _m35_t_postprocess_requires_known_functions():
@@ -6073,12 +6221,40 @@ def _m35_t_structural_preflight_no_gpu():
         assert pre["cell_bindings"] == {"environment": 0, "configuration": 1, "dependency": 2, "inference": 3, "postprocess": 4}
         assert pre["dependency_split_ok"] is True
         assert set(pre["postprocess_functions_found"]) >= {"motion_relink_edges", "close_single_frame_gaps", "add_safe_divisions_postlink"}
-        assert pre["anchor_counts"]["motion_relink_edges"] == 1 and pre["anchor_counts"]["add_safe_divisions_postlink"] == 1
-        assert pre["dataset_propagation_ok"] is True and pre["output_assignment_patch"]["submission_patched"] is True
-        assert Path(pre["test_dir"]).name == "test"
+        # distinct per-site counts all > 0
+        assert all(pre["required_sites_present"].values())
+        for sk in ("motion_pair_evaluation", "motion_hungarian", "motion_addition",
+                   "gap_matrix_pair", "gap_hungarian", "gap_addition", "safe_div_pair", "safe_div_acceptance"):
+            assert pre["site_counts"].get(sk, 0) > 0
+        assert pre["dataset_propagation_patch_count"] == 2
+        assert pre["output_assignment_patch"]["repo_dir_patched"] and pre["output_assignment_patch"]["submission_patched"] \
+            and pre["output_assignment_patch"]["run_stats_patched"]
+        assert Path(pre["test_dir"]).name == "test" and pre["test_stems_ok"] is True
         # ...but overall FAILED because the fixture is not the audited-sha notebook
         assert pre["notebook_sha_matches_expected"] is False
         assert pre["recommendation"] == "M35_C_STRUCTURAL_PREFLIGHT_FAILED"
+
+
+def _m35_t_real_notebook_preflight_if_present():
+    # Runs the structural preflight against the SUPPLIED REAL notebook when it is mounted.
+    # In this environment the 0.902 bundle is NOT mounted, so this asserts the honest
+    # not-accessible path; on Kaggle (real notebook beb17b03...) it asserts PASS.
+    import os
+    cand = [os.environ.get("M35_REAL_NOTEBOOK"),
+            "/kaggle/input/biohub-0902-reference-bundle/reference/biohub-competition-solution.ipynb",
+            str(Path(KAGGLE_WORKING_DIR) / "reference/biohub-competition-solution.ipynb")]
+    real = next((p for p in cand if p and Path(p).exists()
+                 and _m35_sha256(p) == M35_REF_NOTEBOOK_SHA), None)
+    if real is None:
+        # honest: the audited notebook is not accessible here -> preflight stops cleanly
+        pre = run_m35_c_structural_preflight()
+        assert pre["recommendation"] == "M35_C_STRUCTURAL_PREFLIGHT_FAILED"
+        assert any("not accessible" in r for r in pre["reasons"]) or pre["notebook_sha256"] != M35_REF_NOTEBOOK_SHA
+        return
+    root = str(Path(real).parents[1])                         # <bundle>/reference/<nb> -> <bundle>
+    pre = run_m35_c_structural_preflight(search_roots=[root])
+    assert pre["notebook_sha256"] == M35_REF_NOTEBOOK_SHA
+    assert pre["recommendation"] == "M35_C_STRUCTURAL_PREFLIGHT_PASS"
 
 
 def run_milestone35_tests():
@@ -6103,9 +6279,10 @@ def run_milestone35_tests():
                _m35_t_geff_hashes_unchanged_helper, _m35_t_postprocess_ast_records_rejected_proposals,
                _m35_t_postprocess_requires_known_functions, _m35_t_instrumented_postprocess_sha_gate,
                _m35_t_geff_dataset_name_is_stem, _m35_t_resolve_test_dir,
-               _m35_t_postprocess_snapshot_requires_real_dataset, _m35_t_structural_preflight_no_gpu]:
+               _m35_t_postprocess_snapshot_requires_real_dataset, _m35_t_structural_preflight_no_gpu,
+               _m35_t_real_notebook_preflight_if_present]:
         fn()
-    print("All milestone35_reference_0902_foundation tests passed (47/47).")
+    print("All milestone35_reference_0902_foundation tests passed (48/48).")
 
 
 def run_milestone35_reference_audit(working_dir=KAGGLE_WORKING_DIR):

@@ -144,6 +144,28 @@ the `INSTRUMENTED_POSTPROCESS_MISMATCH` SHA gate fires on a divergent CSV.
   counts, output-patch status, dataset propagation, and test-dir resolution →
   `M35_C_STRUCTURAL_PREFLIGHT_PASS/FAILED`, launching **no inference**. Run it first.
 
+*Rev8 — exact audited cell-4 structure.* Corrections after the real-notebook facts:
+`motion_relink_edges` has **no** `dataset` param in the original — the instrumented
+**copy** adds a keyword-only `dataset=None` and patches the `filter_output_graph` call
+to `motion_relink_edges(..., dataset=dataset)` (`dataset_propagation_patch_count`); the
+preflight checks the **patch**, not the original signature. Instrumentation now uses
+**exact semantic site specs** (not every loop): motion pair-evaluation (`for i,source_id`
+/ `for j,target_id`), motion Hungarian (`for r,c in zip(row_ind,col_ind)`), motion
+addition (`for pass_name,gate_um`); gap matrix (`for i,ep` / `for j,sp`), gap Hungarian +
+addition (`for r,c`); safe-division pair (`for candidate_id`) + acceptance
+(`for _,source_id,candidate_id,parent_dist,_ in proposals`); `filter_output_graph` stays
+survival-only. `dataset` is resolved across enclosing frames (`_m35c_find_dataset`) so a
+snapshot inside nested `assign_pass` still gets it; numpy scalars are retained and
+normalised. The preflight now reports **distinct** counts —
+`motion_pair_evaluation / motion_hungarian / motion_addition / gap_matrix_pair /
+gap_hungarian / gap_addition / safe_div_pair / safe_div_acceptance` +
+`dataset_propagation_patch_count` — and requires every one `> 0`, all **three** cell-1
+assignments patched (`REPO_DIR`/`SUBMISSION_PATH`/`RUN_STATS_PATH`), and exactly the four
+`.zarr` test stems. **The audited notebook (`beb17b03…`) is not mounted in the authoring
+environment**, so the real-notebook `PASS` and its genuine site counts can only be
+produced by running the preflight on Kaggle; a dedicated test runs the preflight against
+the real notebook when present and asserts SHA + `PASS`.
+
 ## What was genuinely executed vs. blocked
 - **M35-A — manifest-driven, PASSED on Kaggle.** All critical-file SHA256 matched
   `REFERENCE_BUNDLE_MANIFEST.json`. (Off the reference environment it reports
@@ -194,7 +216,7 @@ the `INSTRUMENTED_POSTPROCESS_MISMATCH` SHA gate fires on a divergent CSV.
    with a genuine subprocess reproduction + comparison.
 
 Also: exactly one standalone entry point per module (no stray unconditional runner
-calls); each generated one-cell `.txt` is syntax-checked and self-tests 47/47.
+calls); each generated one-cell `.txt` is syntax-checked and self-tests 48/48.
 
 ## M35-A (manifest-driven audit)
 Verifies: manifest present + complete; every critical file's SHA256 == manifest;
@@ -295,7 +317,7 @@ modification of M16–M34; no claim or guarantee of 0.975; the 0.902 is recorded
 USER-OBSERVED, separate from independently verified Kaggle evidence; the M19-C
 fingerprint (133106/121718) is not reused.
 
-## Tests (47/47)
+## Tests (48/48)
 Geometry roundtrips + TTA8 safety; fusion one-to-one / order-invariance / no-link /
 independent division; **exact path resolution + manifest SHA verification**;
 **dataset-scoped node IDs**; manifest SHA-mismatch → FAIL; **isolated missing-bundle**;
