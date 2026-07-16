@@ -4342,27 +4342,99 @@ class M35CEventRecorder:
             r = dict(st); r["event_types"] = sorted(st["event_types"]); rows.append(r)
         return rows
 
+    def gap_bridge_materializations(self):
+        """Reconstruct each gap bridge's TWO ACTUAL edges from the SEPARATE
+        first_edge_added / second_edge_added records in the ORDERED event log - NEVER
+        from consolidated `features` (the second event's features.update overwrites the
+        first event's actual_edge_source_id/target_id). Validates identity:
+        first  actual (bridge_source -> middle);  second actual (middle -> bridge_target).
+        Returns {evaluation_id: {first, second, middle_id, bridge_source_id,
+        bridge_target_id, dataset, complete, valid}}."""
+        by_eid = {}
+        for ev in self.events:
+            if ev.get("origin") != "gap-close" or ev["event_type"] not in ("first_edge_added", "second_edge_added"):
+                continue
+            d = by_eid.setdefault(ev["evaluation_id"], {
+                "first": None, "second": None, "dataset": ev["dataset"],
+                "bridge_source_id": ev["source_id"], "bridge_target_id": ev["target_id"]})
+            f = ev["features"]
+            rec = {"actual_source": f.get("actual_edge_source_id"), "actual_target": f.get("actual_edge_target_id"),
+                   "middle_id": f.get("middle_id"), "ordinal": ev["event_ordinal"]}
+            d["first" if ev["event_type"] == "first_edge_added" else "second"] = rec
+        out = {}
+        for eid, d in by_eid.items():
+            first, second = d["first"], d["second"]
+            complete = bool(first and second)
+            middle_id = first["middle_id"] if (first and first["middle_id"] is not None) else (
+                second["middle_id"] if second else None)
+            valid = bool(complete and middle_id is not None
+                         and first["actual_source"] == d["bridge_source_id"]
+                         and first["actual_target"] == middle_id
+                         and second["actual_source"] == middle_id
+                         and second["actual_target"] == d["bridge_target_id"])
+            out[eid] = {**d, "complete": complete, "valid": valid, "middle_id": middle_id}
+        return out
+
+    def _blank_candidate(self):
+        return {"dataset": None, "source_id": None, "target_id": None, "candidate_origin": None,
+                "candidate_role": None, "evaluation_id": None, "bridge_evaluation_id": None,
+                "bridge_source_id": None, "bridge_target_id": None, "middle_id": None, "actual_edge_index": None,
+                "proposal_stage": None, "proposal_pass": None, "proposal_ordinal": 0,
+                "physical_distance_um": None, "learned_edge_prob": None, "learned_edge_logit": None,
+                "motion_score": None, "appearance_cost": None, "disappearance_cost": None, "division_feature": 0.0,
+                "source_t": None, "target_t": None, "source_z": None, "source_y": None, "source_x": None,
+                "target_z": None, "target_y": None, "target_x": None, "gates_passed": {},
+                "accepted_by_assignment": False, "added_to_graph": False, "survived_final_filter": False,
+                "source_det_conf": None, "target_det_conf": None, "selected_by_reference_solver": False}
+
     def raw_candidates(self):
-        """Consolidated state as raw candidate dicts (candidate_export schema)."""
+        """Raw candidate dicts. Each proposal keeps its consolidated ROW (candidate_role
+        'bridge_proposal' for gap, else 'proposal'); ADDITIONALLY, every accepted gap
+        bridge with BOTH first_edge_added + second_edge_added emits TWO derived
+        'materialized_edge' rows for its actual graph edges (source->middle, middle->
+        target), read from the ordered event log. The bridge row is never replaced or
+        collapsed."""
+        mats = self.gap_bridge_materializations()
         out = []
         for st in self.consolidated():
             et = set(st["event_types"]); f = st["features"]; g = st["gates"]
-            out.append({"dataset": st["dataset"], "source_id": int(st["source_id"]), "target_id": int(st["target_id"]),
-                        "candidate_origin": st["origin"], "proposal_stage": "|".join(sorted(et)) or "pair_evaluated",
-                        "proposal_pass": st.get("pass_name") or (st["origin"] or "").replace("-", "_"),
+            origin = st["origin"]; eid = st["evaluation_id"]
+            s = int(st["source_id"]); t = int(st["target_id"])
+            mid = f.get("middle_id")
+            row = self._blank_candidate()
+            row.update({"dataset": st["dataset"], "source_id": s, "target_id": t,
+                        "candidate_origin": origin,
+                        "candidate_role": "bridge_proposal" if origin == "gap-close" else "proposal",
+                        "evaluation_id": eid,
+                        "middle_id": (int(mid) if mid is not None else None),
+                        "proposal_stage": "|".join(sorted(et)) or "pair_evaluated",
+                        "proposal_pass": st.get("pass_name") or (origin or "").replace("-", "_"),
                         "proposal_ordinal": (st["events"][0] if st["events"] else 0),
                         "physical_distance_um": f.get("raw_distance", f.get("distance")),
-                        "learned_edge_prob": f.get("learned_probability"), "learned_edge_logit": None,
-                        "motion_score": f.get("predicted_motion_distance"),
-                        "appearance_cost": None, "disappearance_cost": None, "division_feature": 0.0,
-                        "source_t": None, "target_t": None, "source_z": None, "source_y": None, "source_x": None,
-                        "target_z": None, "target_y": None, "target_x": None, "gates_passed": g,
-                        # entering the sorted-proposals loop must NEVER imply acceptance
-                        "accepted_by_assignment": bool("accepted" in et or "edge_added" in et),
-                        "added_to_graph": _m35c_added_to_graph(st["origin"], et),
+                        "learned_edge_prob": f.get("learned_probability"),
+                        "motion_score": f.get("predicted_motion_distance"), "gates_passed": g,
+                        "accepted_by_assignment": _m35c_accepted_by_assignment(origin, et),
+                        "added_to_graph": _m35c_added_to_graph(origin, et),
                         "survived_final_filter": bool("survived_final_filter" in et),
-                        "source_det_conf": None, "target_det_conf": None,
-                        "selected_by_reference_solver": _m35c_added_to_graph(st["origin"], et)})
+                        "selected_by_reference_solver": _m35c_added_to_graph(origin, et)})
+            out.append(row)
+            # derived MATERIALIZED-edge rows for accepted+valid gap bridges (2 per bridge)
+            m = mats.get(eid)
+            if origin == "gap-close" and m and m["complete"] and m["valid"]:
+                for idx, (stage, rec) in enumerate((("gap_first_materialized_edge", m["first"]),
+                                                    ("gap_second_materialized_edge", m["second"]))):
+                    mr = self._blank_candidate()
+                    mr.update({"dataset": st["dataset"],
+                               "source_id": int(rec["actual_source"]), "target_id": int(rec["actual_target"]),
+                               "candidate_origin": "gap-close", "candidate_role": "materialized_edge",
+                               "evaluation_id": f"{eid}|{stage}",
+                               "bridge_evaluation_id": eid, "bridge_source_id": s, "bridge_target_id": t,
+                               "middle_id": int(m["middle_id"]), "actual_edge_index": idx,
+                               "proposal_stage": stage, "proposal_pass": st.get("pass_name") or "gap_close",
+                               "proposal_ordinal": int(rec["ordinal"]),
+                               "accepted_by_assignment": True, "added_to_graph": True,
+                               "selected_by_reference_solver": True})
+                    out.append(mr)
         return out
 
     def snapshot_proposals(self):     # candidate_export compatibility alias
@@ -4378,8 +4450,19 @@ class M35CEventRecorder:
 def _m35c_added_to_graph(origin, event_types):
     et = set(event_types)
     if origin == "gap-close":
-        return bool(set(M35_C_GAP_BOTH_EDGES) <= et or "edge_added" in et)
+        return bool(set(M35_C_GAP_BOTH_EDGES) <= et)
     return bool("edge_added" in et)
+
+
+def _m35c_accepted_by_assignment(origin, event_types):
+    """ORIGIN-AWARE acceptance. motion-relink / safe-division: an `accepted` or
+    `edge_added` event. gap-close: BOTH `first_edge_added` AND `second_edge_added`
+    (a bridge is accepted only when both materialized edges reached the graph), so a
+    materialized bridge is never accepted_by_assignment=False with added_to_graph=True."""
+    et = set(event_types)
+    if origin == "gap-close":
+        return bool(set(M35_C_GAP_BOTH_EDGES) <= et)
+    return bool("accepted" in et or "edge_added" in et)
 
 
 # names that are always considered bound (module constants / helpers / builtins)
@@ -5139,7 +5222,9 @@ def _m35_run_reference_postprocess_instrumented(notebook_path, geff_dir, out_csv
 # the exact reference final edges must be 100%.
 M35_CANDIDATE_ORIGINS = ("learned", "motion-relink", "gap-close", "safe-division")
 M35_CANDIDATE_COLUMNS = [
-    "dataset", "source_id", "target_id", "candidate_origin", "proposal_stage", "proposal_pass", "proposal_ordinal",
+    "dataset", "source_id", "target_id", "candidate_origin", "candidate_role",
+    "evaluation_id", "bridge_evaluation_id", "bridge_source_id", "bridge_target_id", "middle_id", "actual_edge_index",
+    "proposal_stage", "proposal_pass", "proposal_ordinal",
     "source_t", "target_t", "frame_delta",
     "source_z", "source_y", "source_x", "target_z", "target_y", "target_x", "physical_distance_um",
     "learned_edge_prob", "learned_edge_logit", "motion_score", "appearance_cost", "disappearance_cost",
@@ -5245,6 +5330,41 @@ def validate_candidate_export(cand_df):
             "missing_feature_counts": missing_counts, "nonfinite_counts": nonfinite,
             "origins_present": origins_present, "learned_present": bool("learned" in origins_present),
             "raw_keys_unique": bool(dup_key_count == 0), "table_valid": valid}
+
+
+def _m35_gap_materialization_report(cand_df):
+    """Verify every ACCEPTED gap bridge materialized EXACTLY two graph edges with valid
+    identity (first source->middle, second middle->target) and unique keys. An accepted
+    bridge with zero/one/conflicting actual-edge rows fails a production gate."""
+    empty = {"accepted_bridges": 0, "materialized_rows": 0, "bridges_with_two_edges": 0,
+             "all_accepted_bridges_complete": True, "identity_valid": True, "keys_unique": True,
+             "incomplete_bridges": [], "invalid_bridges": []}
+    if "candidate_role" not in cand_df.columns or len(cand_df) == 0:
+        return empty
+    bridges = cand_df[(cand_df["candidate_role"] == "bridge_proposal")
+                      & (cand_df["accepted_by_assignment"].astype(bool))]
+    mats = cand_df[cand_df["candidate_role"] == "materialized_edge"]
+    incomplete = []; invalid = []
+    for b in bridges.itertuples():
+        eid = b.evaluation_id
+        mrows = mats[mats["bridge_evaluation_id"] == eid]
+        if len(mrows) != 2:
+            incomplete.append(str(eid)); continue
+        by_idx = {int(r.actual_edge_index): r for r in mrows.itertuples()}
+        ok = (set(by_idx) == {0, 1}
+              and int(by_idx[0].source_id) == int(b.source_id)
+              and int(by_idx[0].target_id) == int(by_idx[0].middle_id)
+              and int(by_idx[1].source_id) == int(by_idx[1].middle_id)
+              and int(by_idx[1].target_id) == int(b.target_id))
+        if not ok:
+            invalid.append(str(eid))
+    mat_keys = mats["candidate_key"].tolist() if "candidate_key" in mats else []
+    return {"accepted_bridges": int(len(bridges)), "materialized_rows": int(len(mats)),
+            "bridges_with_two_edges": int(len(bridges) - len(incomplete)),
+            "all_accepted_bridges_complete": bool(len(incomplete) == 0),
+            "identity_valid": bool(len(invalid) == 0),
+            "keys_unique": bool(len(mat_keys) == len(set(mat_keys))),
+            "incomplete_bridges": incomplete[:50], "invalid_bridges": invalid[:50]}
 
 
 def write_candidate_export(cand_df, out_dir):
@@ -5378,9 +5498,11 @@ def export_candidates_from_reference(bundle_root, executed_cwd, geff_stores, wor
     return (learned_raw + postproc_raw), final_edges, division_final_edges, aux
 
 
-def _m35_c_production_gates(aux, recall, validation, export, geff_unchanged):
+def _m35_c_production_gates(aux, recall, validation, export, geff_unchanged, gap_mat):
     """The FULL M35-C PASS gate (finding F). Every condition must be true; a genuine
-    Kaggle run is required."""
+    Kaggle run is required. Includes gap-bridge materialization gates: every accepted
+    bridge must materialize EXACTLY two valid, uniquely-keyed graph edges and the exact
+    final-edge recall (which now covers those materialized edges) must be 100%."""
     ps = aux.get("predict_subprocess") or {}
     return {
         "predict_subprocess_ok": bool(ps.get("return_code") == 0),
@@ -5396,6 +5518,12 @@ def _m35_c_production_gates(aux, recall, validation, export, geff_unchanged):
         "combined_recall_100": bool(recall["combined_final_recall"]["recall_100pct"]),
         "division_recall_100": bool(recall["division_recall"]["recall_100pct"]),
         "raw_proposal_keys_unique": bool(validation["raw_keys_unique"]),
+        # gap bridge materialization (each accepted bridge -> EXACTLY 2 valid graph edges)
+        "gap_materialized_edges_complete": bool(gap_mat["all_accepted_bridges_complete"]),
+        "gap_materialized_edge_identity_valid": bool(gap_mat["identity_valid"]),
+        "gap_materialized_edge_keys_unique": bool(gap_mat["keys_unique"]),
+        "gap_final_edge_recall_100": bool(recall["combined_final_recall"]["recall_100pct"]
+                                          and recall["postprocess_proposal_recall"]["recall_100pct"]),
         "output_files_have_sha": bool(export["n_partitions"] > 0 and all(p["sha256"] for p in export["partitions"])),
         "candidate_provider_not_used": True,
     }
@@ -5477,9 +5605,11 @@ def run_m35_c_full_candidate_export(working_dir=KAGGLE_WORKING_DIR, search_roots
                               learned_post_ilp_edges=aux.get("learned_post_ilp_edges"),
                               postprocess_added_edges=aux.get("postprocess_added_edges"))
     validation = validate_candidate_export(cand_df)
+    gap_mat = _m35_gap_materialization_report(cand_df)
     export = write_candidate_export(cand_df, out / "m35_c_candidates")
     geff_unchanged = bool(_m35_geff_hashes(executed_cwd) == geff_hashes_before)
     rep["recall"] = recall; rep["validation"] = validation; rep["export"] = export
+    rep["gap_materialization"] = gap_mat
     rep["per_dataset"] = validation["per_dataset_counts"]; rep["aux"] = {k: v for k, v in aux.items()
                                                                          if k not in ("learned_post_ilp_edges", "postprocess_added_edges")}
     rep["m35b_geff_unchanged"] = geff_unchanged
@@ -5491,10 +5621,11 @@ def run_m35_c_full_candidate_export(working_dir=KAGGLE_WORKING_DIR, search_roots
     if used_provider:
         # TEST SEAM: exercises the table/recall machinery but can NEVER be a real PASS.
         ok = bool(recall["candidate_recall_100pct"] and validation["table_valid"] and validation["raw_keys_unique"]
-                  and export["n_partitions"] > 0)
+                  and export["n_partitions"] > 0 and gap_mat["all_accepted_bridges_complete"]
+                  and gap_mat["identity_valid"] and gap_mat["keys_unique"])
         rep["recommendation"] = "CANDIDATE_EXPORT_TEST_SEAM_OK" if ok else "CANDIDATE_EXPORT_INCOMPLETE"
     else:
-        gates = _m35_c_production_gates(aux, recall, validation, export, geff_unchanged)
+        gates = _m35_c_production_gates(aux, recall, validation, export, geff_unchanged, gap_mat)
         rep["production_gates"] = gates
         rep["recommendation"] = "CANDIDATE_EXPORT_PASS" if all(gates.values()) else "CANDIDATE_EXPORT_INCOMPLETE"
     rep["runtime_s"] = round((_t35.time_ns() - t0) / 1e9, 3)
@@ -7011,6 +7142,53 @@ def _m35_t_real_notebook_preflight_if_present():
     assert _m35c_semantic_selftest()["passed"]
 
 
+def _m35_t_gap_materialized_edge_recall():
+    # An accepted gap bridge must export its abstract proposal AND its two MATERIALIZED
+    # graph edges; a skipped-extend bridge exports only the proposal (no materialized
+    # rows). The two actual edges are read from the SEPARATE first/second_edge_added
+    # event records (not consolidated features), reaching 100% postprocess+combined recall.
+    patched, _report = _m35_instrument_postprocess_source(M35C_SELFTEST_CELL4)
+    rec = M35CEventRecorder()
+    g = {"_m35c_EVT": rec, "_m35c_find_dataset": _m35c_find_dataset, "_m35c_ctx_var": _m35c_ctx_var}
+    exec(compile(patched, "<gap_mat_test>", "exec"), g)
+    raw = rec.raw_candidates()
+    D = "44b6_0113de3b"; S, M, T = 0, 100, 10        # accepted bridge (0,10), middle 100
+
+    def has(role, s, t, stage=None):
+        return [c for c in raw if c["candidate_role"] == role and c["source_id"] == s and c["target_id"] == t
+                and (stage is None or c["proposal_stage"] == stage)]
+    # abstract bridge proposal preserved + TWO materialized edges (S->M, M->T)
+    assert has("bridge_proposal", S, T), "accepted bridge proposal row missing"
+    fm = has("materialized_edge", S, M, "gap_first_materialized_edge")
+    sm = has("materialized_edge", M, T, "gap_second_materialized_edge")
+    assert fm and sm, "materialized gap edges missing"
+    assert fm[0]["bridge_source_id"] == S and fm[0]["bridge_target_id"] == T and fm[0]["middle_id"] == M
+    assert fm[0]["actual_edge_index"] == 0 and sm[0]["actual_edge_index"] == 1
+    assert fm[0]["accepted_by_assignment"] and fm[0]["added_to_graph"] and fm[0]["selected_by_reference_solver"]
+    # skipped-extend bridge (1,11): proposal present, NO materialized rows, not added_to_graph
+    prep = has("bridge_proposal", 1, 11)
+    assert prep and prep[0]["added_to_graph"] is False and prep[0]["accepted_by_assignment"] is False
+    assert not [c for c in raw if c["candidate_role"] == "materialized_edge"
+                and c["bridge_evaluation_id"] == prep[0]["evaluation_id"]]
+    # exact recall against the ACTUAL final edges of the accepted bridge
+    final_edges = [(D, S, M), (D, M, T)]
+    cand_df = build_candidate_table(raw, final_edges)
+    recall = candidate_recall(cand_df, final_edges, postprocess_added_edges=final_edges)
+    assert recall["combined_final_recall"]["recall_100pct"], recall["combined_final_recall"]
+    assert recall["postprocess_proposal_recall"]["recall_100pct"], recall["postprocess_proposal_recall"]
+    # abstract bridge (S,T) present but NOT final_edge_present (S->T is not a real edge)
+    br = cand_df[(cand_df.candidate_role == "bridge_proposal") & (cand_df.source_id == S) & (cand_df.target_id == T)]
+    assert len(br) == 1 and bool(br.iloc[0]["final_edge_present"]) is False
+    # the two materialized rows ARE final_edge_present
+    mr = cand_df[cand_df.candidate_role == "materialized_edge"]
+    assert bool(mr["final_edge_present"].all()) and len(mr) == 2
+    # gap materialization gate: exactly two valid, uniquely-keyed edges per accepted bridge
+    gm = _m35_gap_materialization_report(cand_df)
+    assert gm["all_accepted_bridges_complete"] and gm["identity_valid"] and gm["keys_unique"]
+    assert gm["accepted_bridges"] == 1 and gm["materialized_rows"] == 2
+    assert int(cand_df.attrs.get("duplicate_key_count", 0)) == 0
+
+
 def run_milestone35_tests():
     for fn in [_m35_t_geometry_roundtrips, _m35_t_tta8_group_safe, _m35_t_fusion_reused,
                _m35_t_manifest_audit_pass, _m35_t_manifest_sha_mismatch_fails, _m35_t_isolated_missing_bundle,
@@ -7034,9 +7212,9 @@ def run_milestone35_tests():
                _m35_t_event_recorder_rejects_bad_records, _m35_t_return_wrapper_insufficient,
                _m35_t_postprocess_requires_known_functions, _m35_t_instrumented_postprocess_sha_gate,
                _m35_t_geff_dataset_name_is_stem, _m35_t_resolve_test_dir, _m35_t_structural_preflight_no_gpu,
-               _m35_t_real_notebook_preflight_if_present]:
+               _m35_t_real_notebook_preflight_if_present, _m35_t_gap_materialized_edge_recall]:
         fn()
-    print("All milestone35_reference_0902_foundation tests passed (49/49).")
+    print("All milestone35_reference_0902_foundation tests passed (50/50).")
 
 
 def run_milestone35_reference_audit(working_dir=KAGGLE_WORKING_DIR):
