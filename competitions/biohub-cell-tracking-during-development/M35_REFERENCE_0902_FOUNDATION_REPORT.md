@@ -22,47 +22,79 @@ nested notebook kernel. The old nested-nbclient path is **deprecated**
 (`_run_m35_b_nested_nbclient_deprecated`); it died with `DeadKernelError` after
 inference and before postprocessing.
 
-### Two-phase current-kernel M35-B
-- **Phase 1 (inference, once):** run the inference cells in the current kernel,
-  validate **four** GEFF stores, write `m35_b_phase1_checkpoint.json`, then **release
-  CUDA/RAM** (`torch.cuda.empty_cache` + `gc.collect`).
-- **Resume:** if four complete GEFF stores already exist, **skip inference**
-  (`inference_rerun=false`, `resumed_from_geff=true`) and never delete a valid
+### Two-phase current-kernel M35-B (exact five-cell index binding)
+The audited reference notebook has **exactly five code cells** with a fixed role order —
+`0 environment · 1 configuration · 2 dependency · 3 inference · 4 postprocess`. Cells
+are bound **strictly by index** (`_m35_bind_cells_by_index`), **not by keyword**: the
+postprocess cell (4) also mentions GEFF / prediction / torch terms, so any keyword
+heuristic would misclassify it. The old heuristic (`_M35_INFER_MARKERS`,
+`_m35_is_inference_cell`, `_m35_last_inference_index`) is **removed from the production
+path**. Production also asserts the exact audited notebook sha256
+(`require_reference_notebook_sha`, `M35_REF_NOTEBOOK_SHA = beb17b03…`) and reports
+`REFERENCE_NOTEBOOK_SHA_MISMATCH` / `REFERENCE_NOTEBOOK_STRUCTURE_MISMATCH` when the
+notebook is not the audited 0.902 reference.
+- **Phase 1:** run cells `[0,1,2,3]` (env/config/dependency **+ inference once**) in the
+  current kernel, validate **four** GEFF stores, write `m35_b_phase1_checkpoint.json`,
+  then **release CUDA/RAM** (`torch.cuda.empty_cache` + `gc.collect`).
+- **Resume:** if four complete GEFF stores already exist, run cells `[0,1,2]` to
+  reconstruct the env/config/dependency namespace, **skip only the inference cell (3)**
+  (`inference_rerun=false`, `resumed_from_geff=true`), and never delete a valid
   resumable `tracking_repo` (only stale final CSVs are cleared).
-- **Phase 2 (postprocess):** run the exact audited postprocessing cells → write
+- **Phase 2:** run **only** the postprocess cell (4) → write
   `m35_b_reference_reproduced.csv`, hash it **before** reading the reference, then
   compare (byte + canonical) → `REPRO_PASS_EXACT` / `REPRO_PASS_CANONICAL` / mismatch.
 - Only `SUBMISSION_PATH` / `RUN_STATS_PATH` are AST-patched; the no-GPU preflight still
   gates. Never submits.
 
-### Genuine M35-C — full pre-ILP candidate export
-`M35_C_FULL_PREILP_CANDIDATE_EXPORT_NOT_SUBMIT.txt` (`run_m35_c_full_candidate_export`)
-is no longer a placeholder. Hard-gated on the **verified** M35-B report
-(`REPRO_PASS_EXACT`/`CANONICAL` + exact fingerprint), it reuses the four validated GEFF
-stores (no detection rerun), instruments the exact reference pipeline **immediately
-before ILP selection**, and exports **every** candidate edge the solver considered —
-including **ILP-rejected** ones — tagged by origin (**learned / motion-relink /
-gap-close / safe-division**) with a stable `candidate_key` that preserves all
-contributing origins (no lossy dedup). Per-candidate features: dataset, source/target
-id + t, frame_delta, coordinates, `physical_distance_um`, learned edge prob/logit,
-motion score, appearance/disappearance cost, division features,
-`selected_by_reference_solver`, `final_edge_present`, detection confidence. Node IDs
-are dataset-scoped. It writes partitioned **Parquet** (CSV fallback) under
-`/kaggle/working/m35_c_candidates/` + `m35_c_candidate_export_report.json` reporting
-per-dataset counts, positive/final counts, **candidate recall vs the exact final edges
-(must be 100%)**, division recall, duplicate-key / missing-feature / finite checks,
-file sizes, SHA256, runtime. Recommendation `CANDIDATE_EXPORT_PASS` /
-`CANDIDATE_EXPORT_INCOMPLETE` / `BLOCKED_PENDING_M35B_PASS` /
-`REFERENCE_ASSETS_NOT_ACCESSIBLE` / `RUNTIME_DEPENDENCY_FAILURE`. It never submits,
-never modifies the M35-B CSV, and claims no score improvement. **M35-D/E are blocked
-`BLOCKED_PENDING_M35C_PASS`** until a genuine 100 %-recall export.
+### Genuine M35-C — instrumented pre-ILP candidate export (machinery, NOT yet passed)
+**Correction to the prior report:** the earlier build described M35-C as “genuine”
+while `export_candidates_from_reference` still raised `RuntimeError` unconditionally and
+the passing tests used an injected synthetic `candidate_provider`. That was not a
+genuine export. This build removes the stub and implements the real machinery, but
+**M35-C has not passed — no real Kaggle export files exist and none is claimed.**
 
-**What remains blocked:** the REAL candidate export runs on Kaggle with the mounted
-reference pipeline + four GEFF stores; off that environment M35-C blocks honestly
-(`RUNTIME_DEPENDENCY_FAILURE`) and never fabricates candidates. The export machinery,
-schema, 100 % recall, dedup-provenance, and gating are unit-tested (29/29) on synthetic
-candidates. **M35-C is not claimed complete until real candidate edges are exported on
-Kaggle.** No guarantee of 0.975.
+*Why a re-run is mandatory.* The four saved GEFF stores are **post-ILP** outputs
+(`predict_unet_transformer.py`: `graph = build_graph(coords, edges);
+graph = solver.solve(graph); save_graph(...)`). The pre-ILP learned candidates the
+solver **rejected** are therefore **not recoverable** from the saved stores — the
+edge/inference stage must be **re-run with instrumentation**.
+
+*What is now genuinely implemented (section 75).*
+- `_m35_instrument_predict_source` AST-injects dump hooks **immediately after
+  `graph = build_graph(coords, edges)`** (pre-ILP candidate graph, before solve) and
+  **after `graph = solver.solve(graph)`** (post-ILP selected set). It **raises**
+  `M35CInstrumentationError` if either anchor is absent — a stub can never masquerade
+  as instrumented.
+- Production `export_candidates_from_reference` (no unconditional raise) **re-runs** the
+  instrumented predict script into a **separate** dir
+  `/kaggle/working/m35_c_instrumented_predictions/` (never overwrites the M35-B GEFF).
+  Each learned candidate is tagged `selected_by_reference_solver = edge ∈ solver output`.
+- Postprocess proposals (motion-relink / gap-close / safe-division) are captured by
+  `M35CProposalRecorder` + `_m35_instrument_postprocess_functions`
+  (`gates_passed` / `accepted_by_assignment` / `added_to_graph` / `survived_final_filter`).
+- Combined table: `candidate_key = dataset|origin|source_id|target_id|proposal_stage`
+  (origins/stages **never** collapsed); every raw proposal preserved
+  (`m35_c_raw_proposals.csv`). **Separate recalls:** learned pre-ILP vs post-ILP
+  learned; postprocess-proposal vs postprocess-added-final; **combined vs the exact
+  final edges (must be 100%)**; division.
+
+*Production vs test seam.* `candidate_provider` is a **unit-test seam only**; the
+explicit production entry point `run_m35_c_production_candidate_export` forces no
+provider. Off the reference environment production returns `RUNTIME_DEPENDENCY_FAILURE`
+(predict deps / anchors absent) — never fabricates candidates. **What still blocks a
+real pass:** the postprocess proposal instrumentation must be **wired to the mounted
+repo’s actual** motion-relink / gap-close / safe-division function names, and the
+instrumented re-run must run on Kaggle. Until export files exist with 100 % combined
+recall, **M35-C stays blocked and is not claimed passed;** M35-D/E stay
+`BLOCKED_PENDING_M35C_PASS`. No guarantee of 0.975.
+
+*Genuine tests (not synthetic-only).* Beyond the synthetic-provider path, the
+instrumentation mechanism is unit-tested on **real fixtures**: a runnable predict
+script (`build_graph` → `solver.solve`) that drops low-probability edges proves the
+**ILP-rejected pre-ILP candidates are exported** with `selected_by_reference_solver=false`;
+a companion test proves the **post-ILP selected set is a strict subset** of the pre-ILP
+candidates (so the GEFF stores alone cannot represent rejected candidates); and a test
+proves a stub without anchors **cannot** be instrumented.
 
 ## What was genuinely executed vs. blocked
 - **M35-A — manifest-driven, PASSED on Kaggle.** All critical-file SHA256 matched
@@ -114,7 +146,7 @@ Kaggle.** No guarantee of 0.975.
    with a genuine subprocess reproduction + comparison.
 
 Also: exactly one standalone entry point per module (no stray unconditional runner
-calls); each generated one-cell `.txt` is syntax-checked and self-tests 20/20.
+calls); each generated one-cell `.txt` is syntax-checked and self-tests 35/35.
 
 ## M35-A (manifest-driven audit)
 Verifies: manifest present + complete; every critical file's SHA256 == manifest;
@@ -215,18 +247,29 @@ modification of M16–M34; no claim or guarantee of 0.975; the 0.902 is recorded
 USER-OBSERVED, separate from independently verified Kaggle evidence; the M19-C
 fingerprint (133106/121718) is not reused.
 
-## Tests (20/20)
+## Tests (35/35)
 Geometry roundtrips + TTA8 safety; fusion one-to-one / order-invariance / no-link /
 independent division; **exact path resolution + manifest SHA verification**;
 **dataset-scoped node IDs**; manifest SHA-mismatch → FAIL; **isolated missing-bundle**;
-downstream isolated block; **exact/canonical/mismatch comparison**; **real M35-B
+downstream isolated block; **exact/canonical/mismatch comparison**; **two-phase M35-B
 execution (exact/canonical/mismatch)**; **invalid-graph rejection**; **M35-B
 not-hardcoded (data-dependent across fixtures)**; M35-B blocks without bundle without
-fabricating a fingerprint; preset/fingerprint targets; no-local-metric / no-0975.
+fabricating a fingerprint; preset/fingerprint targets; no-local-metric / no-0975. New
+this build: **exact five-cell index binding** (inference always cell 3, postprocess
+always cell 4, ≠5 cells rejected, keyword heuristic gone from `globals()`); **audited
+notebook sha gate** → `REFERENCE_NOTEBOOK_SHA_MISMATCH`; **instrumented predict re-run
+exports ILP-rejected pre-ILP candidates**; **post-ILP set is a strict subset (GEFF
+alone cannot represent rejected)**; **stub without anchors cannot be instrumented**;
+**M35-C without real instrumentation → `RUNTIME_DEPENDENCY_FAILURE`** (production entry
+point, no provider); **postprocess proposal recorder** (accepted/added/survived, absent
+function → honest error); **5-component candidate_key + separate recalls**.
 
 ## Status ledger
 M19-C 0.880 historical; M29-A 0.876 failed; M30-C pending; M31 blocked; M32/M32.1
 unresolved; M33 operationally paused; M34 A–D superseded. 0.902 recorded user-observed.
-M35-A diagnostic (PASSED on Kaggle); M35-B real, blocked off-environment; M35-C/D/E
-blocked pending a genuine M35-B pass. **Exact first action on Kaggle: run M35-A, then
-M35-B; do not build a submission before M35-B genuinely passes.**
+M35-A + M35-B **VERIFIED on Kaggle** (`REFERENCE_AUDIT_PASS`, `REPRO_PASS_EXACT`);
+M35-C machinery genuine but **not yet passed** (needs the instrumented edge/inference
+re-run + postprocess-function wiring on Kaggle); M35-D/E `BLOCKED_PENDING_M35C_PASS`.
+**Exact next action on Kaggle: run the M35-C production entry point
+(`run_m35_c_production_candidate_export`) to re-run the instrumented edge/inference
+stage; do not claim M35-C until real export files exist with 100 % combined recall.**

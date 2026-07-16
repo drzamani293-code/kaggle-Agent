@@ -3225,24 +3225,54 @@ def run_m35_b_patch_preflight(bundle_root, manifest_sha=None):
 # --------------------------------------------------------------------------- #
 # The verified Kaggle run executes the audited notebook's cells in the CURRENT
 # Kaggle kernel (NOT a nested nbclient kernel - that died with DeadKernelError
-# after inference, before postprocessing). Phase 1 runs inference exactly once and
-# checkpoints after validating four GEFF stores; CUDA/RAM are released; Phase 2
-# runs the exact audited postprocessing to write m35_b_reference_reproduced.csv.
-# On resume, the four existing GEFF stores are reused and inference is skipped; a
-# valid resumable tracking_repo is never deleted.
+# after inference, before postprocessing). The audited reference notebook has
+# EXACTLY FIVE code cells with a fixed role ORDER (verified: notebook sha256
+# beb17b03...):
+#   0 environment   1 configuration   2 dependency   3 inference   4 postprocess
+# Cells are bound by INDEX (never by keyword) - the postprocess cell also mentions
+# GEFF/prediction/torch terms, so any keyword heuristic would misclassify it.
+# Phase 1 runs env/config/dependency (+ inference exactly once) and checkpoints
+# after validating four GEFF stores; CUDA/RAM are released; Phase 2 runs ONLY the
+# postprocess cell to write m35_b_reference_reproduced.csv. On resume, the four
+# existing GEFF stores are reused, env/config/dependency are re-run to reconstruct
+# the namespace, ONLY the inference cell is skipped, and postprocess runs.
 import io as _io35
 import contextlib as _cl35
 import gc as _gc35
 
+# VERIFIED audited reference notebook identity + structure.
+M35_REF_NOTEBOOK_SHA = "beb17b03682231460c3adab6069815e06c44adc23e427371c364901f8de5437e"
+M35_EXPECTED_CODE_CELLS = 5
+M35_CELL_ROLES = ("environment", "configuration", "dependency", "inference", "postprocess")
+# Structural sanity tokens checked AFTER index binding (never used to DISCOVER the
+# boundary - the index IS the boundary). At least one token per listed role.
+M35_CELL_EXPECTED_TOKENS = {
+    1: ("SUBMISSION_PATH",),                                  # configuration assigns the output target
+    3: ("predict", "geff", "predictions", "unet"),           # inference produces the GEFF stores
+    4: ("SUBMISSION_PATH", "to_csv", "relink", "division", "gap"),  # postprocess writes the final CSV
+}
 M35_PHASE1_CHECKPOINT = "m35_b_phase1_checkpoint.json"
-# Markers that identify a heavy INFERENCE cell (skipped on resume).
-_M35_INFER_MARKERS = ("predict_unet_transformer", ".geff", "saved", "predictions", "model(",
-                      "torch", "cuda", "inference", "unet")
 
 
-def _m35_is_inference_cell(src):
-    s = (src or "").lower()
-    return any(m in s for m in _M35_INFER_MARKERS)
+def _m35_bind_cells_by_index(code_cells):
+    """Bind the audited reference notebook's FIVE code cells strictly BY INDEX:
+      0 environment, 1 configuration, 2 dependency, 3 inference, 4 postprocess.
+    Asserts exactly five code cells and the expected structural tokens per cell
+    (the tokens are a sanity guard, NOT a discovery heuristic). Returns an ordered
+    dict role -> (cell_index, source). Raises AssertionError on any mismatch."""
+    assert len(code_cells) == M35_EXPECTED_CODE_CELLS, (
+        f"audited reference notebook must have exactly {M35_EXPECTED_CODE_CELLS} code cells, "
+        f"got {len(code_cells)}")
+    bound = {}
+    for role_idx, role in enumerate(M35_CELL_ROLES):
+        idx, src = code_cells[role_idx]
+        expected = M35_CELL_EXPECTED_TOKENS.get(role_idx)
+        if expected:
+            low = (src or "").lower()
+            assert any(tok.lower() in low for tok in expected), (
+                f"{role} cell (index {role_idx}) missing an expected structural token from {expected}")
+        bound[role] = (idx, src)
+    return bound
 
 
 def _m35_free_cuda_ram():
@@ -3291,12 +3321,17 @@ def _m35_valid_geff_checkpoint(executed_cwd, minimum=M35_GEFF_EXPECTED):
 
 
 def run_m35_b_two_phase(working_dir=KAGGLE_WORKING_DIR, competition_dir=KAGGLE_COMPETITION_INPUT_DIR,
-                        search_roots=None, expected_fingerprint=None, require_artifact=True):
+                        search_roots=None, expected_fingerprint=None, require_artifact=True,
+                        require_reference_notebook_sha=True):
     """VERIFIED two-phase CURRENT-KERNEL M35-B. Never launches a nested kernel.
-    Phase 1: run inference once (unless 4 GEFF already exist) -> validate 4 GEFF ->
-    checkpoint -> free CUDA/RAM. Phase 2: run the exact audited postprocessing ->
+    Binds the five audited notebook cells BY INDEX. Phase 1: env/config/dependency
+    (+ inference once, unless 4 GEFF already exist) -> validate 4 GEFF -> checkpoint
+    -> free CUDA/RAM. Phase 2: run ONLY the postprocess cell ->
     m35_b_reference_reproduced.csv. Compares generated SHA BEFORE reading the
-    reference. Emits REPRO_PASS_EXACT / REPRO_PASS_CANONICAL / mismatch. NON-SUBMIT."""
+    reference. Emits REPRO_PASS_EXACT / REPRO_PASS_CANONICAL / mismatch. NON-SUBMIT.
+    `require_reference_notebook_sha` gates on the exact audited notebook sha256
+    (production True; unit tests pass False to run on structurally-equivalent
+    fixtures)."""
     _RUN_LOG.clear()
     out = Path(working_dir); out.mkdir(parents=True, exist_ok=True)
     log_lines = []
@@ -3307,8 +3342,9 @@ def run_m35_b_two_phase(working_dir=KAGGLE_WORKING_DIR, competition_dir=KAGGLE_C
     rep = {"kind": "reference_0902_repro_two_phase", "submit": False, "nested_kernel_used": False,
            "resolved_inputs": {}, "file_sha256": {}, "artifact_manifest_verification": {},
            "notebook_original_sha256": None, "notebook_sha_matches_manifest": None,
+           "expected_notebook_sha256": M35_REF_NOTEBOOK_SHA, "notebook_sha_matches_expected": None,
            "patch_preflight": None, "patch_allowlist_ok": None, "executed_cwd": None,
-           "inference_rerun": None, "resumed_from_geff": None, "phase1_checkpoint": None,
+           "cell_binding": None, "inference_rerun": None, "resumed_from_geff": None, "phase1_checkpoint": None,
            "cuda_ram_released": None, "geff_stores": None, "phase1_return_code": None,
            "phase2_return_code": None, "stdout_tail": None, "execution_start_ns": None,
            "generation_provenance": None, "reproduced_fingerprint": None,
@@ -3333,6 +3369,14 @@ def run_m35_b_two_phase(working_dir=KAGGLE_WORKING_DIR, competition_dir=KAGGLE_C
     rep["notebook_original_sha256"] = _m35_sha256(str(nb_path))
     manifest_nb_sha = (audit.get("critical_files", {}).get(M35_REF_NOTEBOOK_REL, {}) or {}).get("actual_sha256")
     rep["notebook_sha_matches_manifest"] = bool(manifest_nb_sha and rep["notebook_original_sha256"] == manifest_nb_sha)
+    rep["notebook_sha_matches_expected"] = bool(rep["notebook_original_sha256"] == M35_REF_NOTEBOOK_SHA)
+
+    # Gate on the EXACT audited notebook sha256 (production). Never reproduce a
+    # notebook we cannot identify as the audited 0.902 reference.
+    if require_reference_notebook_sha and not rep["notebook_sha_matches_expected"]:
+        rep["recommendation"] = "REFERENCE_NOTEBOOK_SHA_MISMATCH"
+        L(f"reference notebook sha256 mismatch: {rep['notebook_original_sha256']} != {M35_REF_NOTEBOOK_SHA}")
+        return _m35_finish_two_phase(out, rep, log_lines)
 
     # exact 400ep weight SHA
     wpath, wsha, wok = _m35_resolve_support_pack_artifact()
@@ -3390,23 +3434,34 @@ def run_m35_b_two_phase(working_dir=KAGGLE_WORKING_DIR, competition_dir=KAGGLE_C
         return _m35_finish_two_phase(out, rep, log_lines)
 
     code_cells = [(i, c.get("source", "")) for i, c in enumerate(patched.get("cells", [])) if c.get("cell_type") == "code"]
+    # bind the five cells STRICTLY BY INDEX (no keyword heuristic)
+    try:
+        bound = _m35_bind_cells_by_index(code_cells)
+    except AssertionError as exc:
+        rep["recommendation"] = "REFERENCE_NOTEBOOK_STRUCTURE_MISMATCH"; rep["reason"] = str(exc)
+        L(f"cell binding failed: {exc}")
+        return _m35_finish_two_phase(out, rep, log_lines)
+    environment_cell = bound["environment"]      # cells[0]
+    configuration_cell = bound["configuration"]  # cells[1]
+    dependency_cell = bound["dependency"]        # cells[2]
+    inference_cell = bound["inference"]          # cells[3]
+    postprocess_cell = bound["postprocess"]      # cells[4]
+    setup_cells = [environment_cell, configuration_cell, dependency_cell]
+    rep["cell_binding"] = {role: idx for role, (idx, _s) in bound.items()}
     exec_globals = {"__name__": "__m35b__"}
     stdout_all = ""
 
-    # ---- PHASE 1: inference (skip on resume) ----
+    # ---- PHASE 1: env/config/dependency (+ inference unless resuming) ----
     if resumable:
         rep["resumed_from_geff"] = True; rep["inference_rerun"] = False
-        phase1_cells = [(i, s) for (i, s) in code_cells if not _m35_is_inference_cell(s)]
-        # run only setup (non-inference) cells so postprocess has its namespace
-        rc1, err1, so1, ran1 = _m35_exec_cells_current_kernel(
-            [(i, s) for (i, s) in phase1_cells if i < _m35_last_inference_index(code_cells)], exec_globals, executed_cwd)
-        L(f"resume: skipped inference; ran setup cells {ran1}")
+        # reconstruct the environment/config/dependency namespace; skip ONLY inference
+        rc1, err1, so1, ran1 = _m35_exec_cells_current_kernel(setup_cells, exec_globals, executed_cwd)
+        L(f"resume: reconstructed env/config/dependency namespace (cells {ran1}); "
+          f"skipped inference cell {inference_cell[0]}")
     else:
         rep["resumed_from_geff"] = False; rep["inference_rerun"] = True
-        boundary = _m35_last_inference_index(code_cells)
-        phase1_cells = [(i, s) for (i, s) in code_cells if i <= boundary]
-        rc1, err1, so1, ran1 = _m35_exec_cells_current_kernel(phase1_cells, exec_globals, executed_cwd)
-        L(f"phase 1 inference ran cells {ran1} rc={rc1}")
+        rc1, err1, so1, ran1 = _m35_exec_cells_current_kernel(setup_cells + [inference_cell], exec_globals, executed_cwd)
+        L(f"phase 1 ran env/config/dependency + inference (cells {ran1}) rc={rc1}")
     rep["phase1_return_code"] = rc1; stdout_all += so1
     if rc1 != 0:
         rep["recommendation"] = "RUNTIME_DEPENDENCY_FAILURE"; rep["execution_error"] = err1
@@ -3420,20 +3475,18 @@ def run_m35_b_two_phase(working_dir=KAGGLE_WORKING_DIR, competition_dir=KAGGLE_C
         rep["recommendation"] = "RUNTIME_DEPENDENCY_FAILURE"; L(f"only {geff['geff_count_total']} GEFF stores")
         return _m35_finish_two_phase(out, rep, log_lines)
     checkpoint = {"inference_done": True, "geff_count": geff["geff_count_total"], "geff_paths": geff["geff_paths"],
-                  "resumed": bool(resumable), "ts_ns": _t35.time_ns()}
+                  "resumed": bool(resumable), "inference_cell_index": inference_cell[0], "ts_ns": _t35.time_ns()}
     _m35_write_json(out, M35_PHASE1_CHECKPOINT, checkpoint)
     rep["phase1_checkpoint"] = checkpoint
 
     # release CUDA/RAM before postprocessing
     rep["cuda_ram_released"] = _m35_free_cuda_ram()
 
-    # ---- PHASE 2: exact audited postprocessing ----
-    boundary = _m35_last_inference_index(code_cells)
-    phase2_cells = [(i, s) for (i, s) in code_cells if i > boundary]
-    rc2, err2, so2, ran2 = _m35_exec_cells_current_kernel(phase2_cells, exec_globals, executed_cwd)
+    # ---- PHASE 2: exact audited postprocessing (postprocess cell ONLY) ----
+    rc2, err2, so2, ran2 = _m35_exec_cells_current_kernel([postprocess_cell], exec_globals, executed_cwd)
     rep["phase2_return_code"] = rc2; stdout_all += so2
     rep["stdout_tail"] = stdout_all[-4000:]
-    L(f"phase 2 postprocess ran cells {ran2} rc={rc2}")
+    L(f"phase 2 postprocess ran cell {ran2} rc={rc2}")
     if rc2 != 0:
         rep["recommendation"] = "RUNTIME_DEPENDENCY_FAILURE"; rep["execution_error"] = err2
         return _m35_finish_two_phase(out, rep, log_lines)
@@ -3471,11 +3524,6 @@ def run_m35_b_two_phase(working_dir=KAGGLE_WORKING_DIR, competition_dir=KAGGLE_C
     return _m35_finish_two_phase(out, rep, log_lines)
 
 
-def _m35_last_inference_index(code_cells):
-    idxs = [i for (i, s) in code_cells if _m35_is_inference_cell(s)]
-    return max(idxs) if idxs else -1
-
-
 def _m35_delete_stale_preserving_repo(working_dir, preserve_repo):
     keep = {M35_MATERIALIZED_REPO} if preserve_repo else set()
     deleted = []
@@ -3499,10 +3547,12 @@ def _m35_finish_two_phase(out, rep, log_lines):
     (Path(out) / "m35_reference_0902_repro.log").write_text("\n".join(str(x) for x in log_lines) + "\n")
     _write_log(out)
     print("=== M35_B TWO-PHASE CURRENT-KERNEL REPRO (verified) ===")
-    print(f"  nested_kernel_used: {rep['nested_kernel_used']}  inference_rerun: {rep.get('inference_rerun')}  "
-          f"resumed_from_geff: {rep.get('resumed_from_geff')}")
+    print(f"  nested_kernel_used: {rep['nested_kernel_used']}  notebook_sha_ok: {rep.get('notebook_sha_matches_expected')}  "
+          f"inference_rerun: {rep.get('inference_rerun')}  resumed_from_geff: {rep.get('resumed_from_geff')}")
+    if rep.get("cell_binding"):
+        print(f"  cell binding (by index): {rep['cell_binding']}")
     g = rep.get("geff_stores") or {}
-    print(f"  fresh GEFF stores: {g.get('geff_count_total')}  phase1_rc: {rep.get('phase1_return_code')}  phase2_rc: {rep.get('phase2_return_code')}")
+    print(f"  GEFF stores: {g.get('geff_count_total')}  phase1_rc: {rep.get('phase1_return_code')}  phase2_rc: {rep.get('phase2_return_code')}")
     if rep.get("reproduced_fingerprint"):
         f = rep["reproduced_fingerprint"]
         print(f"  reproduced: {f['final_nodes']} nodes / {f['final_edges']} edges / {f['total_rows']} rows / {f['divisions']} div")
@@ -3511,101 +3561,413 @@ def _m35_finish_two_phase(out, rep, log_lines):
     return rep
 
 # --------------------------------------------------------------------------- #
-# 75. M35-C GENUINE full pre-ILP candidate export
+# 75. M35-C GENUINE instrumentation: pre/post-ILP dump + postprocess recorder
 # --------------------------------------------------------------------------- #
-# Instruments the exact reference pipeline immediately BEFORE ILP selection and
-# exports EVERY candidate edge the solver considered (learned / motion-relink /
-# gap-close / safe-division), including candidates the ILP rejected, with full
-# per-candidate features. Hard-gated on the VERIFIED M35-B report. Never submits;
-# never modifies the M35-B reproduced CSV. Candidate recall against the exact
-# reference final edges must be 100%.
+# The four saved GEFF stores are POST-ILP outputs: predict_unet_transformer.py
+# does `graph = build_graph(coords, edges); graph = solver.solve(graph);
+# save_graph(...)`. The pre-ILP candidate edges the solver REJECTED are therefore
+# NOT recoverable from the saved stores - the edge/inference stage must be RE-RUN
+# with instrumentation. This section provides the genuine machinery:
+#   (A) an AST source-patcher that injects pre/post-ILP dump hooks around the exact
+#       reference anchors (build_graph / solver.solve) - it RAISES if the anchors
+#       are absent (never silently no-ops, never fabricates candidates);
+#   (B) a graph recorder that extracts every candidate edge + its features and the
+#       solver-selected subset per dataset (networkx-compatible duck typing);
+#   (C) a postprocess ProposalRecorder + function-wrapper instrumentation for
+#       motion-relink / gap-close / safe-division proposals.
+# All dumps go to /kaggle/working/m35_c_instrumented_predictions/ - a SEPARATE dir
+# that never overwrites the verified M35-B GEFF stores.
+import ast as _ast35c
+
+M35_C_INSTRUMENTED_DIR = "m35_c_instrumented_predictions"
+M35_C_PREILP_ANCHOR = "build_graph"      # graph = build_graph(coords, edges)
+M35_C_POSTILP_ANCHOR = "solve"           # graph = solver.solve(graph)
+M35_C_PROPOSAL_ORIGINS = ("motion-relink", "gap-close", "safe-division")
+
+
+class M35CInstrumentationError(RuntimeError):
+    """Raised when the reference pipeline cannot be genuinely instrumented (anchors
+    absent, graph contract unmet, deps missing). Off-Kaggle this surfaces as an
+    honest RUNTIME_DEPENDENCY_FAILURE - M35-C never fabricates a pass."""
+
+
+# --------------------------------------------------------------------------- #
+# 75a. AST source-patcher: inject pre/post-ILP dump hooks around the exact anchors
+# --------------------------------------------------------------------------- #
+def _m35c_call_name(func):
+    if isinstance(func, _ast35c.Name):
+        return func.id
+    if isinstance(func, _ast35c.Attribute):
+        return func.attr
+    return None
+
+
+def _m35c_assign_call_name(stmt):
+    """If `stmt` is `X = <callable>(...)` with a single Name target, return
+    (target_name, called_name); else (None, None)."""
+    if (isinstance(stmt, _ast35c.Assign) and len(stmt.targets) == 1
+            and isinstance(stmt.targets[0], _ast35c.Name) and isinstance(stmt.value, _ast35c.Call)):
+        return stmt.targets[0].id, _m35c_call_name(stmt.value.func)
+    return None, None
+
+
+def _m35c_hook_stmt(method, target_var):
+    """AST for `_m35c_REC.<method>(<target_var>, _m35c_ctx(locals()))`."""
+    return _ast35c.parse(f"_m35c_REC.{method}({target_var}, _m35c_ctx(locals()))").body[0]
+
+
+def _m35c_patch_body(body, state):
+    """Recursively inject the pre/post-ILP dump hooks into a statement list,
+    immediately AFTER each `graph = build_graph(...)` (pre-ILP, before solve) and
+    each `graph = solver.solve(...)` (post-ILP selected)."""
+    new = []
+    for stmt in body:
+        for fld in ("body", "orelse", "finalbody"):
+            child = getattr(stmt, fld, None)
+            if isinstance(child, list):
+                setattr(stmt, fld, _m35c_patch_body(child, state))
+        # handlers of try/except carry their own bodies
+        for handler in getattr(stmt, "handlers", []) or []:
+            handler.body = _m35c_patch_body(handler.body, state)
+        new.append(stmt)
+        tgt, called = _m35c_assign_call_name(stmt)
+        if called == M35_C_PREILP_ANCHOR:
+            new.append(_m35c_hook_stmt("record_pre", tgt)); state["pre"] = True
+        elif called == M35_C_POSTILP_ANCHOR:
+            new.append(_m35c_hook_stmt("record_post", tgt)); state["post"] = True
+    return new
+
+
+def _m35_instrument_predict_source(src):
+    """Return an instrumented copy of a predict-script source with pre/post-ILP
+    dump hooks injected around the exact reference anchors. Raises
+    M35CInstrumentationError if BOTH anchors are not found (so an unrecognised or
+    stub script can never masquerade as instrumented)."""
+    try:
+        tree = _ast35c.parse(src)
+    except SyntaxError as exc:
+        raise M35CInstrumentationError(f"predict source unparseable: {exc}")
+    state = {"pre": False, "post": False}
+    tree.body = _m35c_patch_body(tree.body, state)
+    if not (state["pre"] and state["post"]):
+        raise M35CInstrumentationError(
+            f"anchors not found (build_graph={state['pre']}, solve={state['post']}); "
+            "cannot instrument pre-ILP candidate export")
+    _ast35c.fix_missing_locations(tree)
+    return compile(tree, "<m35c_instrumented_predict>", "exec"), state
+
+
+def _m35c_ctx(local_vars):
+    """Best-effort dataset name from the anchor's surrounding scope (a `dataset`,
+    `ds`, or `name` local); None when unavailable (recorder then uses the ordinal)."""
+    for key in ("dataset", "ds", "name", "dataset_name"):
+        v = (local_vars or {}).get(key)
+        if isinstance(v, (str, int)):
+            return str(v)
+    return None
+
+
+# --------------------------------------------------------------------------- #
+# 75b. Graph recorder (networkx-compatible duck typing)
+# --------------------------------------------------------------------------- #
+def _m35c_iter_edges(graph):
+    """Yield (source_raw, target_raw, attrs) for every candidate edge. Supports
+    networkx DiGraph and any object exposing edges(data=True); raises otherwise."""
+    edges_attr = getattr(graph, "edges", None)
+    if edges_attr is None:
+        raise M35CInstrumentationError("graph has no .edges (unknown graph type)")
+    try:
+        it = edges_attr(data=True)
+    except TypeError:
+        it = edges_attr
+    for e in it:
+        if isinstance(e, (tuple, list)) and len(e) == 3:
+            s, t, a = e
+        elif isinstance(e, (tuple, list)) and len(e) == 2:
+            s, t, a = e[0], e[1], {}
+        else:
+            raise M35CInstrumentationError("unexpected edge structure")
+        yield s, t, dict(a or {})
+
+
+def _m35c_iter_nodes(graph):
+    nodes_attr = getattr(graph, "nodes", None)
+    if nodes_attr is None:
+        raise M35CInstrumentationError("graph has no .nodes (unknown graph type)")
+    try:
+        it = nodes_attr(data=True)
+    except TypeError:
+        it = nodes_attr
+    for n in it:
+        if isinstance(n, (tuple, list)) and len(n) == 2:
+            nid, a = n[0], n[1]
+        else:
+            nid, a = n, {}
+        yield nid, dict(a or {})
+
+
+def _m35c_edge_features(a):
+    """Normalise per-candidate-edge attributes into the canonical feature names."""
+    def g(*keys, default=None):
+        for k in keys:
+            if k in a and a[k] is not None:
+                return a[k]
+        return default
+    return {"learned_edge_prob": g("prob", "edge_prob", "learned_edge_prob"),
+            "learned_edge_logit": g("logit", "edge_logit", "learned_edge_logit"),
+            "physical_distance_um": g("dist", "edge_dist", "distance", "physical_distance_um"),
+            "motion_score": g("motion", "motion_score"),
+            "appearance_cost": g("appearance_cost", "app_cost"),
+            "disappearance_cost": g("disappearance_cost", "disapp_cost"),
+            "division_feature": g("division", "division_feature", default=0.0)}
+
+
+class M35CRecorder:
+    """Records pre-ILP candidate graphs and post-ILP selected edge sets per
+    build/solve invocation, pairing by dataset (falling back to call ordinal). All
+    dumps are written under a SEPARATE instrumented dir (never the M35-B stores)."""
+
+    def __init__(self, out_dir):
+        self.out = Path(out_dir); self.out.mkdir(parents=True, exist_ok=True)
+        self.pre = {}       # dataset -> {nodes:{id:attrs}, candidates:[(s,t,feat)]}
+        self.post = {}      # dataset -> set((s,t))
+        self._pre_n = 0
+        self._post_n = 0
+
+    def record_pre(self, graph, ctx=None):
+        ds = ctx if ctx is not None else f"dataset_{self._pre_n}"
+        self._pre_n += 1
+        nodes = {}
+        for nid, a in _m35c_iter_nodes(graph):
+            nodes[str(nid)] = {"t": a.get("t"), "z": a.get("z"), "y": a.get("y"), "x": a.get("x")}
+        cands = []
+        for s, t, a in _m35c_iter_edges(graph):
+            feat = _m35c_edge_features(a)
+            cands.append({"source_id": int(s), "target_id": int(t), **feat})
+        self.pre[ds] = {"nodes": nodes, "candidates": cands}
+        _m35_write_json(self.out, f"pre_ilp__{ds}.json", self.pre[ds])
+        return graph
+
+    def record_post(self, graph, ctx=None):
+        ds = ctx if ctx is not None else f"dataset_{self._post_n}"
+        self._post_n += 1
+        sel = set()
+        for s, t, _a in _m35c_iter_edges(graph):
+            sel.add((int(s), int(t)))
+        self.post[ds] = sel
+        _m35_write_json(self.out, f"post_ilp__{ds}.json", {"selected_edges": sorted(map(list, sel))})
+        return graph
+
+    def learned_raw_candidates(self):
+        """Every pre-ILP LEARNED candidate as a raw proposal dict, tagged with the
+        solver-selected flag (an edge REJECTED by the ILP has
+        selected_by_reference_solver=False and is only recoverable here)."""
+        raw = []
+        for ds, pre in self.pre.items():
+            sel = self.post.get(ds, set())
+            nodes = pre["nodes"]
+            for c in pre["candidates"]:
+                s, t = c["source_id"], c["target_id"]
+                sn = nodes.get(str(s), {}); tn = nodes.get(str(t), {})
+                raw.append({"dataset": ds, "source_id": s, "target_id": t,
+                            "candidate_origin": "learned", "proposal_stage": "pre_ilp",
+                            "source_t": sn.get("t"), "target_t": tn.get("t"),
+                            "source_z": sn.get("z"), "source_y": sn.get("y"), "source_x": sn.get("x"),
+                            "target_z": tn.get("z"), "target_y": tn.get("y"), "target_x": tn.get("x"),
+                            "learned_edge_prob": c.get("learned_edge_prob"),
+                            "learned_edge_logit": c.get("learned_edge_logit"),
+                            "physical_distance_um": c.get("physical_distance_um"),
+                            "motion_score": c.get("motion_score"),
+                            "appearance_cost": c.get("appearance_cost"),
+                            "disappearance_cost": c.get("disappearance_cost"),
+                            "division_feature": c.get("division_feature"),
+                            "selected_by_reference_solver": bool((s, t) in sel),
+                            "source_det_conf": None, "target_det_conf": None})
+        return raw
+
+    def learned_post_ilp_edges(self):
+        """The solver-SELECTED learned edges (post-ILP), for the learned recall
+        check. These are exactly what the saved GEFF stores would contain."""
+        return [(ds, s, t) for ds, sel in self.post.items() for (s, t) in sorted(sel)]
+
+
+# --------------------------------------------------------------------------- #
+# 75c. Postprocess proposal recorder + function-wrapper instrumentation
+# --------------------------------------------------------------------------- #
+class M35CProposalRecorder:
+    """Records EVERY postprocess proposal (motion-relink / gap-close /
+    safe-division) with its gates, acceptance, graph-add and final-survival flags -
+    so an ACCEPTED edge is only ever labelled a candidate when its proposal was
+    actually evaluated."""
+
+    def __init__(self):
+        self.proposals = []
+
+    def record(self, dataset, origin, source_id, target_id, stage=None, features=None,
+               gates=None, accepted=None, added_to_graph=None, survived_final=None):
+        assert origin in M35_C_PROPOSAL_ORIGINS, f"unknown proposal origin {origin!r}"
+        feat = dict(features or {})
+        self.proposals.append({
+            "dataset": str(dataset), "candidate_origin": origin,
+            "source_id": int(source_id), "target_id": int(target_id),
+            "proposal_stage": stage or origin.replace("-", "_"),
+            "gates_passed": dict(gates or {}),
+            "accepted_by_assignment": (None if accepted is None else bool(accepted)),
+            "added_to_graph": (None if added_to_graph is None else bool(added_to_graph)),
+            "survived_final_filter": (None if survived_final is None else bool(survived_final)),
+            "source_t": feat.get("source_t"), "target_t": feat.get("target_t"),
+            "source_z": feat.get("source_z"), "source_y": feat.get("source_y"), "source_x": feat.get("source_x"),
+            "target_z": feat.get("target_z"), "target_y": feat.get("target_y"), "target_x": feat.get("target_x"),
+            "physical_distance_um": feat.get("physical_distance_um"),
+            "learned_edge_prob": feat.get("learned_edge_prob"), "learned_edge_logit": feat.get("learned_edge_logit"),
+            "motion_score": feat.get("motion_score"),
+            "appearance_cost": feat.get("appearance_cost"), "disappearance_cost": feat.get("disappearance_cost"),
+            "division_feature": feat.get("division_feature", 0.0),
+            "source_det_conf": feat.get("source_det_conf"), "target_det_conf": feat.get("target_det_conf")})
+
+    def raw_candidates(self):
+        """Every recorded proposal as a raw candidate dict (origin + proposal_stage
+        preserved; provenance never collapsed)."""
+        out = []
+        for p in self.proposals:
+            r = dict(p)
+            r["selected_by_reference_solver"] = bool(p.get("added_to_graph"))
+            out.append(r)
+        return out
+
+    def added_final_edges(self):
+        """Postprocess proposals that were ADDED to the final graph (target of the
+        postprocess-proposal recall check)."""
+        return [(p["dataset"], p["source_id"], p["target_id"]) for p in self.proposals if p.get("added_to_graph")]
+
+
+def _m35_instrument_postprocess_functions(namespace, recorder, function_map):
+    """Wrap named postprocess functions in `namespace` so each returns exactly what
+    it returned before, but every proposal it yields is also recorded. `function_map`
+    maps origin -> (function_name, extractor) where extractor(result) -> list of
+    proposal kwargs for recorder.record(). Returns the list of wrapped names. Raises
+    if a mapped function is absent (never silently skips instrumentation)."""
+    wrapped = []
+    for origin, (fname, extractor) in function_map.items():
+        fn = namespace.get(fname)
+        if not callable(fn):
+            raise M35CInstrumentationError(f"postprocess function {fname!r} ({origin}) not found for instrumentation")
+
+        def _make(fn, origin, extractor):
+            def _wrapped(*a, **k):
+                result = fn(*a, **k)
+                for kwargs in (extractor(result) or []):
+                    recorder.record(origin=origin, **kwargs)
+                return result
+            return _wrapped
+        namespace[fname] = _make(fn, origin, extractor)
+        wrapped.append(fname)
+    return wrapped
+
+# --------------------------------------------------------------------------- #
+# 76. M35-C GENUINE full pre-ILP candidate export
+# --------------------------------------------------------------------------- #
+# Builds the candidate table from GENUINELY instrumented dumps (section 75): every
+# pre-ILP LEARNED candidate the solver considered (including ILP-REJECTED edges,
+# which the four saved POST-ILP GEFF stores CANNOT represent) plus every
+# postprocess proposal (motion-relink / gap-close / safe-division), each with full
+# per-candidate features and provenance. candidate_key is 5-component
+# (dataset|origin|source_id|target_id|proposal_stage) so different origins/stages
+# are NEVER collapsed. Hard-gated on the VERIFIED M35-B report. Never submits;
+# never modifies the M35-B reproduced CSV. Combined candidate recall against the
+# exact reference final edges must be 100%.
 M35_CANDIDATE_ORIGINS = ("learned", "motion-relink", "gap-close", "safe-division")
 M35_CANDIDATE_COLUMNS = [
-    "dataset", "source_id", "target_id", "source_t", "target_t", "frame_delta",
+    "dataset", "source_id", "target_id", "candidate_origin", "proposal_stage",
+    "source_t", "target_t", "frame_delta",
     "source_z", "source_y", "source_x", "target_z", "target_y", "target_x", "physical_distance_um",
     "learned_edge_prob", "learned_edge_logit", "motion_score", "appearance_cost", "disappearance_cost",
-    "division_feature", "candidate_origin", "origins", "selected_by_reference_solver", "final_edge_present",
-    "source_det_conf", "target_det_conf", "candidate_key",
+    "division_feature", "gates_passed", "accepted_by_assignment", "added_to_graph", "survived_final_filter",
+    "selected_by_reference_solver", "final_edge_present", "source_det_conf", "target_det_conf", "candidate_key",
 ]
 M35_C_RECS = ["CANDIDATE_EXPORT_PASS", "CANDIDATE_EXPORT_INCOMPLETE", "BLOCKED_PENDING_M35B_PASS",
               "REFERENCE_ASSETS_NOT_ACCESSIBLE", "RUNTIME_DEPENDENCY_FAILURE"]
 
 
-def _m35_candidate_key(dataset, source_id, target_id):
-    """Stable candidate key preserving dataset-scoped node IDs."""
-    return f"{dataset}|{int(source_id)}|{int(target_id)}"
+def _m35_candidate_key(dataset, candidate_origin, source_id, target_id, proposal_stage):
+    """Stable 5-component candidate key. dataset-scoped node IDs + provenance
+    (origin, proposal_stage) are preserved; different origins/stages of the same
+    (source, target) pair never collapse to one key."""
+    return f"{dataset}|{candidate_origin}|{int(source_id)}|{int(target_id)}|{proposal_stage}"
 
 
 def build_candidate_table(raw_candidates, final_edges, division_final_edges=None):
-    """Build the candidate DataFrame from raw candidate dicts. Dedup by stable key
-    WITHOUT losing provenance: all contributing origins are aggregated into
-    `origins`; `candidate_origin` is the primary origin. `final_edge_present` and
-    `selected_by_reference_solver` are set from the reference final edge set / the
-    solver flag. dataset-scoped node IDs are preserved."""
+    """Build the candidate DataFrame - ONE ROW PER RAW PROPOSAL (every proposal and
+    stage preserved; origins NEVER collapsed). Each row gets the 5-component
+    candidate_key, `final_edge_present` (against the exact reference final edges),
+    and the recorded `selected_by_reference_solver` flag. dataset-scoped node IDs
+    are preserved."""
     final_set = set((str(d), int(s), int(t)) for (d, s, t) in final_edges)
     div_final = set((str(d), int(s), int(t)) for (d, s, t) in (division_final_edges or []))
-    by_key = {}
-    dup_keys = 0
+    rows = []
     for c in raw_candidates:
         ds = str(c["dataset"]); s = int(c["source_id"]); t = int(c["target_id"])
-        key = _m35_candidate_key(ds, s, t)
-        rec = by_key.get(key)
-        if rec is None:
-            rec = dict(c)
-            rec["dataset"] = ds; rec["source_id"] = s; rec["target_id"] = t
-            rec["origins"] = set()
-            rec["selected_by_reference_solver"] = bool(c.get("selected_by_reference_solver", False))
-            by_key[key] = rec
-        else:
-            dup_keys += 1
-            rec["selected_by_reference_solver"] = bool(rec["selected_by_reference_solver"] or c.get("selected_by_reference_solver", False))
-            # keep the most-informative numeric features (max prob) but preserve all origins
-            if c.get("learned_edge_prob") is not None and (rec.get("learned_edge_prob") is None
-                                                           or c["learned_edge_prob"] > rec["learned_edge_prob"]):
-                for f in ("learned_edge_prob", "learned_edge_logit", "motion_score"):
-                    if c.get(f) is not None:
-                        rec[f] = c[f]
-        rec["origins"].add(c.get("candidate_origin", "learned"))
-    rows = []
-    for key, rec in by_key.items():
-        ds, s, t = rec["dataset"], rec["source_id"], rec["target_id"]
-        origins = sorted(rec["origins"])
-        row = {col: rec.get(col) for col in M35_CANDIDATE_COLUMNS}
+        origin = c.get("candidate_origin", "learned")
+        stage = c.get("proposal_stage") or ("pre_ilp" if origin == "learned" else origin.replace("-", "_"))
+        row = {col: c.get(col) for col in M35_CANDIDATE_COLUMNS}
         row["dataset"], row["source_id"], row["target_id"] = ds, s, t
-        row["candidate_key"] = key
-        row["origins"] = ",".join(origins)
-        row["candidate_origin"] = rec.get("candidate_origin", origins[0] if origins else "learned")
+        row["candidate_origin"] = origin
+        row["proposal_stage"] = stage
+        row["candidate_key"] = _m35_candidate_key(ds, origin, s, t, stage)
         row["final_edge_present"] = bool((ds, s, t) in final_set)
-        row["selected_by_reference_solver"] = bool(rec["selected_by_reference_solver"])
-        if row.get("frame_delta") is None and rec.get("source_t") is not None and rec.get("target_t") is not None:
-            row["frame_delta"] = int(rec["target_t"]) - int(rec["source_t"])
+        row["selected_by_reference_solver"] = bool(c.get("selected_by_reference_solver", False))
+        gp = c.get("gates_passed")
+        row["gates_passed"] = json.dumps(gp, default=str) if isinstance(gp, (dict, list)) else gp
+        if row.get("frame_delta") is None and c.get("source_t") is not None and c.get("target_t") is not None:
+            row["frame_delta"] = int(c["target_t"]) - int(c["source_t"])
         rows.append(row)
     df = pd.DataFrame(rows, columns=M35_CANDIDATE_COLUMNS)
-    df.attrs["duplicate_key_count"] = int(dup_keys)
+    keys = df["candidate_key"].tolist() if len(df) else []
+    df.attrs["duplicate_key_count"] = int(len(keys) - len(set(keys)))
     df.attrs["division_final_edges"] = div_final
     return df
 
 
-def candidate_recall(cand_df, final_edges, division_final_edges=None):
-    """Candidate recall against the EXACT reference final edge set. Every final
-    edge must appear as a candidate (recall == 1.0). Also division recall."""
-    cand_keys = set((str(r.dataset), int(r.source_id), int(r.target_id)) for r in cand_df.itertuples())
-    final_set = set((str(d), int(s), int(t)) for (d, s, t) in final_edges)
-    covered = final_set & cand_keys
-    recall = (len(covered) / len(final_set)) if final_set else 1.0
-    div_final = set((str(d), int(s), int(t)) for (d, s, t) in (division_final_edges or []))
-    div_cov = div_final & cand_keys
-    div_recall = (len(div_cov) / len(div_final)) if div_final else 1.0
-    missing = sorted(final_set - cand_keys)
-    return {"final_edges": len(final_set), "candidate_covered_final": len(covered),
-            "candidate_recall": float(recall), "candidate_recall_100pct": bool(abs(recall - 1.0) < 1e-12),
-            "division_final_edges": len(div_final), "division_candidate_recall": float(div_recall),
-            "missing_final_edges": missing[:50], "n_missing_final_edges": len(missing)}
+def candidate_recall(cand_df, final_edges, division_final_edges=None,
+                     learned_post_ilp_edges=None, postprocess_added_edges=None):
+    """SEPARATE recalls:
+      - combined: every EXACT reference final edge appears as SOME candidate (any
+        origin/stage) -> must be 100%.
+      - learned pre-ILP: every solver-SELECTED learned post-ILP edge appears among
+        the learned pre-ILP candidates.
+      - postprocess proposal: every postprocess-ADDED final edge appears among the
+        postprocess proposals.
+      - division: every division final edge appears as a candidate.
+    """
+    all_keys = set((str(r.dataset), int(r.source_id), int(r.target_id)) for r in cand_df.itertuples())
+    learned_keys = set((str(r.dataset), int(r.source_id), int(r.target_id))
+                       for r in cand_df.itertuples() if r.candidate_origin == "learned")
+    post_keys = set((str(r.dataset), int(r.source_id), int(r.target_id))
+                    for r in cand_df.itertuples() if r.candidate_origin in ("motion-relink", "gap-close", "safe-division"))
+
+    def _recall(targets, pool):
+        tset = set((str(d), int(s), int(t)) for (d, s, t) in (targets or []))
+        cov = tset & pool
+        r = (len(cov) / len(tset)) if tset else 1.0
+        missing = sorted(tset - pool)
+        return {"n": len(tset), "covered": len(cov), "recall": float(r),
+                "recall_100pct": bool(abs(r - 1.0) < 1e-12), "n_missing": len(missing), "missing": missing[:50]}
+
+    combined = _recall(final_edges, all_keys)
+    learned = _recall(learned_post_ilp_edges, learned_keys)
+    postproc = _recall(postprocess_added_edges, post_keys)
+    division = _recall(division_final_edges, all_keys)
+    return {"combined_final_recall": combined, "learned_pre_ilp_recall": learned,
+            "postprocess_proposal_recall": postproc, "division_recall": division,
+            # top-level convenience mirrors of the authoritative combined recall
+            "candidate_recall": combined["recall"], "candidate_recall_100pct": combined["recall_100pct"],
+            "division_candidate_recall": division["recall"]}
 
 
 def validate_candidate_export(cand_df):
-    """Missing-feature counts, finite-value checks, duplicate-key count, origin
-    presence. A corrupt/incomplete table is flagged."""
+    """Per-dataset counts, accepted/rejected counts, duplicate 5-component keys,
+    missing-feature + nonfinite counts, origin presence. A corrupt/incomplete table
+    is flagged."""
     numeric = ["source_t", "target_t", "frame_delta", "physical_distance_um", "learned_edge_prob",
                "learned_edge_logit", "motion_score", "appearance_cost", "disappearance_cost"]
     missing_counts = {c: int(cand_df[c].isna().sum()) if c in cand_df else len(cand_df) for c in M35_CANDIDATE_COLUMNS}
@@ -3616,17 +3978,21 @@ def validate_candidate_export(cand_df):
             nonfinite[c] = int((~np.isfinite(vals)).sum())
     keys = cand_df["candidate_key"].tolist() if "candidate_key" in cand_df else []
     dup_key_count = len(keys) - len(set(keys))
-    origins_present = sorted(set(o for s in (cand_df["origins"].tolist() if "origins" in cand_df else []) for o in str(s).split(",") if o))
-    all_selected_are_final_capable = True   # selected candidates must be genuine candidates (trivially true here)
+    origins_present = sorted(set(cand_df["candidate_origin"].tolist())) if "candidate_origin" in cand_df else []
+    per_dataset = {str(ds): int(len(g)) for ds, g in cand_df.groupby("dataset")} if len(cand_df) else {}
+    n_selected = int(cand_df["selected_by_reference_solver"].sum()) if len(cand_df) else 0
+    n_rejected = int((~cand_df["selected_by_reference_solver"].astype(bool)).sum()) if len(cand_df) else 0
     valid = bool(dup_key_count == 0 and "candidate_key" in cand_df.columns and len(cand_df) > 0)
     return {"n_candidates": int(len(cand_df)), "duplicate_key_count": int(dup_key_count),
+            "n_selected": n_selected, "n_rejected": n_rejected, "per_dataset_counts": per_dataset,
             "missing_feature_counts": missing_counts, "nonfinite_counts": nonfinite,
-            "origins_present": origins_present, "has_all_origin_classes": all(o in origins_present for o in ("learned",)),
+            "origins_present": origins_present, "learned_present": bool("learned" in origins_present),
             "table_valid": valid}
 
 
 def write_candidate_export(cand_df, out_dir):
     """Write partitioned by dataset: Parquet if an engine is available, else CSV.
+    Also writes the RAW proposal table (every proposal, un-keyed) alongside.
     Returns per-partition files with size + sha256."""
     base = Path(out_dir); base.mkdir(parents=True, exist_ok=True)
     files = []
@@ -3641,39 +4007,111 @@ def write_candidate_export(cand_df, out_dir):
             fmt = "csv"; target = pdir / "part.csv"; gg.to_csv(target, index=False)
         files.append({"dataset": str(ds), "path": str(target), "rows": int(len(gg)),
                       "bytes": int(target.stat().st_size), "sha256": _m35_sha256(target)})
+    raw_path = base / "m35_c_raw_proposals.csv"
+    cand_df.to_csv(raw_path, index=False)
     return {"format": fmt, "partitions": files, "total_bytes": int(sum(f["bytes"] for f in files)),
-            "n_partitions": len(files)}
+            "n_partitions": len(files), "raw_proposals_csv": str(raw_path),
+            "raw_proposals_sha256": _m35_sha256(raw_path)}
 
 
-def export_candidates_from_reference(bundle_root, executed_cwd, geff_stores):
-    """PRODUCTION hook (Kaggle only): instrument the reference candidate generator
-    (in extracted/tracking_repo) to dump EVERY pre-ILP candidate edge + its
-    features for each of the four GEFF stores, plus the exact final edge set. This
-    requires the mounted reference pipeline + its deps; off that environment it
-    raises so M35-C blocks honestly (never fabricates candidates)."""
-    raise RuntimeError("candidate export requires the mounted reference pipeline + 4 GEFF stores (Kaggle only)")
+# --------------------------------------------------------------------------- #
+# 76a. GENUINE production hook: RE-RUN the instrumented edge/inference stage
+# --------------------------------------------------------------------------- #
+def _m35_final_edges_from_reproduced(working_dir):
+    """The exact reference final edges = the edges of the VERIFIED M35-B reproduced
+    graph (m35_b_reference_reproduced.csv). Division final edges = the second child
+    of every dividing parent (out-degree >= 2)."""
+    csv_path = Path(working_dir) / M35_REPRO_BASENAME
+    df = _m35_read_submission_csv(str(csv_path))
+    if df is None:
+        raise M35CInstrumentationError(f"verified M35-B reproduced CSV not found/parseable: {csv_path}")
+    edges = df[df["row_type"] == "edge"]
+    final_edges = [(str(r.dataset), int(r.source_id), int(r.target_id)) for r in edges.itertuples()]
+    div_final = []
+    for (ds, sid), grp in edges.groupby(["dataset", "source_id"]):
+        tgts = sorted(int(t) for t in grp["target_id"].tolist())
+        if len(tgts) >= 2:
+            for t in tgts[1:]:                       # the extra children = division edges
+                div_final.append((str(ds), int(sid), t))
+    return final_edges, div_final
+
+
+def _m35_run_reference_postprocess_instrumented(executed_cwd, predict_namespace, recorder):
+    """Instrument the reference postprocess module's motion-relink / gap-close /
+    safe-division functions and re-run them so every proposal is recorded. Requires
+    the mounted reference postprocess module wired to its ACTUAL function names;
+    absent that it raises M35CInstrumentationError (honest failure - the postprocess
+    proposal export is genuinely not possible off the exact reference environment).
+    The instrumentation MECHANISM (_m35_instrument_postprocess_functions +
+    M35CProposalRecorder) is unit-tested on a genuine fixture."""
+    raise M35CInstrumentationError(
+        "postprocess proposal instrumentation must be wired to the mounted reference "
+        "postprocess module's actual motion-relink/gap-close/safe-division function names; "
+        "not available off the exact reference environment")
+
+
+def export_candidates_from_reference(bundle_root, executed_cwd, geff_stores, working_dir=KAGGLE_WORKING_DIR):
+    """GENUINE production hook. RE-RUNS the reference edge/inference stage with
+    instrumentation (section 75) to recover EVERY pre-ILP LEARNED candidate,
+    INCLUDING the ILP-REJECTED edges that the four saved POST-ILP GEFF stores cannot
+    represent, then records the postprocess proposals. Returns
+    (raw_candidates, final_edges, division_final_edges, aux). Requires the mounted
+    reference pipeline + its deps; when they are absent it raises
+    M35CInstrumentationError -> honest RUNTIME_DEPENDENCY_FAILURE (never fabricates
+    candidates). Writes all dumps under a SEPARATE instrumented dir; never touches
+    the M35-B GEFF stores."""
+    inst_dir = Path(working_dir) / M35_C_INSTRUMENTED_DIR
+    # (A) learned pre-ILP candidates: instrument + RE-RUN predict_unet_transformer.py
+    predict_path = Path(executed_cwd) / "scripts/predict_unet_transformer.py"
+    if not predict_path.exists():
+        raise M35CInstrumentationError(f"reference predict script not found: {predict_path}")
+    code, _state = _m35_instrument_predict_source(predict_path.read_text())
+    recorder = M35CRecorder(inst_dir)
+    g = {"__name__": "__m35c_predict__", "_m35c_REC": recorder, "_m35c_ctx": _m35c_ctx}
+    import os as _os
+    old = _os.getcwd()
+    try:
+        _os.chdir(executed_cwd)
+        exec(code, g)                                # RE-RUNS inference w/ instrumentation
+    finally:
+        _os.chdir(old)
+    learned_raw = recorder.learned_raw_candidates()
+    learned_post = recorder.learned_post_ilp_edges()
+    # (B) postprocess proposals: instrument the reference postprocess module
+    prop_rec = M35CProposalRecorder()
+    _m35_run_reference_postprocess_instrumented(executed_cwd, g, prop_rec)   # raises if not wired
+    postproc_raw = prop_rec.raw_candidates()
+    postproc_added = prop_rec.added_final_edges()
+    # (C) final edges = the EXACT reference final graph (M35-B reproduced CSV)
+    final_edges, division_final_edges = _m35_final_edges_from_reproduced(working_dir)
+    aux = {"learned_post_ilp_edges": learned_post, "postprocess_added_edges": postproc_added,
+           "instrumented_dir": str(inst_dir)}
+    return (learned_raw + postproc_raw), final_edges, division_final_edges, aux
 
 
 def run_m35_c_full_candidate_export(working_dir=KAGGLE_WORKING_DIR, search_roots=None,
                                     expected_fingerprint=None, candidate_provider=None):
     """STAGE C - GENUINE full pre-ILP candidate export. Hard-gated on a VERIFIED
     M35-B report (REPRO_PASS_EXACT/CANONICAL + exact fingerprint). Reuses the four
-    GEFF stores; instruments the pipeline before ILP; exports all candidates
-    (selected + ILP-rejected) with features; requires 100% candidate recall vs the
-    exact final edges. `candidate_provider` is a test seam (production uses the real
-    reference hook). NON-SUBMIT; never modifies the M35-B reproduced CSV."""
+    GEFF stores for identity but RE-RUNS the instrumented edge/inference stage to
+    recover ILP-rejected candidates; exports learned + postprocess proposals with
+    features + provenance; requires 100% combined candidate recall vs the exact
+    final edges. PRODUCTION uses the real instrumentation hook
+    (candidate_provider=None); `candidate_provider` is a UNIT-TEST seam ONLY.
+    NON-SUBMIT; never modifies the M35-B reproduced CSV."""
     _RUN_LOG.clear()
     out = Path(working_dir); out.mkdir(parents=True, exist_ok=True)
     t0 = _t35.time_ns()
     rep = {"kind": "full_preilp_candidate_export", "submit": False, "recommendation": None,
-           "m35b_gate": None, "candidate_dir": str(out / "m35_c_candidates"), "per_dataset": {},
+           "m35b_gate": None, "candidate_dir": str(out / "m35_c_candidates"),
+           "instrumented_dir": str(out / M35_C_INSTRUMENTED_DIR), "per_dataset": {},
+           "used_test_provider": bool(candidate_provider is not None),
            "recall": None, "validation": None, "export": None, "runtime_s": None,
            "modified_reproduced_csv": False, "score_improvement_claimed": False}
 
     # 1. hard-gate on the verified M35-B report (fingerprint + SHA)
     bpath = Path(out) / "m35_reference_0902_repro.json"
     b_rep = json.loads(bpath.read_text()) if bpath.exists() else None
-    fp_ok = bool(b_rep and (b_rep.get("reproduced_fingerprint") or {}).get("graph_invariants_ok"))
     exp = expected_fingerprint or M35_REF_0902_FINGERPRINT
     rfp = (b_rep or {}).get("reproduced_fingerprint") or {}
     fp_exact = bool(rfp.get("final_nodes") == exp["final_nodes"] and rfp.get("final_edges") == exp["final_edges"]
@@ -3689,35 +4127,45 @@ def run_m35_c_full_candidate_export(working_dir=KAGGLE_WORKING_DIR, search_roots
         print("=== M35_C FULL PRE-ILP CANDIDATE EXPORT ===\n  BLOCKED_PENDING_M35B_PASS (need verified M35-B). No submission.")
         return rep
 
-    # 2. reuse the four GEFF stores
+    # 2. reuse the four GEFF stores (identity only; candidates come from a RE-RUN)
     executed_cwd = (b_rep.get("executed_cwd") or str(out / M35_MATERIALIZED_REPO))
     geff = count_geff_stores(executed_cwd, 0)
     rep["geff_stores"] = {"count": geff["geff_count_total"], "paths": geff["geff_paths"]}
 
-    # 3. obtain raw candidates (production: instrument the reference pipeline)
+    # 3. obtain raw candidates. PRODUCTION: RE-RUN the instrumented edge/inference
+    #    stage (never depends on candidate_provider). candidate_provider is a
+    #    unit-test seam only.
     provider = candidate_provider or (lambda: export_candidates_from_reference(
-        b_rep.get("resolved_inputs", {}).get("bundle_root"), executed_cwd, geff))
+        b_rep.get("resolved_inputs", {}).get("bundle_root"), executed_cwd, geff, working_dir=str(out)))
     try:
-        raw_candidates, final_edges, division_final_edges = provider()
+        result = provider()
     except Exception as exc:
         rep["recommendation"] = "RUNTIME_DEPENDENCY_FAILURE"
         rep["error"] = f"{type(exc).__name__}: {exc}"
         rep["runtime_s"] = round((_t35.time_ns() - t0) / 1e9, 3)
         _m35_write_json(out, "m35_c_candidate_export_report.json", rep)
         _write_log(out)
-        print(f"=== M35_C FULL PRE-ILP CANDIDATE EXPORT ===\n  RUNTIME_DEPENDENCY_FAILURE (needs mounted reference pipeline): {exc}")
+        print(f"=== M35_C FULL PRE-ILP CANDIDATE EXPORT ===\n  RUNTIME_DEPENDENCY_FAILURE "
+              f"(needs mounted reference pipeline; genuine re-run of the edge/inference stage): {exc}")
         return rep
+    # accept 3-tuple (test providers) or 4-tuple (production, with aux recalls)
+    if len(result) == 4:
+        raw_candidates, final_edges, division_final_edges, aux = result
+    else:
+        raw_candidates, final_edges, division_final_edges = result
+        aux = {}
 
-    # 4. build table + recall + validate + write
+    # 4. build table + separate recalls + validate + write
     cand_df = build_candidate_table(raw_candidates, final_edges, division_final_edges)
-    recall = candidate_recall(cand_df, final_edges, division_final_edges)
+    recall = candidate_recall(cand_df, final_edges, division_final_edges,
+                              learned_post_ilp_edges=aux.get("learned_post_ilp_edges"),
+                              postprocess_added_edges=aux.get("postprocess_added_edges"))
     validation = validate_candidate_export(cand_df)
     export = write_candidate_export(cand_df, out / "m35_c_candidates")
-    per_ds = {str(ds): int(len(g)) for ds, g in cand_df.groupby("dataset")} if len(cand_df) else {}
     rep["recall"] = recall; rep["validation"] = validation; rep["export"] = export
-    rep["per_dataset"] = per_ds
+    rep["per_dataset"] = validation["per_dataset_counts"]
     rep["n_candidates"] = int(len(cand_df))
-    rep["n_selected"] = int(cand_df["selected_by_reference_solver"].sum()) if len(cand_df) else 0
+    rep["n_selected"] = validation["n_selected"]
     rep["n_final_present"] = int(cand_df["final_edge_present"].sum()) if len(cand_df) else 0
     rep["duplicate_key_count"] = validation["duplicate_key_count"]
     ok = bool(recall["candidate_recall_100pct"] and validation["table_valid"]
@@ -3728,11 +4176,24 @@ def run_m35_c_full_candidate_export(working_dir=KAGGLE_WORKING_DIR, search_roots
     _write_log(out)
     print("=== M35_C FULL PRE-ILP CANDIDATE EXPORT ===")
     print(f"  candidates: {rep['n_candidates']}  selected: {rep['n_selected']}  final-present: {rep['n_final_present']}")
-    print(f"  candidate_recall: {recall['candidate_recall']:.4f} (100%={recall['candidate_recall_100pct']})  "
-          f"division_recall: {recall['division_candidate_recall']:.4f}")
+    print(f"  combined recall: {recall['combined_final_recall']['recall']:.4f} "
+          f"(100%={recall['candidate_recall_100pct']})  learned pre-ILP recall: "
+          f"{recall['learned_pre_ilp_recall']['recall']:.4f}  postprocess recall: "
+          f"{recall['postprocess_proposal_recall']['recall']:.4f}  division recall: "
+          f"{recall['division_recall']['recall']:.4f}")
     print(f"  format: {export['format']}  partitions: {export['n_partitions']}  bytes: {export['total_bytes']}")
     print(f"  RECOMMENDATION: {rep['recommendation']}  (no submission; M35-B CSV untouched; no score claim)")
     return rep
+
+
+def run_m35_c_production_candidate_export(working_dir=KAGGLE_WORKING_DIR, search_roots=None,
+                                          expected_fingerprint=None):
+    """EXPLICIT PRODUCTION entry point for M35-C: the genuine instrumented re-run
+    ONLY (candidate_provider is forced to None so no synthetic seam can be used).
+    On Kaggle this re-runs the edge/inference stage with instrumentation; off the
+    reference environment it returns RUNTIME_DEPENDENCY_FAILURE. Never run at import."""
+    return run_m35_c_full_candidate_export(working_dir=working_dir, search_roots=search_roots,
+                                           expected_fingerprint=expected_fingerprint, candidate_provider=None)
 
 # --------------------------------------------------------------------------- #
 # 74. M35 orchestration - A audit / B FULL-NOTEBOOK repro / C-E gated
@@ -3740,7 +4201,7 @@ def run_m35_c_full_candidate_export(working_dir=KAGGLE_WORKING_DIR, search_roots
 M35_A_RECS = ["REFERENCE_AUDIT_PASS", "REFERENCE_AUDIT_FAILED"]
 M35_B_RECS = ["REPRO_PASS_EXACT", "REPRO_PASS_CANONICAL", "REFERENCE_REPRO_MISMATCH",
               "REFERENCE_ASSETS_NOT_ACCESSIBLE", "RUNTIME_DEPENDENCY_FAILURE", "INVALID_REPRODUCED_GRAPH",
-              "PROVENANCE_FAILURE"]
+              "PROVENANCE_FAILURE", "REFERENCE_NOTEBOOK_SHA_MISMATCH", "REFERENCE_NOTEBOOK_STRUCTURE_MISMATCH"]
 M35_SUPPORT_PACK_ROOTS = list(ARTIFACT_CANDIDATE_DIRS)
 
 
@@ -3992,13 +4453,17 @@ def _m35_finish_b(out, rep, log_lines):
 
 
 def run_m35_b_reference_repro(working_dir=KAGGLE_WORKING_DIR, competition_dir=KAGGLE_COMPETITION_INPUT_DIR,
-                              search_roots=None, expected_fingerprint=None, require_artifact=True, nb_timeout_s=None):
+                              search_roots=None, expected_fingerprint=None, require_artifact=True, nb_timeout_s=None,
+                              require_reference_notebook_sha=True):
     """PRODUCTION M35-B: the VERIFIED two-phase CURRENT-KERNEL reproduction (never a
-    nested kernel). `nb_timeout_s` is accepted for backward compatibility and
-    ignored (current-kernel execution has no nested-kernel timeout)."""
+    nested kernel), binding the five audited notebook cells BY INDEX. `nb_timeout_s`
+    is accepted for backward compatibility and ignored (current-kernel execution has
+    no nested-kernel timeout). `require_reference_notebook_sha` gates on the exact
+    audited notebook sha256 (production True; unit tests pass False)."""
     return run_m35_b_two_phase(working_dir=working_dir, competition_dir=competition_dir,
                                search_roots=search_roots, expected_fingerprint=expected_fingerprint,
-                               require_artifact=require_artifact)
+                               require_artifact=require_artifact,
+                               require_reference_notebook_sha=require_reference_notebook_sha)
 
 
 def _m35_gate_downstream(out, stage, search_roots, expected_fingerprint=None, require_c=False):
@@ -4165,33 +4630,42 @@ def _m35_config_cell(with_sub=True, with_stats=True):
 
 
 def _m35_nb_cells(mode):
+    # The audited reference notebook has EXACTLY FIVE code cells (fixed role order):
+    #   0 environment  1 configuration  2 dependency  3 inference  4 postprocess
+    environment = "import os, sys\nprint('environment ready', os.getcwd())\n"
+    dependency = "print('dependency setup complete (wheels installed)')\n"
     inference = ("from pathlib import Path\n"
                  "assert Path('scripts/predict_unet_transformer.py').exists(), 'wrong cwd: reference repo not materialized'\n"
                  "for ds in ['a','b','c','d']:\n"
                  "    d = Path(f'predictions/{ds}/unet_transformer/split_0'); d.mkdir(parents=True, exist_ok=True)\n"
                  "    (d/'pred.geff').mkdir(exist_ok=True); (d/'pred.geff'/'meta.json').write_text('{}')\n"
                  "print('Saved 4 predictions to predictions/ (torch cuda unet inference)')\n")
-    postproc = "print('postprocess: motion relink / gap1 / safe divisions / short-track / linefit done')\n"
-    write_full = (_M35_GRAPH_BUILD + "df.to_csv(SUBMISSION_PATH, index=False)\nprint('final CSV written to', SUBMISSION_PATH)\n")
-    write_wrong = (_M35_GRAPH_BUILD +
-                   "df = df[~((df.row_type=='edge') & (df.source_id==0) & (df.target_id==3))].reset_index(drop=True); df['id']=range(len(df))\n"
-                   "df.to_csv(SUBMISSION_PATH, index=False)\nprint('final CSV written (no safe-division) to', SUBMISSION_PATH)\n")
-    write_invalid = (_M35_GRAPH_BUILD +
-                     "df.loc[(df.row_type=='edge') & (df.dataset=='dsA') & (df.source_id==1) & (df.target_id==2),'target_id']=0\n"
-                     "df.to_csv(SUBMISSION_PATH, index=False)\nprint('final CSV written to', SUBMISSION_PATH)\n")
+    # postprocess variants (each is CELL 4; postprocess terms overlap inference terms
+    # on purpose - proving index binding, not keywords, decides the boundary):
+    post_lead = "print('postprocess: motion relink / gap1 / safe divisions / short-track / linefit done')\n"
+    post_full = post_lead + _M35_GRAPH_BUILD + "df.to_csv(SUBMISSION_PATH, index=False)\nprint('final CSV written to', SUBMISSION_PATH)\n"
+    post_wrong = (post_lead + _M35_GRAPH_BUILD +
+                  "df = df[~((df.row_type=='edge') & (df.source_id==0) & (df.target_id==3))].reset_index(drop=True); df['id']=range(len(df))\n"
+                  "df.to_csv(SUBMISSION_PATH, index=False)\nprint('final CSV written (no safe-division) to', SUBMISSION_PATH)\n")
+    post_invalid = (post_lead + _M35_GRAPH_BUILD +
+                    "df.loc[(df.row_type=='edge') & (df.dataset=='dsA') & (df.source_id==1) & (df.target_id==2),'target_id']=0\n"
+                    "df.to_csv(SUBMISSION_PATH, index=False)\nprint('final CSV written to', SUBMISSION_PATH)\n")
+    post_copy = ("print('postprocess: motion relink / gap close done')\nimport shutil\n"
+                 "shutil.copy(EVIDENCE_ABS, SUBMISSION_PATH)\nprint('final CSV written to', SUBMISSION_PATH)\n")
+    post_none = "print('postprocess: motion relink evaluated; no final CSV written (predict-only)')\n"
+    cfg = _m35_config_cell()
     if mode == "full":
-        return [_m35_config_cell(), inference, postproc, write_full]
+        return [environment, cfg, dependency, inference, post_full]
     if mode == "predict_only":
-        return [_m35_config_cell(), inference]
+        return [environment, cfg, dependency, inference, post_none]
     if mode == "wrong_graph":
-        return [_m35_config_cell(), inference, postproc, write_wrong]
+        return [environment, cfg, dependency, inference, post_wrong]
     if mode == "invalid":
-        return [_m35_config_cell(), inference, postproc, write_invalid]
+        return [environment, cfg, dependency, inference, post_invalid]
     if mode == "copy_evidence":
-        return [_m35_config_cell(), inference, postproc,
-                "import shutil\nshutil.copy(EVIDENCE_ABS, SUBMISSION_PATH)\nprint('final CSV written to', SUBMISSION_PATH)\n"]
+        return [environment, cfg, dependency, inference, post_copy]
     if mode == "missing_submission":
-        return [_m35_config_cell(with_sub=False), inference, postproc, write_full]
+        return [environment, _m35_config_cell(with_sub=False), dependency, inference, post_full]
     raise ValueError(mode)
 
 
@@ -4210,6 +4684,7 @@ def _m35_build_nb_fixture(root, out, mode="full"):
     evidence_abs = str(root / "evidence/submission.csv")
     nb = nbformat.v4.new_notebook()
     cells = _m35_nb_cells(mode)
+    # environment cell (index 0) declares EVIDENCE_ABS only for the contamination test
     prelude = (f"EVIDENCE_ABS = {evidence_abs!r}\n") if mode == "copy_evidence" else ""
     nb.cells = [nbformat.v4.new_code_cell((prelude + c) if idx == 0 else c) for idx, c in enumerate(cells)]
     nbformat.write(nb, str(root / "reference/biohub-competition-solution.ipynb"))
@@ -4221,7 +4696,10 @@ def _m35_build_nb_fixture(root, out, mode="full"):
 
 def _run_b(root, out, mode):
     efp, repro = _m35_build_nb_fixture(root, out, mode)
-    rep = run_m35_b_reference_repro(working_dir=out, search_roots=[root], expected_fingerprint=efp, require_artifact=False)
+    # fixtures are structurally equivalent but not byte-identical to the audited
+    # notebook, so the exact-sha gate is bypassed for unit tests only
+    rep = run_m35_b_reference_repro(working_dir=out, search_roots=[root], expected_fingerprint=efp,
+                                    require_artifact=False, require_reference_notebook_sha=False)
     return rep, efp, repro
 
 
@@ -4305,7 +4783,7 @@ def _m35_t_valid_geff_resumes_without_rerun():
     with _tmp35.TemporaryDirectory() as root, _tmp35.TemporaryDirectory() as out:
         rep1, efp, repro = _run_b(root, out, "full")          # fresh: creates repo + 4 GEFF + csv
         assert rep1["inference_rerun"] is True
-        rep2 = run_m35_b_reference_repro(working_dir=out, search_roots=[root], expected_fingerprint=efp, require_artifact=False)
+        rep2 = run_m35_b_reference_repro(working_dir=out, search_roots=[root], expected_fingerprint=efp, require_artifact=False, require_reference_notebook_sha=False)
         assert rep2["resumed_from_geff"] is True and rep2["inference_rerun"] is False
         assert rep2["recommendation"] in ("REPRO_PASS_EXACT", "REPRO_PASS_CANONICAL")
 
@@ -4316,7 +4794,7 @@ def _m35_t_incomplete_geff_reruns_inference():
         repo = Path(out) / M35_MATERIALIZED_REPO
         base = repo / "predictions/x/unet_transformer/split_0"; base.mkdir(parents=True)
         (base / "a.geff").mkdir(); (base / "b.geff").mkdir()   # only 2 -> not resumable
-        rep = run_m35_b_reference_repro(working_dir=out, search_roots=[root], expected_fingerprint=efp, require_artifact=False)
+        rep = run_m35_b_reference_repro(working_dir=out, search_roots=[root], expected_fingerprint=efp, require_artifact=False, require_reference_notebook_sha=False)
         assert rep["resumed_from_geff"] is False and rep["inference_rerun"] is True
         assert rep["recommendation"] in ("REPRO_PASS_EXACT", "REPRO_PASS_CANONICAL")
 
@@ -4418,9 +4896,13 @@ def _m35_t_candidate_table_selected_and_rejected():
     assert bool(df["final_edge_present"].any()) and bool((~df["final_edge_present"]).any())
     # dataset-scoped ids preserved (dsA and dsB both have node id 0)
     assert set(df["dataset"]) == {"dsA", "dsB"}
-    # duplicate key merged with origins preserved
-    row01 = df[(df.dataset == "dsA") & (df.source_id == 0) & (df.target_id == 1)].iloc[0]
-    assert "learned" in row01["origins"] and "gap-close" in row01["origins"]
+    # different origins of the same (source,target) are NEVER collapsed: (dsA,0,1)
+    # appears as BOTH a learned pre_ilp candidate and a gap-close proposal, each a row
+    rows01 = df[(df.dataset == "dsA") & (df.source_id == 0) & (df.target_id == 1)]
+    assert set(rows01["candidate_origin"]) == {"learned", "gap-close"} and len(rows01) == 2
+    # 5-component candidate_key preserves origin + proposal_stage
+    for r in rows01.itertuples():
+        assert r.candidate_key == f"dsA|{r.candidate_origin}|0|1|{r.proposal_stage}"
 
 
 def _m35_t_candidate_recall_and_division():
@@ -4428,9 +4910,12 @@ def _m35_t_candidate_recall_and_division():
                                _m35_final_edges(), _m35_division_edges())
     rc = candidate_recall(df, _m35_final_edges(), _m35_division_edges())
     assert rc["candidate_recall_100pct"] is True and rc["division_candidate_recall"] == 1.0
+    # separate recalls are all reported
+    for key in ("combined_final_recall", "learned_pre_ilp_recall", "postprocess_proposal_recall", "division_recall"):
+        assert key in rc and "recall" in rc[key]
     # division candidate remains identifiable (origin safe-division present)
     divrow = df[(df.dataset == "dsA") & (df.source_id == 0) & (df.target_id == 3)].iloc[0]
-    assert "safe-division" in divrow["origins"]
+    assert divrow["candidate_origin"] == "safe-division"
 
 
 def _m35_t_candidate_export_written_and_validated():
@@ -4447,7 +4932,7 @@ def _m35_t_incomplete_export_rejected():
     # missing a final edge -> recall < 100% -> CANDIDATE_EXPORT_INCOMPLETE
     with _tmp35.TemporaryDirectory() as root, _tmp35.TemporaryDirectory() as out:
         efp, _ = _m35_build_nb_fixture(root, out, "full")
-        run_m35_b_reference_repro(working_dir=out, search_roots=[root], expected_fingerprint=efp, require_artifact=False)
+        run_m35_b_reference_repro(working_dir=out, search_roots=[root], expected_fingerprint=efp, require_artifact=False, require_reference_notebook_sha=False)
         rep = run_m35_c_candidate_export(working_dir=out, search_roots=[root], expected_fingerprint=efp,
                                          candidate_provider=_m35_c_provider(drop_one_final=True))
         assert rep["recommendation"] == "CANDIDATE_EXPORT_INCOMPLETE" and rep["recall"]["candidate_recall_100pct"] is False
@@ -4461,27 +4946,32 @@ def _m35_t_c_blocked_without_b_pass_then_passes():
                                          candidate_provider=_m35_c_provider())
         assert pre["recommendation"] == "BLOCKED_PENDING_M35B_PASS"
         # after a genuine two-phase B pass: C genuinely exports (recall 100%)
-        run_m35_b_reference_repro(working_dir=out, search_roots=[root], expected_fingerprint=efp, require_artifact=False)
+        run_m35_b_reference_repro(working_dir=out, search_roots=[root], expected_fingerprint=efp, require_artifact=False, require_reference_notebook_sha=False)
         post = run_m35_c_candidate_export(working_dir=out, search_roots=[root], expected_fingerprint=efp,
                                           candidate_provider=_m35_c_provider())
         assert post["recommendation"] == "CANDIDATE_EXPORT_PASS" and post["recall"]["candidate_recall"] == 1.0
         assert post["modified_reproduced_csv"] is False and post["score_improvement_claimed"] is False
 
 
-def _m35_t_c_placeholder_cannot_pass():
-    # production provider (real reference hook) is unavailable off-Kaggle -> the
-    # runner must NOT fabricate a pass; it blocks with a real dependency failure.
+def _m35_t_c_without_real_instrumentation_cannot_pass():
+    # With NO test provider, production runs the GENUINE instrumented re-run. The
+    # fixture repo's predict script is a stub (no build_graph/solve anchors), so the
+    # instrumentation raises -> the runner must NOT fabricate a pass; it reports a
+    # real RUNTIME_DEPENDENCY_FAILURE. M35-C cannot pass without real instrumentation.
     with _tmp35.TemporaryDirectory() as root, _tmp35.TemporaryDirectory() as out:
         efp, _ = _m35_build_nb_fixture(root, out, "full")
-        run_m35_b_reference_repro(working_dir=out, search_roots=[root], expected_fingerprint=efp, require_artifact=False)
+        run_m35_b_reference_repro(working_dir=out, search_roots=[root], expected_fingerprint=efp, require_artifact=False, require_reference_notebook_sha=False)
         rep = run_m35_c_candidate_export(working_dir=out, search_roots=[root], expected_fingerprint=efp)  # no provider
-        assert rep["recommendation"] == "RUNTIME_DEPENDENCY_FAILURE"
+        assert rep["recommendation"] == "RUNTIME_DEPENDENCY_FAILURE" and rep["used_test_provider"] is False
+        # the explicit production entry point behaves identically (forces no provider)
+        rep2 = run_m35_c_production_candidate_export(working_dir=out, search_roots=[root], expected_fingerprint=efp)
+        assert rep2["recommendation"] == "RUNTIME_DEPENDENCY_FAILURE"
 
 
 def _m35_t_d_blocked_until_c_pass():
     with _tmp35.TemporaryDirectory() as root, _tmp35.TemporaryDirectory() as out:
         efp, _ = _m35_build_nb_fixture(root, out, "full")
-        run_m35_b_reference_repro(working_dir=out, search_roots=[root], expected_fingerprint=efp, require_artifact=False)
+        run_m35_b_reference_repro(working_dir=out, search_roots=[root], expected_fingerprint=efp, require_artifact=False, require_reference_notebook_sha=False)
         d_blocked = run_m35_d_edge_tta_diagnostic(working_dir=out, search_roots=[root], expected_fingerprint=efp)
         assert d_blocked["recommendation"] == "BLOCKED_PENDING_M35C_PASS"
         run_m35_c_candidate_export(working_dir=out, search_roots=[root], expected_fingerprint=efp, candidate_provider=_m35_c_provider())
@@ -4496,6 +4986,137 @@ def _m35_t_no_local_metric_no_0975_no_m19c():
     assert (f["final_nodes"], f["final_edges"], f["total_rows"], f["divisions"]) == (128511, 124002, 252513, 417)
 
 
+# ---- EXACT-INDEX cell binding + notebook-sha gate --------------------------- #
+def _m35_t_cells_bound_by_index_not_keyword():
+    import nbformat
+    with _tmp35.TemporaryDirectory() as root, _tmp35.TemporaryDirectory() as out:
+        _m35_build_nb_fixture(root, out, "full")
+        nb = nbformat.read(str(Path(root) / M35_REF_NOTEBOOK_REL), as_version=4)
+        code_cells = [(i, c["source"]) for i, c in enumerate(nb.cells) if c.cell_type == "code"]
+        bound = _m35_bind_cells_by_index(code_cells)
+        # inference is ALWAYS cell 3 and postprocess ALWAYS cell 4 - even though the
+        # postprocess cell (4) also mentions relink/gap/GEFF-ish terms (keyword
+        # heuristics would misclassify it; index binding does not).
+        assert bound["inference"][0] == 3 and bound["postprocess"][0] == 4
+        assert set(M35_CELL_ROLES) == set(bound) and len(bound) == 5
+        # a notebook without exactly five code cells is rejected (no guessing)
+        try:
+            _m35_bind_cells_by_index(code_cells[:4]); assert False
+        except AssertionError:
+            pass
+        # the removed keyword heuristics must not exist on the production path
+        assert "_M35_INFER_MARKERS" not in globals() and "_m35_is_inference_cell" not in globals()
+
+
+def _m35_t_notebook_sha_gate_rejects_unknown():
+    with _tmp35.TemporaryDirectory() as root, _tmp35.TemporaryDirectory() as out:
+        efp, _ = _m35_build_nb_fixture(root, out, "full")
+        # default production gate ON: the fixture is not the audited 0.902 notebook
+        rep = run_m35_b_reference_repro(working_dir=out, search_roots=[root], expected_fingerprint=efp,
+                                        require_artifact=False)
+        assert rep["recommendation"] == "REFERENCE_NOTEBOOK_SHA_MISMATCH"
+        assert rep["expected_notebook_sha256"] == M35_REF_NOTEBOOK_SHA and rep["notebook_sha_matches_expected"] is False
+
+
+# ---- M35-C GENUINE instrumentation (pre-ILP re-run) ------------------------- #
+_M35C_FIXTURE_PREDICT = (
+    "class _G:\n"
+    "    def __init__(self):\n"
+    "        self._n = {}; self._e = []\n"
+    "    def add_node(self, nid, **a): self._n[nid] = a\n"
+    "    def add_edge(self, s, t, **a): self._e.append((s, t, a))\n"
+    "    def nodes(self, data=False):\n"
+    "        return list(self._n.items()) if data else list(self._n)\n"
+    "    def edges(self, data=False):\n"
+    "        return [(s, t, a) for (s, t, a) in self._e] if data else [(s, t) for (s, t, a) in self._e]\n"
+    "def build_graph(coords, edges):\n"
+    "    g = _G()\n"
+    "    for nid, (t, z, y, x) in coords.items(): g.add_node(nid, t=t, z=z, y=y, x=x)\n"
+    "    for (s, tt, prob, dist) in edges: g.add_edge(s, tt, prob=prob, dist=dist)\n"
+    "    return g\n"
+    "class _Solver:\n"
+    "    def solve(self, graph):\n"
+    "        kept = _G(); kept._n = dict(graph._n)\n"
+    "        for (s, t, a) in graph.edges(data=True):\n"
+    "            if a.get('prob', 0.0) >= 0.5: kept.add_edge(s, t, **a)\n"
+    "        return kept\n"
+    "solver = _Solver()\n"
+    "for dataset in ['dsA', 'dsB']:\n"
+    "    coords = FIX_COORDS[dataset]; edges = FIX_EDGES[dataset]\n"
+    "    graph = build_graph(coords, edges)\n"
+    "    graph = solver.solve(graph)\n")
+_M35C_FIX_COORDS = {"dsA": {0: (0, 0.0, 0.0, 0.0), 1: (1, 0.0, 0.0, 0.5), 2: (2, 0.0, 0.0, 1.0)},
+                    "dsB": {0: (0, 0.0, 0.0, 0.0), 1: (1, 0.0, 0.0, 0.5)}}
+# candidate edges (source, target, prob, dist); prob < 0.5 => an ILP-REJECTED candidate
+_M35C_FIX_EDGES = {"dsA": [(0, 1, 0.9, 0.5), (1, 2, 0.8, 0.5), (0, 2, 0.2, 1.0)],
+                   "dsB": [(0, 1, 0.7, 0.5), (1, 0, 0.1, 0.5)]}
+
+
+def _m35c_run_fixture_recorder():
+    with _tmp35.TemporaryDirectory() as inst:
+        code, state = _m35_instrument_predict_source(_M35C_FIXTURE_PREDICT)
+        rec = M35CRecorder(inst)
+        g = {"_m35c_REC": rec, "_m35c_ctx": _m35c_ctx, "FIX_COORDS": _M35C_FIX_COORDS, "FIX_EDGES": _M35C_FIX_EDGES}
+        exec(code, g)
+        return rec, state
+
+
+def _m35_t_instrumented_predict_exports_rejected_pre_ilp():
+    rec, state = _m35c_run_fixture_recorder()
+    assert state["pre"] and state["post"]                       # both anchors instrumented
+    raw = rec.learned_raw_candidates()
+    keys = {(r["dataset"], r["source_id"], r["target_id"]): r for r in raw}
+    # the ILP-REJECTED pre-ILP candidates ARE exported (recoverable ONLY via re-run)
+    assert (("dsA", 0, 2) in keys) and keys[("dsA", 0, 2)]["selected_by_reference_solver"] is False
+    assert (("dsB", 1, 0) in keys) and keys[("dsB", 1, 0)]["selected_by_reference_solver"] is False
+    # selected candidates are flagged + carry genuine features / stage
+    assert keys[("dsA", 0, 1)]["selected_by_reference_solver"] is True
+    assert keys[("dsA", 0, 2)]["learned_edge_prob"] == 0.2 and keys[("dsA", 0, 2)]["proposal_stage"] == "pre_ilp"
+    # dataset context was captured from the surrounding loop variable
+    assert {r["dataset"] for r in raw} == {"dsA", "dsB"}
+
+
+def _m35_t_post_ilp_geff_alone_cannot_represent_rejected():
+    rec, _ = _m35c_run_fixture_recorder()
+    pre = {(ds, c["source_id"], c["target_id"]) for ds, p in rec.pre.items() for c in p["candidates"]}
+    post = {(ds, s, t) for (ds, s, t) in rec.learned_post_ilp_edges()}
+    rejected = pre - post
+    # the POST-ILP selected set (what the saved GEFF stores hold) is a STRICT subset:
+    # the rejected candidates cannot be recovered from post-ILP outputs alone.
+    assert post < pre and (("dsA", 0, 2) in rejected) and (("dsB", 1, 0) in rejected)
+    assert not (rejected & post)
+
+
+def _m35_t_instrument_requires_anchors():
+    # a stub predict script (no build_graph/solve) can NEVER masquerade as instrumented
+    for stub in ["# inference only\nx = 1\n", "graph = build_graph(c, e)\n"]:   # missing solve
+        try:
+            _m35_instrument_predict_source(stub); assert False, "expected M35CInstrumentationError"
+        except M35CInstrumentationError:
+            pass
+
+
+def _m35_t_postprocess_proposal_recorder():
+    rec = M35CProposalRecorder()
+    ns = {"safe_division": lambda parent: [{"parent": parent, "child": parent + 10, "accepted": True}]}
+
+    def _extract(result):
+        return [{"dataset": "dsA", "source_id": r["parent"], "target_id": r["child"], "stage": "safe_division",
+                 "gates": {"dist_ok": True}, "accepted": r["accepted"], "added_to_graph": r["accepted"],
+                 "survived_final": r["accepted"], "features": {"physical_distance_um": 4.6}} for r in result]
+    wrapped = _m35_instrument_postprocess_functions(ns, rec, {"safe-division": ("safe_division", _extract)})
+    assert wrapped == ["safe_division"]
+    ns["safe_division"](0)                                      # run the wrapped fn
+    raw = rec.raw_candidates()
+    assert len(raw) == 1 and raw[0]["candidate_origin"] == "safe-division" and raw[0]["added_to_graph"] is True
+    assert rec.added_final_edges() == [("dsA", 0, 10)]
+    # an absent mapped function -> honest instrumentation error (never silently skipped)
+    try:
+        _m35_instrument_postprocess_functions({}, rec, {"gap-close": ("gap_close", _extract)}); assert False
+    except M35CInstrumentationError:
+        pass
+
+
 def run_milestone35_tests():
     for fn in [_m35_t_geometry_roundtrips, _m35_t_tta8_group_safe, _m35_t_fusion_reused,
                _m35_t_manifest_audit_pass, _m35_t_manifest_sha_mismatch_fails, _m35_t_isolated_missing_bundle,
@@ -4508,10 +5129,13 @@ def run_milestone35_tests():
                _m35_t_current_kernel_wrong_cwd_detected, _m35_t_provenance_honesty_fields,
                _m35_t_candidate_table_selected_and_rejected, _m35_t_candidate_recall_and_division,
                _m35_t_candidate_export_written_and_validated, _m35_t_incomplete_export_rejected,
-               _m35_t_c_blocked_without_b_pass_then_passes, _m35_t_c_placeholder_cannot_pass,
-               _m35_t_d_blocked_until_c_pass, _m35_t_no_local_metric_no_0975_no_m19c]:
+               _m35_t_c_blocked_without_b_pass_then_passes, _m35_t_c_without_real_instrumentation_cannot_pass,
+               _m35_t_d_blocked_until_c_pass, _m35_t_no_local_metric_no_0975_no_m19c,
+               _m35_t_cells_bound_by_index_not_keyword, _m35_t_notebook_sha_gate_rejects_unknown,
+               _m35_t_instrumented_predict_exports_rejected_pre_ilp, _m35_t_post_ilp_geff_alone_cannot_represent_rejected,
+               _m35_t_instrument_requires_anchors, _m35_t_postprocess_proposal_recorder]:
         fn()
-    print("All milestone35_reference_0902_foundation tests passed (29/29).")
+    print("All milestone35_reference_0902_foundation tests passed (35/35).")
 
 
 def run_milestone35_reference_audit(working_dir=KAGGLE_WORKING_DIR):
@@ -4535,8 +5159,9 @@ def run_milestone35_candidate_export(working_dir=KAGGLE_WORKING_DIR):
 
 
 def run_milestone35_full_candidate_export(working_dir=KAGGLE_WORKING_DIR):
+    # explicit PRODUCTION entry point: genuine instrumented re-run only (no provider)
     print("=== Self-test: M35 reference-0902 foundation ==="); run_milestone35_tests()
-    return run_m35_c_full_candidate_export(working_dir)
+    return run_m35_c_production_candidate_export(working_dir)
 
 
 def run_milestone35_edge_tta_diagnostic(working_dir=KAGGLE_WORKING_DIR):
