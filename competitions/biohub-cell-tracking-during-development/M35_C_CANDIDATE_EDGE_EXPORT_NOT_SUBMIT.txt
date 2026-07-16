@@ -4095,6 +4095,17 @@ def _m35c_norm(v):
     return v
 
 
+def _m35c_finite(v):
+    """True iff v is a finite real number (not None / NaN / inf)."""
+    if v is None:
+        return False
+    try:
+        import math as _m
+        return _m.isfinite(float(_m35c_norm(v)))
+    except (TypeError, ValueError):
+        return False
+
+
 class M35CProposalRecorder:
     """Records EVERY postprocess proposal EVALUATED inside the exact cell-4 functions
     (motion-relink / gap-close / safe-division / final-filter), INCLUDING proposals a
@@ -4286,6 +4297,72 @@ class M35CEventRecorder:
         self.state = {}
         self.conflicts = []
         self._ord = 0
+        # COMPACT out-of-gate counters (NO per-pair dicts): keyed by
+        # (origin, dataset, t, pass_name, reason) -> {"count", "hist"} + fixed distance bins
+        self.out_of_gate = {}
+
+    _OOG_BINS = (5.0, 10.0, 20.0, 40.0, 80.0, 160.0, 320.0)
+
+    def count_out_of_gate(self, origin, dataset, t, pass_name, reason, distance=None, n=1):
+        """Record REJECTED (out-of-gate / out-of-threshold) Cartesian pairs as a COMPACT
+        aggregate - a single counter (+ fixed-bin distance histogram) per
+        (origin, dataset, t, pass_name, reason). NEVER allocates an evaluation_id, a
+        per-pair Python state dict, or a candidate row. This is what keeps the recorder
+        bounded when the raw Cartesian pair count is in the tens of millions."""
+        key = (str(origin), str(dataset), None if t is None else int(_m35c_norm(t)),
+               None if pass_name is None else str(pass_name), str(reason))
+        slot = self.out_of_gate.get(key)
+        if slot is None:
+            slot = {"count": 0, "hist": [0] * (len(self._OOG_BINS) + 1)}
+            self.out_of_gate[key] = slot
+        slot["count"] += int(n)
+        if distance is not None:
+            d = float(_m35c_norm(distance)); b = len(self._OOG_BINS)
+            for idx, edge in enumerate(self._OOG_BINS):
+                if d <= edge:
+                    b = idx; break
+            slot["hist"][b] += int(n)
+        return slot["count"]
+
+    def out_of_gate_summary(self):
+        """Serialisable out-of-gate aggregate (counts + histograms), no per-pair rows."""
+        rows = []
+        for (origin, dataset, t, pass_name, reason), slot in self.out_of_gate.items():
+            rows.append({"origin": origin, "dataset": dataset, "t": t, "pass_name": pass_name,
+                         "reason": reason, "count": int(slot["count"]), "hist": list(slot["hist"])})
+        return {"bins": list(self._OOG_BINS), "rows": rows,
+                "total_out_of_gate": int(sum(r["count"] for r in rows))}
+
+    def motion_feature_report(self):
+        """Feature-completeness over IN-GATE motion candidates (those that received a
+        cost_computed event). Every feasible candidate - including ones NOT selected by
+        Hungarian - must carry finite raw_distance / predicted_motion_distance /
+        learned_probability / cost / gate_um and a non-null t / pass_name / source / target."""
+        required = ("raw_distance", "predicted_motion_distance", "learned_probability", "cost", "gate_um")
+        feasible = [st for st in self.state.values()
+                    if st["origin"] == "motion-relink"
+                    and ("cost_computed" in st["event_types"] or st["gates"].get("within_gate"))]
+        complete = 0; incomplete = 0; examples = []
+        for st in feasible:
+            f = st["features"]; parts = st["evaluation_id"].split("|")
+            t_ok = len(parts) >= 3 and parts[2] not in ("", "None")
+            pass_ok = len(parts) >= 4 and parts[3] not in ("", "None")
+            miss = [k for k in required if not _m35c_finite(f.get(k))]
+            if not miss and t_ok and pass_ok and st["source_id"] is not None and st["target_id"] is not None:
+                complete += 1
+            else:
+                incomplete += 1
+                if len(examples) < 20:
+                    examples.append({"evaluation_id": st["evaluation_id"],
+                                     "missing": miss + ([] if t_ok else ["t"]) + ([] if pass_ok else ["pass_name"])})
+        n = len(feasible)
+        return {"motion_feasible_candidates": int(n),
+                "motion_cost_computed_candidates": int(sum(1 for st in feasible if "cost_computed" in st["event_types"])),
+                "motion_feature_complete_candidates": int(complete),
+                "motion_feature_incomplete_candidates": int(incomplete),
+                "motion_feature_completeness": (complete / n) if n else 0.0,
+                "motion_feature_completeness_100": bool(n > 0 and incomplete == 0),
+                "missing_motion_feature_examples": examples}
 
     def create_or_update(self, evaluation_id, event_type, dataset=None, origin=None,
                          source_id=None, target_id=None, pass_name=None,
@@ -4666,15 +4743,24 @@ def _tmpl(src):
 # Each rule: (matcher, key, template, required_local_names)
 def _m35c_motion_rules():
     return [
-        ("after_assign:raw", "motion_pair_evaluation", _tmpl(
-            f"_m35c_EVT.create_or_update({_EID_MOTION}, 'pair_evaluated', dataset=_m35c_find_dataset(), "
+        # SCALE-SAFE: out-of-gate Cartesian pairs (raw > gate_um) update only a COMPACT
+        # counter - NO evaluation_id / state dict / candidate row is created. Injected
+        # before the real `if raw > gate_um: continue`.
+        ("out_of_gate:raw", "motion_out_of_gate", _tmpl(
+            "_m35c_EVT.count_out_of_gate('motion-relink', _m35c_find_dataset(), _m35c_ctx_var('t'), "
+            "_m35c_ctx_var('pass_name'), 'raw_gate', float(raw))\n"),
+         {"raw"}),
+        # A FEASIBLE motion candidate is created only AFTER the real cost is computed
+        # (`cost[i, j] = motion + 0.05 * raw - MOTION_RELINK_LEARNED_BONUS * prob`); every
+        # in-gate pair gets cost_computed with ALL features, even if Hungarian rejects it.
+        ("after_subscript:cost", "motion_cost_computed", _tmpl(
+            f"_m35c_EVT.create_or_update({_EID_MOTION}, 'cost_computed', dataset=_m35c_find_dataset(), "
             "origin='motion-relink', source_id=source_id, target_id=target_id, pass_name=_m35c_ctx_var('pass_name'), "
-            "features={'gate_um': gate_um, 'raw_distance': float(raw)}, gates={'within_gate': bool(raw <= gate_um)})\n"),
-         {"source_id", "target_id", "gate_um", "raw"}),
-        ("before_continue", "motion_gate_rejected", _tmpl(
-            f"_m35c_EVT.create_or_update({_EID_MOTION}, 'gate_rejected', dataset=_m35c_find_dataset(), "
-            "origin='motion-relink', source_id=source_id, target_id=target_id, gates={'within_gate': False})\n"),
-         {"source_id", "target_id"}),
+            "matrix_i=i, matrix_j=j, "
+            "features={'gate_um': float(gate_um), 'raw_distance': float(raw), "
+            "'predicted_motion_distance': float(motion), 'learned_probability': float(prob), "
+            "'cost': float(cost[i, j])}, gates={'within_gate': True, 'cost_computed': True})\n"),
+         {"source_id", "target_id", "gate_um", "raw", "motion", "prob", "i", "j"}),
         ("hungarian", "motion_hungarian", _tmpl(
             "source_id = source_ids[int(r)]\ntarget_id = target_ids[int(c)]\n"
             "if float(cost[r, c]) >= big:\n"
@@ -4700,13 +4786,13 @@ def _m35c_motion_rules():
 
 def _m35c_gap_rules():
     return [
-        ("after_subscript:d", "gap_matrix_pair", _tmpl(
-            "source_id = end_ids[int(i)]\ntarget_id = start_ids[int(j)]\n"
-            f"_m35c_EVT.create_or_update({_EID_GAP}, 'pair_evaluated', dataset=_m35c_find_dataset(), "
-            "origin='gap-close', source_id=source_id, target_id=target_id, matrix_i=i, matrix_j=j, "
-            "features={'distance': float(d[i, j]), 'threshold_um': threshold_um}, "
-            "gates={'within_gate': bool(d[i, j] <= threshold_um)})\n"),
-         {"end_ids", "start_ids", "d", "i", "j"}),
+        # SCALE-SAFE: never one event per d[i, j]. After `cost = np.where(d <= threshold_um,
+        # d, big)` aggregate the out-of-threshold cell count into a COMPACT counter; the
+        # feasible in-threshold candidates are created in the bounded Hungarian loop.
+        ("after_assign:cost", "gap_out_of_threshold", _tmpl(
+            "_m35c_EVT.count_out_of_gate('gap-close', _m35c_find_dataset(), _m35c_ctx_var('t'), 'gap', "
+            "'threshold_gate', None, n=int((d > threshold_um).sum()))\n"),
+         {"d", "threshold_um"}),
         ("hungarian_gap", "gap_hungarian", _tmpl(
             "source_id = end_ids[int(r)]\ntarget_id = start_ids[int(c)]\n"
             "if float(d[r, c]) > threshold_um:\n"
@@ -4880,6 +4966,16 @@ def _m35c_inject_body(body, bound, rules, counts, binding_errors, origin, accept
                     stmt.body = tmpl() + stmt.body; counts[k] = counts.get(k, 0) + 1
             out.append(stmt); continue
 
+        # motion raw gate: `if raw > gate_um: continue` is the OUT-OF-GATE path. Update a
+        # COMPACT counter before the continue - never a per-pair event/state/candidate.
+        if origin == "motion-relink" and isinstance(stmt, _ast35c.If) and "out_of_gate:raw" in matchers:
+            test_src = _m35c_if_test_src(stmt)
+            if any(isinstance(s, _ast35c.Continue) for s in stmt.body) and "gate_um" in test_src and "raw" in test_src:
+                k, tmpl, req = matchers["out_of_gate:raw"]
+                if not _m35c_missing_bindings(req, bound):
+                    stmt.body = tmpl() + stmt.body; counts[k] = counts.get(k, 0) + 1
+                out.append(stmt); continue
+
         for fld in ("body", "orelse", "finalbody"):
             child = getattr(stmt, fld, None)
             if isinstance(child, list):
@@ -5001,12 +5097,14 @@ def _m35c_patch_motion_dataset_propagation(tree):
 
 # per-site static expressions the preflight requires in the patched source
 M35_C_REQUIRED_EXPRS = {
-    "motion_pair_evaluation": ["'pair_evaluated'", "float(raw)", "raw <= gate_um"],
+    # SCALE-SAFE: motion candidates are created at cost_computed (in-gate only); the
+    # out-of-gate path only updates a compact counter.
+    "motion_out_of_gate": ["count_out_of_gate", "'raw_gate'"],
+    "motion_cost_computed": ["'cost_computed'", "cost[i, j]", "float(motion)", "float(prob)"],
     "motion_hungarian": ["source_ids[int(r)]", "target_ids[int(c)]", "cost[r, c]", "raw_dist[r, c]",
                          "motion_dist[r, c]", "prob_matrix[r, c]", "'assignment_rejected'"],
     "motion_selected_edges_append": ["'edge_added'"],
     "motion_frame_matches_append": ["'accepted'"],
-    "gap_matrix_pair": ["end_ids[int(i)]", "start_ids[int(j)]", "d[i, j]", "threshold_um"],
     "gap_hungarian": ["end_ids[int(r)]", "start_ids[int(c)]", "d[r, c]"],
     "gap_edge_dict_e1": ["'first_edge_prepared'", "middle_id"],
     "gap_edge_dict_e2": ["'second_edge_prepared'", "middle_id"],
@@ -5017,8 +5115,8 @@ M35_C_REQUIRED_EXPRS = {
     "safe_div_acceptance": ["'accepted'"],
 }
 # every one of these must be > 0 (gap dict/extend sites are additionally required == 1)
-M35_REQUIRED_SITE_KEYS = ("motion_pair_evaluation", "motion_hungarian", "motion_selected_edges_append",
-                          "motion_frame_matches_append", "gap_matrix_pair", "gap_hungarian",
+M35_REQUIRED_SITE_KEYS = ("motion_out_of_gate", "motion_cost_computed", "motion_hungarian",
+                          "motion_selected_edges_append", "motion_frame_matches_append", "gap_hungarian",
                           "gap_edge_dict_e1", "gap_edge_dict_e2", "gap_extend",
                           "safe_div_pair", "safe_div_selected", "safe_div_acceptance")
 # these gap sites must occur EXACTLY once (one e1 dict, one e2 dict, one extend)
@@ -5080,10 +5178,12 @@ M35C_SELFTEST_CELL4 = (
     "        for i, source_id in enumerate(source_ids):\n"
     "            for j, target_id in enumerate(target_ids):\n"
     "                raw = float(abs(source_id - target_id))\n"
-    "                raw_dist[i, j] = raw; motion_dist[i, j] = raw * 0.5; prob_matrix[i, j] = 0.9\n"
     "                if raw > gate_um:\n"
     "                    continue\n"
-    "                cost[i, j] = raw\n"
+    "                motion = raw * 0.5\n"
+    "                prob = 0.9\n"
+    "                raw_dist[i, j] = raw; motion_dist[i, j] = motion; prob_matrix[i, j] = prob\n"
+    "                cost[i, j] = motion + 0.05 * raw - 0.0 * prob\n"
     "        rows = [i for i in range(n) if float(cost[i].min()) < big]\n"
     "        row_ind = rows; col_ind = [int(np.argmin(cost[i])) for i in rows]\n"
     "        matches = []\n"
@@ -5094,7 +5194,7 @@ M35C_SELFTEST_CELL4 = (
     "            matches.append((source_id, target_id, float(cost[r, c])))\n"
     "        return matches\n"
     "    for pass_name, gate_um in [('tight', 6.0), ('relaxed', 12.0)]:\n"
-    "        for (source_id, target_id, distance_um) in assign_pass([0], [5, 20], gate_um):\n"
+    "        for (source_id, target_id, distance_um) in assign_pass([0], [4, 5, 20], gate_um):\n"
     "            frame_matches.append((source_id, target_id, distance_um))\n"
     "            selected_edges.append({'source_id': source_id, 'target_id': target_id, 'distance_um': distance_um})\n"
     "    return selected_edges\n"
@@ -5188,7 +5288,11 @@ def _m35c_semantic_selftest():
         e = et_of(rws)
         return bool(rws and "selected_by_sorted_order" in e and "accepted" not in e and "edge_added" not in e)
 
-    mot = rows("motion-relink", 0, 5); rej = rows("motion-relink", 0, 20)
+    # (0,4) is Hungarian-selected+accepted; (0,5) is IN-GATE but Hungarian-unselected
+    # (feature-complete, cost_computed, not added); (0,20) is OUT-OF-GATE (counter only).
+    mot = rows("motion-relink", 0, 4); mot_unsel = rows("motion-relink", 0, 5)
+    rej = rows("motion-relink", 0, 20)
+    mfr = rec.motion_feature_report(); oog = rec.out_of_gate_summary()
     gap = [r for r in cons if r["origin"] == "gap-close"]
     # (0,10) commits the extend; (1,11) prepares e1/e2 but the extend is deliberately skipped
     gap_added = rows("gap-close", 0, 10); gap_prep_only = rows("gap-close", 1, 11)
@@ -5199,11 +5303,22 @@ def _m35c_semantic_selftest():
     safe_global_cap = rows("safe-division", 10, 11)
     no_none_ids = all("|None|" not in r["evaluation_id"] for r in cons)
     checks = {
-        "rejected_and_accepted_present": bool(("gate_rejected" in evt or "assignment_rejected" in evt)
-                                              and ("edge_added" in evt or "first_edge_added" in evt)),
-        "motion_lifecycle_one_eval_id": bool(mot and {"pair_evaluated", "hungarian_selected", "accepted", "edge_added"}
+        "rejected_and_accepted_present": bool(
+            (oog["total_out_of_gate"] > 0 or any(x in evt for x in
+             ("gate_rejected", "assignment_rejected", "global_cap_rejected",
+              "frame_cap_rejected", "target_conflict_rejected")))
+            and ("edge_added" in evt or "first_edge_added" in evt)),
+        "motion_lifecycle_one_eval_id": bool(mot and {"cost_computed", "hungarian_selected", "accepted", "edge_added"}
                                              <= set(mot[0]["event_types"])),
-        "motion_rejected_not_added": bool(rej and "edge_added" not in set(rej[0]["event_types"])),
+        # an IN-GATE Hungarian-UNSELECTED motion pair keeps full features but is not added
+        "motion_ingate_unselected_feature_complete": bool(
+            mot_unsel and "cost_computed" in et_of(mot_unsel) and "edge_added" not in et_of(mot_unsel)
+            and all(_m35c_finite(mot_unsel[0]["features"].get(k))
+                    for k in ("raw_distance", "predicted_motion_distance", "learned_probability", "cost"))),
+        # an OUT-OF-GATE pair creates NO candidate row/state but increments the counter
+        "motion_out_of_gate_not_candidate": bool(not rej and oog["total_out_of_gate"] > 0),
+        "motion_feature_completeness_100": bool(mfr["motion_feature_completeness_100"]
+                                                and mfr["motion_feasible_candidates"] > 0),
         # gap bridge edges enter the graph ONLY after the extend
         "gap_real_extend_both_added": bool(gap_added and {"first_edge_added", "second_edge_added"} <= et_of(gap_added)
                                            and added_tg(gap_added)),
@@ -5229,7 +5344,7 @@ def _m35c_semantic_selftest():
         "no_identity_conflicts": bool(len(rec.conflicts) == 0),
         "binding_ok": report["binding_ok"],
         "binding_errors_empty": bool(len(report["binding_errors"]) == 0),
-        "feature_value_matches": bool(mot and abs((mot[0]["features"].get("raw_distance") or -1) - 5.0) < 1e-9),
+        "feature_value_matches": bool(mot and abs((mot[0]["features"].get("raw_distance") or -1) - 4.0) < 1e-9),
         "all_required_exprs_present": bool(report["all_required_exprs_present"]),
         "all_required_sites_present": all(report["required_sites_present"].values()),
         "gap_sites_exactly_one": all(report["site_counts"].get(k, 0) == 1 for k in M35_GAP_EXACTLY_ONE_SITE_KEYS),
@@ -5239,6 +5354,64 @@ def _m35c_semantic_selftest():
             "dataset_propagation_patch_count": report["dataset_propagation_patch_count"],
             "binding_errors": report["binding_errors"], "n_events": len(rec.events),
             "n_consolidated": len(cons), "n_conflicts": len(rec.conflicts)}
+
+
+def _m35c_scale_probe_source():
+    """A motion-only cell (with trivial gap/safe stubs so the instrumenter accepts it)
+    whose assign_pass runs a FULL n*m Cartesian loop with a raw gate - used to PROVE the
+    instrumented architecture allocates NO per-pair state for out-of-gate pairs."""
+    return (
+        "import numpy as np\n"
+        "def motion_relink_edges(source_ids, target_ids, gate_um):\n"
+        "    dataset = 'probe_ds'\n"
+        "    t = 0\n"
+        "    pass_name = 'tight'\n"
+        "    selected_edges = []\n"
+        "    def assign_pass(source_ids, target_ids, gate_um):\n"
+        "        big = 1e18\n"
+        "        n, m = len(source_ids), len(target_ids)\n"
+        "        cost = np.full((n, m), big); raw_dist = np.full((n, m), np.inf)\n"
+        "        motion_dist = np.full((n, m), np.inf); prob_matrix = np.zeros((n, m))\n"
+        "        for i, source_id in enumerate(source_ids):\n"
+        "            for j, target_id in enumerate(target_ids):\n"
+        "                raw = float(abs(source_id - target_id))\n"
+        "                if raw > gate_um:\n"
+        "                    continue\n"
+        "                motion = raw * 0.5\n"
+        "                prob = 0.9\n"
+        "                raw_dist[i, j] = raw; motion_dist[i, j] = motion; prob_matrix[i, j] = prob\n"
+        "                cost[i, j] = motion + 0.05 * raw - 0.0 * prob\n"
+        "        return []\n"
+        "    assign_pass(source_ids, target_ids, gate_um)\n"
+        "    return selected_edges\n"
+        "def close_single_frame_gaps(*a, **k):\n    return []\n"
+        "def add_safe_divisions_postlink(*a, **k):\n    return []\n")
+
+
+def _m35c_scale_probe(n_sources, n_targets, gate_um, trace=False):
+    """Instrument + EXECUTE the Cartesian probe; return the ACTUAL recorder allocation so a
+    test can prove state <= in-gate pairs and out-of-gate pairs cost ZERO per-pair objects.
+    With ``trace`` uses tracemalloc for a deterministic peak-memory reading."""
+    patched, _rep = _m35_instrument_postprocess_source(_m35c_scale_probe_source())
+    rec = M35CEventRecorder()
+    g = {"_m35c_EVT": rec, "_m35c_find_dataset": _m35c_find_dataset, "_m35c_ctx_var": _m35c_ctx_var}
+    exec(compile(patched, "<m35c_scale_probe>", "exec"), g)
+    src = list(range(int(n_sources))); tgt = list(range(int(n_targets)))
+    in_gate = sum(1 for a in src for b in tgt if abs(a - b) <= gate_um)
+    out_gate = n_sources * n_targets - in_gate
+    peak_mb = None
+    if trace:
+        import tracemalloc as _tm
+        _tm.start()
+        g["motion_relink_edges"](src, tgt, gate_um)
+        _cur, _peak = _tm.get_traced_memory(); _tm.stop(); peak_mb = _peak / (1024.0 * 1024.0)
+    else:
+        g["motion_relink_edges"](src, tgt, gate_um)
+    oog_events = sum(1 for e in rec.events if e["event_type"] in ("gate_rejected", "pair_evaluated"))
+    return {"cartesian_pairs": int(n_sources * n_targets), "in_gate_pairs": int(in_gate),
+            "out_of_gate_pairs": int(out_gate), "n_states": len(rec.state), "n_events": len(rec.events),
+            "out_of_gate_counter_total": rec.out_of_gate_summary()["total_out_of_gate"],
+            "out_of_gate_individual_events": int(oog_events), "peak_mb": peak_mb}
 
 
 def _m35_run_reference_postprocess_instrumented(notebook_path, geff_dir, out_csv, recorder,
@@ -5318,6 +5491,168 @@ def _m35_run_reference_postprocess_instrumented(notebook_path, geff_dir, out_csv
 # submits; never modifies the M35-B reproduced CSV. Combined candidate recall against
 # the exact reference final edges must be 100%.
 M35_CANDIDATE_ORIGINS = ("learned", "motion-relink", "gap-close", "safe-division")
+# Reference-scale MOTION tight-pass Cartesian pair counts per dataset (from the audited
+# final-node timepoint counts). The relaxed pass adds more; this is a LOWER bound.
+M35_C_SCALE_REFERENCE_TIGHT_PAIRS = {
+    "44b6_0113de3b": 6505842, "44b6_0b24845f": 6098849,
+    "6bba_05b6850b": 404575, "6bba_05db0fb1": 52105972,
+}
+M35_C_SCALE_RECS = ["M35_C_SCALE_PREFLIGHT_PASS", "M35_C_SCALE_PREFLIGHT_FAILED"]
+# conservative per-object sizes (bytes) for the OLD all-in-RAM architecture
+_M35_BYTES_PER_EVENT = 900          # one event dict (10+ keys, nested feature/gate dicts)
+_M35_BYTES_PER_STATE = 1100         # one consolidated state dict
+_M35_BYTES_PER_OUTPUT_ROW = 320     # one flat candidate row on disk (compressed est.)
+
+
+def run_m35_c_scale_preflight(working_dir=KAGGLE_WORKING_DIR, tight_pairs=None,
+                              in_gate_fraction=0.002, kaggle_ram_gb=13.0):
+    """NO-GPU scale preflight. From the real per-dataset MOTION Cartesian pair counts it
+    projects the OLD all-in-RAM memory (proportional to Cartesian pairs -> OOM) vs. the
+    scale-safe streaming memory (proportional only to FEASIBLE in-gate candidates), and
+    runs a deterministic ARCHITECTURE PROBE proving the production instrumentation
+    allocates NO per-pair state for out-of-gate pairs. HARD-FAILS if state still scales
+    with Cartesian pairs. NON-SUBMIT."""
+    _RUN_LOG.clear()
+    out = Path(working_dir); out.mkdir(parents=True, exist_ok=True)
+    tp = dict(tight_pairs or M35_C_SCALE_REFERENCE_TIGHT_PAIRS)
+    total_pairs = int(sum(tp.values()))
+    est_rejections = int(round(total_pairs * (1.0 - in_gate_fraction)))
+    est_feasible = int(round(total_pairs * in_gate_fraction))
+    # OLD architecture: ~2 events/pair (pair_evaluated + gate_rejected) + 1 state/pair
+    old_events = 2 * total_pairs
+    projected_old_memory_gb = (old_events * _M35_BYTES_PER_EVENT + total_pairs * _M35_BYTES_PER_STATE) / 1e9
+    streaming_state_upper_bound = est_feasible                    # only in-gate pairs held
+    projected_streaming_memory_gb = (streaming_state_upper_bound * (_M35_BYTES_PER_EVENT + _M35_BYTES_PER_STATE)) / 1e9
+    projected_output_rows = int(est_feasible * 1.5)              # + learned + materialized (bounded)
+    projected_output_disk_gb = (projected_output_rows * _M35_BYTES_PER_OUTPUT_ROW) / 1e9
+
+    pre = {"kind": "m35_c_scale_preflight", "submit": False, "runs_gpu": False,
+           "per_dataset_tight_pairs": tp, "motion_tight_cartesian_pairs": total_pairs,
+           "estimated_raw_gate_rejections": est_rejections,
+           "estimated_in_memory_events_old_architecture": int(old_events),
+           "projected_old_memory_gb": round(projected_old_memory_gb, 3),
+           "streaming_candidate_state_upper_bound": int(streaming_state_upper_bound),
+           "projected_streaming_memory_gb": round(projected_streaming_memory_gb, 6),
+           "projected_output_rows": projected_output_rows,
+           "projected_output_disk_gb": round(projected_output_disk_gb, 4),
+           "kaggle_ram_gb": kaggle_ram_gb, "reasons": []}
+    # ARCHITECTURE PROBE: 400x400 Cartesian, gate 0.5 -> exactly 400 in-gate, 159600 out.
+    probe = _m35c_scale_probe(400, 400, 0.5, trace=True)
+    pre["architecture_probe"] = probe
+    if probe["out_of_gate_individual_events"] != 0:
+        pre["reasons"].append(f"production allocates {probe['out_of_gate_individual_events']} per-pair events "
+                              "for out-of-gate pairs (must be 0)")
+    if probe["n_states"] > probe["in_gate_pairs"]:
+        pre["reasons"].append(f"candidate states {probe['n_states']} exceed in-gate pairs {probe['in_gate_pairs']} "
+                              "(state must not scale with Cartesian pairs)")
+    if probe["out_of_gate_counter_total"] != probe["out_of_gate_pairs"]:
+        pre["reasons"].append(f"out-of-gate counter {probe['out_of_gate_counter_total']} != "
+                              f"exact out-of-gate pairs {probe['out_of_gate_pairs']}")
+    if projected_old_memory_gb <= kaggle_ram_gb:
+        pre["reasons"].append("old architecture projected memory does not exceed Kaggle RAM - "
+                              "scale estimate implausible (check inputs)")
+    if projected_streaming_memory_gb >= kaggle_ram_gb:
+        pre["reasons"].append(f"streaming projected memory {projected_streaming_memory_gb:.3f} GB "
+                              f">= Kaggle RAM {kaggle_ram_gb} GB")
+    ok = bool(not pre["reasons"] and probe["out_of_gate_individual_events"] == 0
+              and probe["n_states"] <= probe["in_gate_pairs"]
+              and projected_old_memory_gb > kaggle_ram_gb
+              and projected_streaming_memory_gb < kaggle_ram_gb)
+    pre["recommendation"] = "M35_C_SCALE_PREFLIGHT_PASS" if ok else "M35_C_SCALE_PREFLIGHT_FAILED"
+    _m35_write_json(out, "m35_c_scale_preflight.json", pre); _write_log(out)
+    print("=== M35_C SCALE PREFLIGHT (no GPU) ===")
+    print(f"  motion tight Cartesian pairs: {total_pairs:,}  est. raw-gate rejections: {est_rejections:,}")
+    print(f"  OLD in-RAM events: {old_events:,}  projected OLD memory: {projected_old_memory_gb:.1f} GB "
+          f"(Kaggle RAM ~{kaggle_ram_gb} GB)")
+    print(f"  streaming state upper bound: {streaming_state_upper_bound:,}  "
+          f"projected streaming memory: {projected_streaming_memory_gb*1000:.1f} MB")
+    print(f"  projected output rows: {projected_output_rows:,}  disk: {projected_output_disk_gb:.3f} GB")
+    print(f"  probe(400x400,gate0.5): states={probe['n_states']} in_gate={probe['in_gate_pairs']} "
+          f"oog_events={probe['out_of_gate_individual_events']} oog_counter={probe['out_of_gate_counter_total']} "
+          f"peak={probe['peak_mb']:.1f}MB")
+    print(f"  RECOMMENDATION: {pre['recommendation']}  (no GPU, no inference, no submission)")
+    return pre
+
+
+def _m35_stream_write_candidates(raw_iter, out_dir, final_edges, division_final_edges=None,
+                                 gap_event_edges=None, learned_post_ilp_edges=None,
+                                 postprocess_added_edges=None, chunk_rows=50000):
+    """DISK-BACKED incremental candidate writer. Consumes raw candidates as an ITERATOR,
+    writes compressed JSONL chunks partitioned by dataset/origin, and maintains ONLY
+    small running aggregates (candidate-key set for uniqueness, small final-edge target
+    sets for recall, per-origin counts) - NEVER one giant list or DataFrame. Returns the
+    incremental recall + key-uniqueness result and the written-file manifest."""
+    import gzip as _gz
+    base = Path(out_dir); base.mkdir(parents=True, exist_ok=True)
+    handles = {}; files = {}
+    key_count = {}                                # candidate_key -> count (uniqueness)
+    all_keys = set(); learned_keys = set(); post_keys = set(); gap_mat_keys = set()
+    n_rows = 0; per_origin = {}
+    try:
+        for c in raw_iter:
+            ds = str(c["dataset"]); origin = c.get("candidate_origin", "learned")
+            role = c.get("candidate_role") or ("proposal" if origin != "learned" else "learned")
+            s = int(c["source_id"]); t = int(c["target_id"])
+            stage = c.get("proposal_stage") or ("pre_ilp" if origin == "learned" else origin.replace("-", "_"))
+            ppass = c.get("proposal_pass") or origin.replace("-", "_")
+            ordinal = c.get("proposal_ordinal"); ordinal = int(ordinal) if ordinal is not None else n_rows
+            key = _m35_candidate_key(ds, origin, s, t, stage, ppass, ordinal)
+            key_count[key] = key_count.get(key, 0) + 1
+            all_keys.add((ds, s, t))
+            if origin == "learned":
+                learned_keys.add((ds, s, t))
+            if origin in ("motion-relink", "gap-close", "safe-division"):
+                post_keys.add((ds, s, t))
+            if origin == "gap-close" and role == "materialized_edge":
+                gap_mat_keys.add((ds, s, t))
+            pk = (ds, origin)
+            fh = handles.get(pk)
+            if fh is None:
+                pdir = base / f"dataset={ds}"; pdir.mkdir(parents=True, exist_ok=True)
+                fp = pdir / f"{origin}.jsonl.gz"; fh = _gz.open(fp, "at", encoding="utf-8")
+                handles[pk] = fh; files[pk] = str(fp)
+            row = dict(c); row["candidate_key"] = key
+            fh.write(json.dumps(row, default=str) + "\n"); n_rows += 1
+            per_origin[origin] = per_origin.get(origin, 0) + 1
+    finally:
+        for fh in handles.values():
+            fh.close()
+    recall = _m35_incremental_recall_and_keys(all_keys, learned_keys, post_keys, gap_mat_keys, key_count,
+                                              final_edges, division_final_edges, gap_event_edges,
+                                              learned_post_ilp_edges, postprocess_added_edges)
+    manifest = []
+    for pk, fp in files.items():
+        p = Path(fp); b = p.read_bytes()
+        manifest.append({"dataset": pk[0], "origin": pk[1], "path": fp, "bytes": len(b),
+                         "sha256": _hl35.sha256(b).hexdigest()})
+    return {"n_rows": int(n_rows), "per_origin": per_origin, "n_partitions": len(manifest),
+            "partitions": manifest, "format": "jsonl.gz", **recall}
+
+
+def _m35_incremental_recall_and_keys(all_keys, learned_keys, post_keys, gap_mat_keys, key_count,
+                                     final_edges, division_final_edges=None, gap_event_edges=None,
+                                     learned_post_ilp_edges=None, postprocess_added_edges=None):
+    """Recall + key-uniqueness computed from the small running SETS only (never the full
+    row table). The exact final-edge sets are small enough to stay in memory; raw rows
+    are not, and are NOT materialised here."""
+    def _rec(targets, pool):
+        tset = set((str(d), int(s), int(t)) for (d, s, t) in (targets or []))
+        cov = tset & pool
+        r = (len(cov) / len(tset)) if tset else 1.0
+        return {"n": len(tset), "covered": len(cov), "recall": float(r),
+                "recall_100pct": bool(abs(r - 1.0) < 1e-12)}
+    dup = sum(v - 1 for v in key_count.values() if v > 1)
+    gap_expected = set((str(d), int(s), int(t)) for (d, s, t) in (gap_event_edges or []))
+    gap_present = gap_expected & gap_mat_keys
+    gap_recall = (len(gap_present) / len(gap_expected)) if gap_expected else 0.0
+    return {"combined_final_recall": _rec(final_edges, all_keys),
+            "learned_pre_ilp_recall": _rec(learned_post_ilp_edges, learned_keys),
+            "postprocess_proposal_recall": _rec(postprocess_added_edges, post_keys),
+            "division_recall": _rec(division_final_edges, all_keys),
+            "gap_materialized_recall": float(gap_recall),
+            "gap_materialized_recall_100": bool(gap_expected and abs(gap_recall - 1.0) < 1e-12),
+            "duplicate_key_count": int(dup), "raw_keys_unique": bool(dup == 0),
+            "n_candidate_keys": int(len(key_count))}
 M35_CANDIDATE_COLUMNS = [
     "dataset", "source_id", "target_id", "candidate_origin", "candidate_role",
     "evaluation_id", "bridge_evaluation_id", "bridge_source_id", "bridge_target_id", "middle_id", "actual_edge_index",
@@ -5625,6 +5960,9 @@ def export_candidates_from_reference(bundle_root, executed_cwd, geff_stores, wor
            # EVENT-LEVEL gap audit (before candidate filtering) + validated gap event edges
            "gap_event_audit": prop_rec.gap_event_audit(),
            "gap_event_edges": prop_rec.gap_validated_event_edges(),
+           # SCALE-SAFE: compact out-of-gate aggregate + motion feature completeness
+           "out_of_gate_summary": prop_rec.out_of_gate_summary(),
+           "motion_feature_report": prop_rec.motion_feature_report(),
            "final_csv_byte_exact": bool(pp_info.get("final_csv_sha_exact"))}
     return (learned_raw + postproc_raw), final_edges, division_final_edges, aux
 
@@ -5664,6 +6002,9 @@ def _m35_c_production_gates(aux, recall, validation, export, geff_unchanged, gap
         "gap_materialized_edge_keys_unique": bool(gap_mat["keys_unique"]),
         # GAP-SPECIFIC recall (materialized_edge rows only; motion/safe cannot satisfy it)
         "gap_final_edge_recall_100": bool(allow_no_gap or gap_recall["gap_materialized_recall_100"]),
+        # MOTION feature completeness over feasible in-gate candidates (hard gate)
+        "motion_feature_completeness_100": bool((aux.get("motion_feature_report") or {}).get("motion_feature_completeness_100")),
+        "motion_feasible_candidates_present": bool((aux.get("motion_feature_report") or {}).get("motion_feasible_candidates", 0) > 0),
         "output_files_have_sha": bool(export["n_partitions"] > 0 and all(p["sha256"] for p in export["partitions"])),
         "candidate_provider_not_used": True,
     }
@@ -7067,8 +7408,11 @@ def _m35_t_event_recorder_semantic_selftest():
     res = _m35c_semantic_selftest()                              # instrument + EXECUTE the exact-shape fixture
     assert res["passed"] is True, [k for k, v in res["checks"].items() if not v]
     c = res["checks"]
-    # pair_evaluated -> hungarian_selected -> accepted -> edge_added share ONE eval_id
-    assert c["motion_lifecycle_one_eval_id"] and c["motion_rejected_not_added"]
+    # SCALE-SAFE motion: cost_computed -> hungarian_selected -> accepted -> edge_added share
+    # ONE eval_id; an in-gate unselected pair keeps full features; an out-of-gate pair is a
+    # counter only (no candidate); motion feature completeness is 100%.
+    assert c["motion_lifecycle_one_eval_id"] and c["motion_out_of_gate_not_candidate"]
+    assert c["motion_ingate_unselected_feature_complete"] and c["motion_feature_completeness_100"]
     # gap bridge edges enter the graph ONLY after new_edges.extend([e1, e2]):
     # the committed row produces both *_edge_added; the skipped row has only *_edge_prepared
     assert c["gap_real_extend_both_added"] and c["gap_skipped_prepared_not_added"]
@@ -7085,8 +7429,8 @@ def _m35_t_event_recorder_semantic_selftest():
     assert c["binding_errors_empty"]
     assert c["no_missing_identity"] and c["feature_value_matches"] and res["binding_errors"] == []
     assert res["dataset_propagation_patch_count"] == 2
-    for sk in ("motion_pair_evaluation", "motion_hungarian", "motion_selected_edges_append",
-               "motion_frame_matches_append", "gap_matrix_pair", "gap_hungarian",
+    for sk in ("motion_out_of_gate", "motion_cost_computed", "motion_hungarian", "motion_selected_edges_append",
+               "motion_frame_matches_append", "gap_hungarian",
                "gap_edge_dict_e1", "gap_edge_dict_e2", "gap_extend",
                "safe_div_pair", "safe_div_selected", "safe_div_acceptance"):
         assert res["site_counts"].get(sk, 0) >= 1, f"site {sk} not injected"
@@ -7117,14 +7461,18 @@ def _m35_t_return_wrapper_insufficient():
     exec(compile(patched, "<selftest>", "exec"),
          {"_m35c_EVT": rec, "_m35c_find_dataset": _m35c_find_dataset, "_m35c_ctx_var": _m35c_ctx_var})
     cons = {(r["origin"], r["source_id"], r["target_id"]): set(r["event_types"]) for r in rec.consolidated()}
-    # rejected motion pair (0,20) is in the log but NOT added; accepted (0,5) is added
-    assert ("motion-relink", 0, 20) in cons and "edge_added" not in cons[("motion-relink", 0, 20)]
-    assert "edge_added" in cons[("motion-relink", 0, 5)]
-    # the function RETURN VALUE (selected_edges) holds only accepted edges -> insufficient
+    # the IN-GATE Hungarian-unselected pair (0,5) is in the event log (cost_computed) but NOT
+    # added; the accepted pair (0,4) is added; the OUT-OF-GATE pair (0,20) is a counter only.
+    assert ("motion-relink", 0, 5) in cons and "cost_computed" in cons[("motion-relink", 0, 5)] \
+        and "edge_added" not in cons[("motion-relink", 0, 5)]
+    assert "edge_added" in cons[("motion-relink", 0, 4)]
+    assert ("motion-relink", 0, 20) not in cons and rec.out_of_gate_summary()["total_out_of_gate"] > 0
+    # the function RETURN VALUE (selected_edges) holds only accepted edges -> insufficient:
+    # it cannot see the feasible-but-unselected (0,5) that the event log preserves.
     ns = {}
     exec(compile(M35C_SELFTEST_CELL4, "<selftest>", "exec"), ns)
     returned = {(e["source_id"], e["target_id"]) for e in ns["motion_relink_edges"]({}, {}, None)}
-    assert (0, 20) not in returned and (0, 5) in returned
+    assert (0, 4) in returned and (0, 5) not in returned and (0, 20) not in returned
 
 
 def _m35_t_postprocess_requires_known_functions():
@@ -7159,7 +7507,7 @@ def _m35_t_instrumented_postprocess_sha_gate():
         # the real namespace DID run cell 4 and record EVENTS with the real dataset
         assert rec.events and all(e["dataset"] == "44b6_0113de3b" for e in rec.events)
         assert rec.consolidated() and all("edge_added" in r["event_types"] for r in rec.consolidated()
-                                          if r["origin"] == "motion-relink" and r["source_id"] == 0 and r["target_id"] == 5)
+                                          if r["origin"] == "motion-relink" and r["source_id"] == 0 and r["target_id"] == 4)
 
 
 def _m35_t_geff_dataset_name_is_stem():
@@ -7206,8 +7554,8 @@ def _m35_t_structural_preflight_no_gpu():
         assert set(pre["postprocess_functions_found"]) >= {"motion_relink_edges", "close_single_frame_gaps", "add_safe_divisions_postlink"}
         # distinct per-site counts all > 0 (incl. gap e1/e2 dict + extend + motion appends)
         assert all(pre["required_sites_present"].values())
-        for sk in ("motion_pair_evaluation", "motion_hungarian", "motion_selected_edges_append",
-                   "motion_frame_matches_append", "gap_matrix_pair", "gap_hungarian",
+        for sk in ("motion_out_of_gate", "motion_cost_computed", "motion_hungarian", "motion_selected_edges_append",
+                   "motion_frame_matches_append", "gap_hungarian",
                    "gap_edge_dict_e1", "gap_edge_dict_e2", "gap_extend",
                    "safe_div_pair", "safe_div_selected", "safe_div_acceptance"):
             assert pre["site_counts"].get(sk, 0) > 0
@@ -7417,6 +7765,87 @@ def _m35_t_gap_event_audit_and_specific_recall():
     assert _m35_gap_specific_recall(motion_only, rF.gap_validated_event_edges(), final)["gap_materialized_recall_100"] is False
 
 
+def _m35_t_motion_out_of_gate_scale():
+    # Tests 1-3: an IN-GATE Hungarian-unselected motion pair keeps raw/motion/prob/cost; an
+    # OUT-OF-GATE pair creates NO candidate/state but increments the exact counter; motion
+    # feature completeness < 100% blocks the production PASS.
+    patched, _r = _m35_instrument_postprocess_source(M35C_SELFTEST_CELL4)
+    rec = M35CEventRecorder()
+    g = {"_m35c_EVT": rec, "_m35c_find_dataset": _m35c_find_dataset, "_m35c_ctx_var": _m35c_ctx_var}
+    exec(compile(patched, "<oog>", "exec"), g)
+    raw = rec.raw_candidates()
+    unsel = [c for c in raw if c["candidate_origin"] == "motion-relink" and c["source_id"] == 0 and c["target_id"] == 5]
+    assert unsel and unsel[0]["physical_distance_um"] is not None and unsel[0]["motion_score"] is not None
+    assert unsel[0]["learned_edge_prob"] is not None and unsel[0]["added_to_graph"] is False
+    # out-of-gate pair (0,20) is NOT a candidate; the counter is exact
+    assert not [c for c in raw if c["candidate_origin"] == "motion-relink" and c["source_id"] == 0 and c["target_id"] == 20]
+    assert rec.out_of_gate_summary()["total_out_of_gate"] > 0
+    mfr = rec.motion_feature_report()
+    assert mfr["motion_feature_completeness_100"] and mfr["motion_feasible_candidates"] > 0
+    # a sub-100% feature completeness (or zero feasible) blocks the production gate
+    base = {"learned_pre_ilp_recall": {"recall_100pct": True}, "postprocess_proposal_recall": {"recall_100pct": True},
+            "combined_final_recall": {"recall_100pct": True}, "division_recall": {"recall_100pct": True}}
+    exp = {"n_partitions": 1, "partitions": [{"sha256": "x"}]}
+    gm = _m35_gap_materialization_report(pd.DataFrame()); ga = M35CEventRecorder().gap_event_audit()
+    gr = _m35_gap_specific_recall(pd.DataFrame(), [], [])
+    bad = _m35_c_production_gates({"motion_feature_report": {"motion_feature_completeness_100": False, "motion_feasible_candidates": 5}},
+                                 base, {"raw_keys_unique": True}, exp, True, gm, ga, gr, allow_no_gap=True)
+    assert bad["motion_feature_completeness_100"] is False
+    none_ = _m35_c_production_gates({"motion_feature_report": {"motion_feature_completeness_100": True, "motion_feasible_candidates": 0}},
+                                   base, {"raw_keys_unique": True}, exp, True, gm, ga, gr, allow_no_gap=True)
+    assert none_["motion_feasible_candidates_present"] is False
+
+
+def _m35_t_scale_preflight_stress():
+    # Test 4: 800x800 Cartesian, gate 0.5 -> exactly 800 in-gate, 639200 out-of-gate.
+    probe = _m35c_scale_probe(800, 800, 0.5, trace=True)
+    assert probe["cartesian_pairs"] == 640000
+    assert probe["in_gate_pairs"] == 800 and probe["out_of_gate_pairs"] == 639200
+    assert probe["n_states"] <= probe["in_gate_pairs"]           # state bounded by in-gate
+    assert probe["out_of_gate_individual_events"] == 0           # NO per-pair event dicts
+    assert probe["out_of_gate_counter_total"] == 639200          # exact rejection counter
+    # 640k event dicts alone would need > 300 MB; the streaming architecture stays far below
+    assert probe["peak_mb"] is not None and probe["peak_mb"] < 120.0
+    with _tmp35.TemporaryDirectory() as w:
+        pre = run_m35_c_scale_preflight(working_dir=w)
+    assert pre["recommendation"] == "M35_C_SCALE_PREFLIGHT_PASS", pre["reasons"]
+    assert pre["projected_old_memory_gb"] > pre["kaggle_ram_gb"]        # old arch OOMs
+    assert pre["projected_streaming_memory_gb"] < pre["kaggle_ram_gb"]  # streaming safe
+    assert pre["architecture_probe"]["out_of_gate_individual_events"] == 0
+
+
+def _m35_t_incremental_export_recall():
+    # Test 5: disk-backed incremental writing preserves key-uniqueness + every recall.
+    D = "44b6_0113de3b"
+    rF = M35CEventRecorder()
+    rF.create_or_update("g", "first_edge_added", dataset=D, origin="gap-close", source_id=0, target_id=10,
+                        features={"middle_id": 100, "actual_edge_source_id": 0, "actual_edge_target_id": 100,
+                                  "distance_um": 1.5, "edge_prob": None, "gap_closed": 1})
+    rF.create_or_update("g", "second_edge_added", dataset=D, origin="gap-close", source_id=0, target_id=10,
+                        features={"middle_id": 100, "actual_edge_source_id": 100, "actual_edge_target_id": 10,
+                                  "distance_um": 2.5, "edge_prob": None, "gap_closed": 1})
+    learned = [{"dataset": D, "source_id": 20, "target_id": 21, "candidate_origin": "learned",
+                "candidate_role": "learned", "proposal_stage": "pre_ilp", "proposal_pass": "learned",
+                "proposal_ordinal": 1, "selected_by_reference_solver": True}]
+    raw = learned + rF.raw_candidates()
+    final = [(D, 20, 21), (D, 0, 100), (D, 100, 10)]
+    with _tmp35.TemporaryDirectory() as w:
+        st = _m35_stream_write_candidates(iter(raw), Path(w) / "stream", final,
+                                          gap_event_edges=rF.gap_validated_event_edges(),
+                                          learned_post_ilp_edges=[(D, 20, 21)],
+                                          postprocess_added_edges=[(D, 0, 100), (D, 100, 10)])
+    assert st["raw_keys_unique"] and st["duplicate_key_count"] == 0
+    assert st["combined_final_recall"]["recall_100pct"] is True
+    assert st["learned_pre_ilp_recall"]["recall_100pct"] is True
+    assert st["postprocess_proposal_recall"]["recall_100pct"] is True
+    assert st["gap_materialized_recall_100"] is True
+    assert st["n_rows"] == len(raw) and st["n_partitions"] >= 1 and all(p["sha256"] for p in st["partitions"])
+    # cross-check against the in-RAM table (identical combined recall)
+    ref = candidate_recall(build_candidate_table(raw, final), final,
+                           learned_post_ilp_edges=[(D, 20, 21)], postprocess_added_edges=[(D, 0, 100), (D, 100, 10)])
+    assert st["combined_final_recall"]["recall_100pct"] == ref["combined_final_recall"]["recall_100pct"]
+
+
 def run_milestone35_tests():
     for fn in [_m35_t_geometry_roundtrips, _m35_t_tta8_group_safe, _m35_t_fusion_reused,
                _m35_t_manifest_audit_pass, _m35_t_manifest_sha_mismatch_fails, _m35_t_isolated_missing_bundle,
@@ -7441,9 +7870,10 @@ def run_milestone35_tests():
                _m35_t_postprocess_requires_known_functions, _m35_t_instrumented_postprocess_sha_gate,
                _m35_t_geff_dataset_name_is_stem, _m35_t_resolve_test_dir, _m35_t_structural_preflight_no_gpu,
                _m35_t_real_notebook_preflight_if_present, _m35_t_gap_materialized_edge_recall,
-               _m35_t_gap_event_audit_and_specific_recall]:
+               _m35_t_gap_event_audit_and_specific_recall, _m35_t_motion_out_of_gate_scale,
+               _m35_t_scale_preflight_stress, _m35_t_incremental_export_recall]:
         fn()
-    print("All milestone35_reference_0902_foundation tests passed (51/51).")
+    print("All milestone35_reference_0902_foundation tests passed (54/54).")
 
 
 def run_milestone35_reference_audit(working_dir=KAGGLE_WORKING_DIR):
@@ -7470,6 +7900,12 @@ def run_milestone35_c_structural_preflight(working_dir=KAGGLE_WORKING_DIR):
     # real-bundle NO-GPU structural preflight (no inference, no full M35-C run)
     print("=== Self-test: M35 reference-0902 foundation ==="); run_milestone35_tests()
     return run_m35_c_structural_preflight(working_dir)
+
+
+def run_milestone35_c_scale_preflight(working_dir=KAGGLE_WORKING_DIR):
+    # NO-GPU runtime-scale preflight (projects OOM risk + proves streaming architecture)
+    print("=== Self-test: M35 reference-0902 foundation ==="); run_milestone35_tests()
+    return run_m35_c_scale_preflight(working_dir)
 
 
 def run_milestone35_full_candidate_export(working_dir=KAGGLE_WORKING_DIR):

@@ -15,9 +15,17 @@ remain `SUPERSEDED_BY_M35_REFERENCE_0902` (files kept, not promoted).
   **`12f6881e…2fe771`**. The public LB **0.902** is USER-OBSERVED — not independently
   verified from the Kaggle leaderboard.
 - **M35-C = `M35_C_REAL_NOTEBOOK_EVENT_INSTRUMENTATION_PASS` + `M35_C_GAP_MATERIALIZED_ROW_EXPORT_PASS`
+  + `M35_C_RUNTIME_SCALE_SAFETY_PASS` + `M35_C_MOTION_FEATURE_COMPLETENESS_PASS`
   (Rev12 event semantics, Rev13 gap actual-edge export, Rev14 event-level audit + gap-specific
-  recall + non-vacuous gates) + `M35_C_KAGGLE_DATASET_PREFLIGHT_PENDING` →
-  `M35-C = BLOCKED_NOT_YET_RUN`.** Each accepted gap bridge exports its TWO materialized graph
+  recall + non-vacuous gates, Rev15 scale-safe recorder + motion feature completeness) +
+  `M35_C_KAGGLE_DATASET_PREFLIGHT_PENDING` → `M35-C = BLOCKED_NOT_YET_RUN`.** Rev15 makes the
+  postprocess recorder production-safe: out-of-gate Cartesian pairs (est. **65.1 M** motion
+  tight pairs → the old per-pair-event architecture projects **~189 GB**, well past Kaggle's
+  ~13 GB) update only a compact counter/histogram; a feasible motion candidate is created only
+  at `cost_computed` (in-gate), with a hard `motion_feature_completeness_100` gate; the gap
+  matrix aggregates out-of-threshold cells instead of one event per `d[i,j]`; candidate rows
+  are written incrementally to disk with streaming recall/key checks; and an 800×800 stress
+  probe proves state stays ≤ in-gate pairs with **zero** out-of-gate event objects. Each accepted gap bridge exports its TWO materialized graph
   edges (`source→middle`, `middle→target`) as derived `materialized_edge` rows alongside the
   preserved abstract `bridge_proposal` row (actual edges read from the SEPARATE
   `first_edge_added`/`second_edge_added` records, identity-validated, uniquely keyed). Rev14
@@ -400,6 +408,55 @@ S→T). **51/51** tests pass; `py_compile` passes; real-notebook static instrume
 (`M35_C_KAGGLE_DATASET_PREFLIGHT_PENDING` → **`M35-C = BLOCKED_NOT_YET_RUN`**). No GPU
 inference, no full M35-C, no M35-D/E; no candidate-export success and no `0.975` claimed.
 
+*Rev14 status correction.* Rev14's accurate status is
+**`M35_C_GAP_EVENT_AUDIT_AND_SPECIFIC_RECALL_FIXTURE_PASS`** with two production-scale gaps:
+**`M35_C_RUNTIME_SCALE_SAFETY_PENDING_FIX`** (the recorder emitted `pair_evaluated` +
+`gate_rejected` for every motion Cartesian pair and one event per gap `d[i,j]` — at ~65 M
+tight motion pairs this projects >100 M event dicts and OOMs Kaggle) and
+**`M35_C_MOTION_FEATURE_COMPLETENESS_PENDING_FIX`** (feature completeness was reported, never
+gated). Rev15 fixes both.
+
+*Rev15 — scale-safe recorder + motion feature-completeness gate.* (1) **Correct candidate
+universe.** Out-of-gate motion pairs (`if raw > gate_um: continue`) now update only a compact
+`count_out_of_gate(origin, dataset, t, pass_name, reason, distance)` counter (+ fixed-bin
+histogram) — NO evaluation_id, state dict, or candidate row. (2) **Explicit cost_computed
+candidate.** A feasible motion candidate is created immediately after the real
+`cost[i, j] = motion + 0.05*raw - MOTION_RELINK_LEARNED_BONUS*prob`, carrying `matrix_i/j`,
+`gate_um`, `raw_distance`, `predicted_motion_distance`, `learned_probability`, `cost`,
+`within_gate=True`, `cost_computed=True`; every in-gate pair (even Hungarian-unselected) gets
+it, and Hungarian/acceptance/addition update the SAME evaluation_id. (3) **Motion
+feature-completeness gate.** `motion_feature_report()` requires finite
+`raw_distance/predicted_motion_distance/learned_probability/cost/gate_um` + non-null
+`t/pass_name/source/target` for every feasible candidate; production gates
+`motion_feature_completeness_100` and `motion_feasible_candidates_present` now hard-fail.
+(4) **Scale-safe recorder.** Compact audit counters (out-of-gate), feasible-candidate state
+only, and a DISK-BACKED incremental writer `_m35_stream_write_candidates` (compressed JSONL
+partitioned by dataset/origin) with streaming recall + key-uniqueness
+(`_m35_incremental_recall_and_keys`) — never `learned_raw + postproc_raw` → one giant list →
+one DataFrame. (5) **Scale preflight** `run_m35_c_scale_preflight` /
+`M35_C_SCALE_PREFLIGHT_NOT_SUBMIT` computes from the real per-dataset pair counts:
+`motion_tight_cartesian_pairs = 65,115,238`, `estimated_raw_gate_rejections = 64,985,008`,
+`estimated_in_memory_events_old_architecture = 130,230,476`, `projected_old_memory_gb ≈ 188.8`
+(> ~13 GB Kaggle RAM → OOM), `streaming_candidate_state_upper_bound = 130,230`,
+`projected_streaming_memory_gb ≈ 0.26`, `projected_output_rows = 195,345`,
+`projected_output_disk_gb ≈ 0.063`; it runs an architecture probe and HARD-FAILS if state
+scales with Cartesian pairs. (6) **Gap matrix scaling.** The per-cell `d[i,j]` event is gone;
+after `cost = np.where(d <= threshold_um, d, big)` a compact out-of-threshold counter is
+recorded, and feasible gap candidates come from the bounded Hungarian loop. (7) **Retention
+policies** per origin (learned → disk rows; motion → feasible state + counters; gap → feasible
+state + bridge event audit; safe-division → feasible state + gate transitions). New tests:
+`_m35_t_motion_out_of_gate_scale` (in-gate unselected keeps full features; out-of-gate is a
+counter not a candidate; sub-100% completeness / zero feasible block the gate),
+`_m35_t_scale_preflight_stress` (800×800, gate 0.5 → 800 in-gate / 639,200 out-of-gate;
+`n_states ≤ in_gate`, out-of-gate individual events = 0, counter exact = 639,200, tracemalloc
+peak ≈ 21 MB), `_m35_t_incremental_export_recall` (streaming preserves key-uniqueness +
+combined/learned/postprocess/gap recall). **54/54** tests pass; `py_compile` passes;
+real-notebook static instrumentation now shows `motion_out_of_gate=1`, `motion_cost_computed=1`,
+`gap_out_of_threshold=1`, all required sites+exprs present, `binding_ok`, `no_frame_t`. Status:
+**`M35_C_RUNTIME_SCALE_SAFETY_PASS`** + **`M35_C_MOTION_FEATURE_COMPLETENESS_PASS`** +
+**`M35_C_KAGGLE_DATASET_PREFLIGHT_PENDING`** → **`M35-C = BLOCKED_NOT_YET_RUN`**. No GPU
+inference, no full M35-C, no M35-D/E; no candidate-export success and no `0.975` claimed.
+
 ## What was genuinely executed vs. blocked
 - **M35-A — manifest-driven, PASSED on Kaggle.** All critical-file SHA256 matched
   `REFERENCE_BUNDLE_MANIFEST.json`. (Off the reference environment it reports
@@ -584,11 +641,14 @@ unresolved; M33 operationally paused; M34 A–D superseded. 0.902 recorded user-
 **M35-A = VERIFIED_PASS_ON_KAGGLE; M35-B = VERIFIED_REPRO_PASS_EXACT_ON_KAGGLE;
 M35-C = BLOCKED_NOT_YET_RUN** (real-notebook event instrumentation verified locally
 against the audited `beb17b03…` cell 4 = `M35_C_REAL_NOTEBOOK_EVENT_INSTRUMENTATION_PASS`
-+ `M35_C_GAP_MATERIALIZED_ROW_EXPORT_PASS`; Rev12 fixed the post-extend gap events +
-post-gate safe-division acceptance, Rev13 added gap bridge actual-edge (materialized_edge)
-export, and Rev14 added the non-vacuous event-level gap audit + gap-specific recall + gates;
-the four mounted `.zarr` stem check is `M35_C_KAGGLE_DATASET_PREFLIGHT_PENDING`; machinery
-genuine; still needs the instrumented predict subprocess + postprocess re-run on Kaggle);
++ `M35_C_GAP_MATERIALIZED_ROW_EXPORT_PASS` + `M35_C_RUNTIME_SCALE_SAFETY_PASS` +
+`M35_C_MOTION_FEATURE_COMPLETENESS_PASS`; Rev12 fixed post-extend gap events + post-gate
+safe-division acceptance, Rev13 added gap actual-edge export, Rev14 added the non-vacuous
+event-level gap audit + gap-specific recall + gates, and Rev15 made the recorder scale-safe
+(out-of-gate counters, cost_computed candidates, motion feature-completeness gate, disk-backed
+streaming writer, scale preflight ~189 GB old vs ~0.26 GB streaming); the four mounted `.zarr`
+stem check is `M35_C_KAGGLE_DATASET_PREFLIGHT_PENDING`; machinery genuine; still needs the
+instrumented predict subprocess + postprocess re-run on Kaggle);
 M35-D/E `BLOCKED_PENDING_M35C_PASS`.
 **Next action on Kaggle: run the full `run_m35_c_structural_preflight` (mounted `test/`,
 four exact `.zarr` stems) then `run_m35_c_production_candidate_export`; the full
