@@ -14,15 +14,17 @@ remain `SUPERSEDED_BY_M35_REFERENCE_0902` (files kept, not promoted).
   graph_valid. Notebook SHA256 **`beb17b03…5437e`**; controlled 400ep weight SHA256
   **`12f6881e…2fe771`**. The public LB **0.902** is USER-OBSERVED — not independently
   verified from the Kaggle leaderboard.
-- **M35-C = `M35_C_REAL_NOTEBOOK_EVENT_INSTRUMENTATION_PASS` (Rev12 event semantics +
-  Rev13 gap actual-edge export) + `M35_C_KAGGLE_DATASET_PREFLIGHT_PENDING` →
-  `M35-C = BLOCKED_NOT_YET_RUN`.** Rev13 additionally exports each accepted gap bridge's
-  TWO materialized graph edges (`source→middle`, `middle→target`) as derived
-  `materialized_edge` candidate rows alongside the preserved abstract `bridge_proposal`
-  row, so exact final-edge recall (postprocess + combined) reaches 100% on the fixture;
-  actual edges are read from the SEPARATE `first_edge_added`/`second_edge_added` event
-  records (never the overwritten consolidated features), identity-validated, and
-  uniquely keyed. The
+- **M35-C = `M35_C_REAL_NOTEBOOK_EVENT_INSTRUMENTATION_PASS` + `M35_C_GAP_MATERIALIZED_ROW_EXPORT_PASS`
+  (Rev12 event semantics, Rev13 gap actual-edge export, Rev14 event-level audit + gap-specific
+  recall + non-vacuous gates) + `M35_C_KAGGLE_DATASET_PREFLIGHT_PENDING` →
+  `M35-C = BLOCKED_NOT_YET_RUN`.** Each accepted gap bridge exports its TWO materialized graph
+  edges (`source→middle`, `middle→target`) as derived `materialized_edge` rows alongside the
+  preserved abstract `bridge_proposal` row (actual edges read from the SEPARATE
+  `first_edge_added`/`second_edge_added` records, identity-validated, uniquely keyed). Rev14
+  makes the gates non-circular: an EVENT-LEVEL gap audit (computed before candidate filtering)
+  fails a one-edge / duplicate / conflicting bridge; production requires genuine gap bridges
+  (`bridges_with_both_added_events > 0`, `materialized_rows > 0`); and a GAP-SPECIFIC recall
+  over `materialized_edge` rows only (never satisfiable by motion/safe) must be 100%. The
   instrumentation is verified against the SUPPLIED audited notebook (`beb17b03…`, held
   locally in git-ignored `.local_reference/`). Rev11 achieved the static-AST match; Rev12
   corrects two event-semantics defects (gap `*_edge_added` must fire AFTER
@@ -354,6 +356,50 @@ mounted `.zarr` stems are still unchecked (`M35_C_KAGGLE_DATASET_PREFLIGHT_PENDI
 **`M35-C = BLOCKED_NOT_YET_RUN`**. No GPU inference, no full M35-C, no M35-D/E; no
 candidate-export success and no `0.975` claimed.
 
+*Rev13 status correction.* Rev13's accurate scoped status is
+**`M35_C_REAL_NOTEBOOK_EVENT_INSTRUMENTATION_PASS`** + **`M35_C_GAP_MATERIALIZED_ROW_EXPORT_PASS`**
+with **`M35_C_GAP_EVENT_AUDIT_AND_SPECIFIC_RECALL_PENDING_FIX`**: the production gap gates were
+still circular (they started from candidate rows already filtered by gap
+`accepted_by_assignment`, which itself requires both edge events, so a one-edge bridge was
+never reported incomplete) and could pass vacuously (recall reused overall combined/postprocess
+recall, and empty gap sets defaulted to complete/valid=True). Rev14 fixes this.
+
+*Rev14 — non-vacuous event-level gap audit + gap-specific recall.* (1) **Event-level audit
+before candidate filtering.** `M35CEventRecorder.gap_event_audit()` reads the raw event log and
+reports `bridge_evaluations_seen`, `bridges_with_prepared_events`, `bridges_with_any_added_event`,
+`bridges_with_exactly_one_added_event`, `bridges_with_both_added_events`, `duplicate_first_events`,
+`duplicate_second_events`, `incomplete_bridge_evaluation_ids`, `conflicting_bridge_evaluation_ids`,
+`all_event_bridges_complete`, `all_event_identities_valid`. For every evaluation_id with any
+edge event: exactly one first and one second must exist; datasets, bridge source/target, and
+`middle_id` must agree; actual endpoints must be first `bridge_source→middle`, second
+`middle→bridge_target`; and the distance features must be present. A bridge with exactly one
+added event fails the gate; invalid/incomplete evidence is retained (never dropped before the
+gate). The audit is threaded through `export_candidates_from_reference` aux and written to the
+report. (2) **No vacuous defaults.** Production requires `bridges_with_both_added_events > 0`
+and `materialized_rows > 0` (gate `gap_bridges_present_nonvacuous`); an explicit `allow_no_gap`
+seam exists for gap-free test fixtures and is always `False` in production. (3) **True
+gap-specific recall.** `_m35_gap_specific_recall` builds the target set from the validated
+ordered event edges and the candidate pool from `candidate_origin == "gap-close"` +
+`candidate_role == "materialized_edge"` only; it reports `gap_expected_materialized_edges`,
+`gap_candidate_materialized_edges`, `gap_final_edges_present/missing/extra`,
+`gap_materialized_recall`, `gap_materialized_recall_100`, and requires every validated event
+edge to be a real final edge and every expected gap edge to have exactly one materialized row.
+Motion/safe candidates can never satisfy it. (4) **Materialized-edge features.** The extend
+event now records `distance_um`/`edge_prob`/`gap_closed` from `e1`/`e2`; materialized rows carry
+`physical_distance_um` (never None), `learned_edge_prob` when present, and `gap_closed`
+provenance; these fields are part of the event identity validation. (5) **`added_final_edges()`
+fixed** to return `(dataset, bridge_source, middle)` and `(dataset, middle, bridge_target)` from
+the ordered event log — never the abstract `source→target`. (6) New production gates
+`gap_event_audit_complete`, `gap_event_identities_valid`, `gap_bridges_present_nonvacuous`,
+`gap_final_edge_recall_100` (gap-specific). (7) New test
+`_m35_t_gap_event_audit_and_specific_recall` covers only-first, only-second, duplicate-first,
+conflicting-`middle_id`, zero-gap-in-production, and a valid bridge (two materialized rows with
+matching `physical_distance_um`, gap-specific recall 1.0, `added_final_edges` returns S→M/M→T not
+S→T). **51/51** tests pass; `py_compile` passes; real-notebook static instrumentation still
+`binding_ok`/`no_frame_t`/all sites+exprs present. Status unchanged
+(`M35_C_KAGGLE_DATASET_PREFLIGHT_PENDING` → **`M35-C = BLOCKED_NOT_YET_RUN`**). No GPU
+inference, no full M35-C, no M35-D/E; no candidate-export success and no `0.975` claimed.
+
 ## What was genuinely executed vs. blocked
 - **M35-A — manifest-driven, PASSED on Kaggle.** All critical-file SHA256 matched
   `REFERENCE_BUNDLE_MANIFEST.json`. (Off the reference environment it reports
@@ -537,9 +583,10 @@ M19-C 0.880 historical; M29-A 0.876 failed; M30-C pending; M31 blocked; M32/M32.
 unresolved; M33 operationally paused; M34 A–D superseded. 0.902 recorded user-observed.
 **M35-A = VERIFIED_PASS_ON_KAGGLE; M35-B = VERIFIED_REPRO_PASS_EXACT_ON_KAGGLE;
 M35-C = BLOCKED_NOT_YET_RUN** (real-notebook event instrumentation verified locally
-against the audited `beb17b03…` cell 4 = `M35_C_REAL_NOTEBOOK_EVENT_INSTRUMENTATION_PASS`;
-Rev12 fixed the post-extend gap events + post-gate safe-division acceptance and Rev13 added
-gap bridge actual-edge (materialized_edge) export so exact final-edge recall reaches 100%;
+against the audited `beb17b03…` cell 4 = `M35_C_REAL_NOTEBOOK_EVENT_INSTRUMENTATION_PASS`
++ `M35_C_GAP_MATERIALIZED_ROW_EXPORT_PASS`; Rev12 fixed the post-extend gap events +
+post-gate safe-division acceptance, Rev13 added gap bridge actual-edge (materialized_edge)
+export, and Rev14 added the non-vacuous event-level gap audit + gap-specific recall + gates;
 the four mounted `.zarr` stem check is `M35_C_KAGGLE_DATASET_PREFLIGHT_PENDING`; machinery
 genuine; still needs the instrumented predict subprocess + postprocess re-run on Kaggle);
 M35-D/E `BLOCKED_PENDING_M35C_PASS`.
