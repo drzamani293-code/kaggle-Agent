@@ -166,6 +166,31 @@ environment**, so the real-notebook `PASS` and its genuine site counts can only 
 produced by running the preflight on Kaggle; a dedicated test runs the preflight against
 the real notebook when present and asserts SHA + `PASS`.
 
+*Rev9 — explicit event architecture.* Generic locals-snapshots are replaced by an
+**explicit event recorder**: `M35CEventRecorder.create_or_update(evaluation_id,
+event_type, …)` appends to an ordered **event log** and maintains **one consolidated
+state per evaluation_id**. Candidate identity is never inferred from arbitrary locals —
+the injected call passes the **explicitly-derived** source/target; missing/`ALL` dataset
+or (for identity events) missing source/target are hard errors; **conflicting identity
+transitions are recorded**; numpy+Python scalars are normalised. Instrumentation is now
+**statement-level**: motion pair after `raw=…` (+ `gate_rejected` before the continue,
+`cost_computed` after `cost[i,j]=…`), motion Hungarian **derives**
+`source_ids[int(r)]`/`target_ids[int(c)]` and records `cost[r,c]`/`raw_dist[r,c]`/
+`motion_dist[r,c]`/`prob_matrix[r,c]`, `edge_added` at the append; gap matrix after
+`d[i,j]=…` derives `end_ids[int(i)]`/`start_ids[int(j)]`, gap Hungarian derives
+`end_ids[int(r)]`/`start_ids[int(c)]`; safe-division pair after the gate assign +
+acceptance loop. Events for one proposal share ONE `evaluation_id`
+(`dataset|motion|frame_t|pass_name|src|tgt`, `dataset|gap|gap|src|tgt`,
+`dataset|safe_division|src|candidate`). The no-GPU preflight now validates **both** (a)
+STATIC AST — the patched real cell 4 contains the required derivation expressions per
+site — and (b) a **deterministic semantic self-test** that instruments+**executes** an
+exact-shape fixture and asserts the one-eval_id lifecycle, rejected+accepted presence,
+matrix-pairs-become-candidates, additions↔append statements, no stale/conflicting IDs,
+no missing dataset/source/target, and known feature values.
+`M35_C_STRUCTURAL_PREFLIGHT_PASS` requires **both**. The audited notebook (`beb17b03…`)
+is **not mounted** in the authoring environment, so the real-notebook `PASS` and genuine
+per-statement counts can only be produced by running the preflight on Kaggle.
+
 ## What was genuinely executed vs. blocked
 - **M35-A — manifest-driven, PASSED on Kaggle.** All critical-file SHA256 matched
   `REFERENCE_BUNDLE_MANIFEST.json`. (Off the reference environment it reports
@@ -216,7 +241,7 @@ the real notebook when present and asserts SHA + `PASS`.
    with a genuine subprocess reproduction + comparison.
 
 Also: exactly one standalone entry point per module (no stray unconditional runner
-calls); each generated one-cell `.txt` is syntax-checked and self-tests 48/48.
+calls); each generated one-cell `.txt` is syntax-checked and self-tests 49/49.
 
 ## M35-A (manifest-driven audit)
 Verifies: manifest present + complete; every critical file's SHA256 == manifest;
@@ -317,7 +342,7 @@ modification of M16–M34; no claim or guarantee of 0.975; the 0.902 is recorded
 USER-OBSERVED, separate from independently verified Kaggle evidence; the M19-C
 fingerprint (133106/121718) is not reused.
 
-## Tests (48/48)
+## Tests (49/49)
 Geometry roundtrips + TTA8 safety; fusion one-to-one / order-invariance / no-link /
 independent division; **exact path resolution + manifest SHA verification**;
 **dataset-scoped node IDs**; manifest SHA-mismatch → FAIL; **isolated missing-bundle**;
