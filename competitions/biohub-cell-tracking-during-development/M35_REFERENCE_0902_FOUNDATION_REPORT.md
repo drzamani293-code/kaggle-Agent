@@ -191,6 +191,28 @@ no missing dataset/source/target, and known feature values.
 is **not mounted** in the authoring environment, so the real-notebook `PASS` and genuine
 per-statement counts can only be produced by running the preflight on Kaggle.
 
+*Rev10 — keyed to the real cell-4 source.* (1) Safe-division uses the real vars
+`child_dist`/`parent_dist`/`sister_dist` with `SAFE_DIV_EXISTING_CHILD_MAX_UM`/
+`SAFE_DIV_MAX_UM`/`SAFE_DIV_SISTER_MAX_UM` (the eval is created after
+`parent_dist = edge_distance_um(…)`, updated after `sister_dist = …`, with
+`gate_rejected` before the real continues and `accepted`/`edge_added` in the
+proposals loop / after `added.append({…})`). (2) The gap bridge is **two** real edges
+(`source→middle_id`, `middle_id→target`): `first_edge_added` + `second_edge_added` at
+the actual appends, and consolidated `added_to_graph` is set only when **both** exist.
+(3) Motion `edge_added` fires **only** at `selected_edges.append({…})` (dict with
+`source_id`/`target_id`/`distance_um`); `frame_matches.append` emits `accepted`.
+(4) The motion `evaluation_id` uses the real frame var **`t`**
+(`dataset|motion|t|pass_name|src|tgt`); no production id contains `frame_t` or `|None|`.
+(5) Full Hungarian lifecycle: `if cost[r,c] >= big` (motion) / `if d[r,c] > threshold_um`
+(gap) → `assignment_rejected` + continue, else `hungarian_selected`. (6) The preflight
+adds **AST scope/binding validation** (rejects injected names not definitely-assigned on
+the enclosing path) and requires `safe_div_pair`, `gap_addition_first_edge`,
+`gap_addition_second_edge`, `motion_selected_edges_append`, `motion_frame_matches_append`
+all `> 0`, plus no-`frame_t`; it runs the static instrumentation against the real
+notebook, and a real-notebook test asserts SHA `beb17b03…` + `PASS` when the file is
+present. The audited notebook is **not mounted** here, so the real `PASS` still requires
+running the preflight where the notebook lives.
+
 ## What was genuinely executed vs. blocked
 - **M35-A — manifest-driven, PASSED on Kaggle.** All critical-file SHA256 matched
   `REFERENCE_BUNDLE_MANIFEST.json`. (Off the reference environment it reports
@@ -241,7 +263,7 @@ per-statement counts can only be produced by running the preflight on Kaggle.
    with a genuine subprocess reproduction + comparison.
 
 Also: exactly one standalone entry point per module (no stray unconditional runner
-calls); each generated one-cell `.txt` is syntax-checked and self-tests 49/49.
+calls); each generated one-cell `.txt` is syntax-checked and self-tests 49/49 (event architecture).
 
 ## M35-A (manifest-driven audit)
 Verifies: manifest present + complete; every critical file's SHA256 == manifest;
