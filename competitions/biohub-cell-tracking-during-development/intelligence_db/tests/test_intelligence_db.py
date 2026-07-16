@@ -72,7 +72,7 @@ def test_db_initializes_and_seeds(tmp: Path) -> None:
               "M34_A_TTA_GEOMETRY_SOURCE_AUDIT", "M34_B_TTA4_FUSION_DIAGNOSTIC",
               "M34_C_TTA4_CONSERVATIVE_CANDIDATE", "M34_D_TTA8_D4_OPTIONAL_CANDIDATE",
               "M35_A_REFERENCE_BUNDLE_AUDIT", "M35_B_REFERENCE_0902_REPRO",
-              "M35_C_CANDIDATE_EDGE_EXPORT", "M35_D_EDGE_TTA_D4_DIAGNOSTIC",
+              "M35_C_FULL_PREILP_CANDIDATE_EXPORT", "M35_D_EDGE_TTA_D4_DIAGNOSTIC",
               "M35_E_FULL_CANDIDATE_JOINT_SOLVER"]:
         assert e in ids, f"missing seed experiment {e}"
     print("  ok: db initializes and seeds")
@@ -114,7 +114,7 @@ def test_scored_and_best(tmp: Path) -> None:
         m25a = con.execute("SELECT status FROM experiments WHERE experiment_id='M25_A_PRUNE_MILD_SAFE_DIV'").fetchone()
         m27a = con.execute("SELECT public_score, status FROM experiments WHERE experiment_id='M27_A_PUBLIC_REPRO_EXACT_SAFETY'").fetchone()
         best = con.execute("SELECT experiment_id, public_score FROM experiments WHERE public_score IS NOT NULL ORDER BY public_score DESC, created_at LIMIT 1").fetchone()
-        pending_ids = {r[0] for r in con.execute("SELECT experiment_id FROM experiments WHERE public_score IS NULL AND status NOT IN ('unsafe','blocked','diagnostic','wrong_artifact','superseded')").fetchall()}
+        pending_ids = {r[0] for r in con.execute("SELECT experiment_id FROM experiments WHERE public_score IS NULL AND status NOT IN ('unsafe','blocked','diagnostic','wrong_artifact','superseded','verified')").fetchall()}
         n_final = con.execute("SELECT COUNT(*) FROM experiments WHERE status='final'").fetchone()[0]
     finally:
         con.close()

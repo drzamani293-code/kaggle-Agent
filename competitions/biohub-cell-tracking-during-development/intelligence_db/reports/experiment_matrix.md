@@ -1,6 +1,6 @@
 # Experiment Matrix
 
-_Generated 2026-07-15 16:36 UTC from intelligence.duckdb._
+_Generated 2026-07-16 00:42 UTC from intelligence.duckdb._
 
 Command differences, post-processing ops, submission stats, and score for every variant.
 All variants share ILP weights (edge -1.0, appearance 0.1, disappearance 0.1, division 1.0, --use-ilp);
@@ -80,6 +80,7 @@ only `det_threshold` and the post-processing chain differ.
 | `M35_A_REFERENCE_BUNDLE_AUDIT` | None | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M35_B_REFERENCE_0902_REPRO` | None | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M35_C_CANDIDATE_EDGE_EXPORT` | None | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
+| `M35_C_FULL_PREILP_CANDIDATE_EXPORT` | None | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M35_D_EDGE_TTA_D4_DIAGNOSTIC` | None | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 | `M35_E_FULL_CANDIDATE_JOINT_SOLVER` | None | — | None | None | None | 0 | 0 | 0 | 0 | 0 | 0 | — | None | None | pending |
 

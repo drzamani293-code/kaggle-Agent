@@ -136,7 +136,7 @@ def report_next_actions(con) -> str:
     # Genuinely-open work vs superseded/unsafe/blocked attempts.
     pending = _fetch(con, """
         SELECT experiment_id, created_at FROM experiments
-        WHERE public_score IS NULL AND status NOT IN ('unsafe', 'blocked', 'diagnostic', 'wrong_artifact', 'superseded') ORDER BY created_at
+        WHERE public_score IS NULL AND status NOT IN ('unsafe', 'blocked', 'diagnostic', 'wrong_artifact', 'superseded', 'verified') ORDER BY created_at
     """)
     unsafe = _fetch(con, """
         SELECT e.experiment_id, p.nodes_before, p.edges_before
@@ -162,22 +162,23 @@ def report_next_actions(con) -> str:
 
     if "M35_A_REFERENCE_BUNDLE_AUDIT" in rows:
         out += [
-            "**Audit the supplied 0.902 reference bundle first (M35) - highest-priority path.**",
-            "M34 (self-contained TTA on the M19-C 0.880 baseline) is technically complete but **superseded** by a",
-            "newly supplied 0.902 reference (preset `public_0902_motion_division_calibration`: det 0.97, D4-XY",
-            "detection TTA already active, motion relink, gap2 disabled; fingerprint 128511/124002/252513). M35",
-            "reproduces and builds on it, reusing only M34's D4 geometry + fusion machinery.",
+            "**M35-A/B are VERIFIED on Kaggle - run the genuine M35-C candidate export next.**",
+            "M35-A = REFERENCE_AUDIT_PASS; M35-B = REPRO_PASS_EXACT (the exact 0.902 reference - 128511 nodes /",
+            "124002 edges / 252513 rows / 417 divisions - reproduced via the VERIFIED two-phase CURRENT-KERNEL runner;",
+            "generated SHA == reference SHA, byte_exact). The nested-nbclient path is deprecated (DeadKernelError).",
             "",
-            "1. **`M35_A_REFERENCE_BUNDLE_AUDIT_NOT_SUBMIT`** - locate+sha256 the notebook/log/results-repo + its",
-            "   OFFICIAL metric, verify the preset + fingerprint. **HARD RULE:** if any asset is missing, print the",
-            "   exact missing paths and STOP with `REFERENCE_ASSETS_NOT_ACCESSIBLE` (never reconstruct from prompt).",
-            "2. **`M35_B_REFERENCE_0902_REPRO_NOT_SUBMIT`** - reproduce the exact 128511/124002/252513 reference.",
-            "3. **`M35_C_CANDIDATE_EDGE_EXPORT_NOT_SUBMIT`** - export full pre-ILP candidate edges + probabilities.",
-            "4. **`M35_D_EDGE_TTA_D4_DIAGNOSTIC_NOT_SUBMIT`** - feature-map/edge-logit D4 vs detector-only D4 via the",
-            "   bundle's OFFICIAL metric (never local_metric.py). **`M35_E`** joint solver only after official CV.",
+            "1. **`M35_A_REFERENCE_BUNDLE_AUDIT_NOT_SUBMIT`** - VERIFIED_PASS_ON_KAGGLE. Manifest-driven SHA audit.",
+            "2. **`M35_B_TWO_PHASE_CURRENT_KERNEL_REPRO_NOT_SUBMIT`** - VERIFIED_REPRO_PASS_EXACT_ON_KAGGLE. Two-phase",
+            "   current-kernel (inference-once + 4-GEFF checkpoint + resume + CUDA release + exact audited postprocess).",
+            "3. **`M35_C_FULL_PREILP_CANDIDATE_EXPORT_NOT_SUBMIT`** - GENUINE full pre-ILP candidate export (all",
+            "   learned/motion-relink/gap-close/safe-division candidates incl. ILP-rejected; candidate recall vs the",
+            "   exact final edges must be 100%). Hard-gated on the verified M35-B report.",
+            "4. **`M35_D_EDGE_TTA_D4_DIAGNOSTIC_NOT_SUBMIT`** - blocked (BLOCKED_PENDING_M35C_PASS) until M35-C exports;",
+            "   uses the bundle's OFFICIAL metric (never local_metric.py). **`M35_E`** joint solver only after official CV.",
             "",
-            "The 0.902 is recorded USER-OBSERVED (not yet independently Kaggle-verified here). No claim of 0.975.",
-            "**`M19-C` 0.880 stays the historical confirmed result.** Do not build a submission before M35_A passes.",
+            "The 0.902 public LB score is USER-OBSERVED, not independently verified from the Kaggle leaderboard.",
+            "No claim of 0.975. **`M19-C` 0.880 stays the historical confirmed result.** No submission is built.",
+            "The reference bundle is not accessible in every environment (then A/B report REFERENCE_ASSETS_NOT_ACCESSIBLE).",
             "",
         ]
     elif "M34_A_TTA_GEOMETRY_SOURCE_AUDIT" in rows:

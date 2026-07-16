@@ -4,6 +4,66 @@ M34 (self-contained TTA on the M19-C 0.880 baseline) is superseded by the suppli
 **0.902** reference bundle. M35 reproduces and builds on that reference. M34 A–D
 remain `SUPERSEDED_BY_M35_REFERENCE_0902` (files kept, not promoted).
 
+## VERIFIED on Kaggle (this update)
+- **M35-A = REFERENCE_AUDIT_PASS** (VERIFIED_PASS_ON_KAGGLE).
+- **M35-B = REPRO_PASS_EXACT** (VERIFIED_REPRO_PASS_EXACT_ON_KAGGLE) via a **two-phase
+  CURRENT-KERNEL** runner (`nested_kernel_used=false`, `inference_rerun=true`, 4 fresh
+  GEFF stores, postprocessing ≈ 3.97 min). Generated `m35_b_reference_reproduced.csv`
+  SHA256 **`8c73d776…cea698`** == reference SHA256 (byte_exact, canonical_equal);
+  fingerprint **exact** (rows 252513, nodes 128511, edges 124002, divisions 417);
+  graph_valid. Notebook SHA256 **`beb17b03…5437e`**; controlled 400ep weight SHA256
+  **`12f6881e…2fe771`**. The public LB **0.902** is USER-OBSERVED — not independently
+  verified from the Kaggle leaderboard.
+
+The verified production runner is
+`M35_B_TWO_PHASE_CURRENT_KERNEL_REPRO_NOT_SUBMIT.txt` (`run_m35_b_two_phase`). It
+executes the audited notebook's cells **in the current Kaggle kernel** — never a
+nested notebook kernel. The old nested-nbclient path is **deprecated**
+(`_run_m35_b_nested_nbclient_deprecated`); it died with `DeadKernelError` after
+inference and before postprocessing.
+
+### Two-phase current-kernel M35-B
+- **Phase 1 (inference, once):** run the inference cells in the current kernel,
+  validate **four** GEFF stores, write `m35_b_phase1_checkpoint.json`, then **release
+  CUDA/RAM** (`torch.cuda.empty_cache` + `gc.collect`).
+- **Resume:** if four complete GEFF stores already exist, **skip inference**
+  (`inference_rerun=false`, `resumed_from_geff=true`) and never delete a valid
+  resumable `tracking_repo` (only stale final CSVs are cleared).
+- **Phase 2 (postprocess):** run the exact audited postprocessing cells → write
+  `m35_b_reference_reproduced.csv`, hash it **before** reading the reference, then
+  compare (byte + canonical) → `REPRO_PASS_EXACT` / `REPRO_PASS_CANONICAL` / mismatch.
+- Only `SUBMISSION_PATH` / `RUN_STATS_PATH` are AST-patched; the no-GPU preflight still
+  gates. Never submits.
+
+### Genuine M35-C — full pre-ILP candidate export
+`M35_C_FULL_PREILP_CANDIDATE_EXPORT_NOT_SUBMIT.txt` (`run_m35_c_full_candidate_export`)
+is no longer a placeholder. Hard-gated on the **verified** M35-B report
+(`REPRO_PASS_EXACT`/`CANONICAL` + exact fingerprint), it reuses the four validated GEFF
+stores (no detection rerun), instruments the exact reference pipeline **immediately
+before ILP selection**, and exports **every** candidate edge the solver considered —
+including **ILP-rejected** ones — tagged by origin (**learned / motion-relink /
+gap-close / safe-division**) with a stable `candidate_key` that preserves all
+contributing origins (no lossy dedup). Per-candidate features: dataset, source/target
+id + t, frame_delta, coordinates, `physical_distance_um`, learned edge prob/logit,
+motion score, appearance/disappearance cost, division features,
+`selected_by_reference_solver`, `final_edge_present`, detection confidence. Node IDs
+are dataset-scoped. It writes partitioned **Parquet** (CSV fallback) under
+`/kaggle/working/m35_c_candidates/` + `m35_c_candidate_export_report.json` reporting
+per-dataset counts, positive/final counts, **candidate recall vs the exact final edges
+(must be 100%)**, division recall, duplicate-key / missing-feature / finite checks,
+file sizes, SHA256, runtime. Recommendation `CANDIDATE_EXPORT_PASS` /
+`CANDIDATE_EXPORT_INCOMPLETE` / `BLOCKED_PENDING_M35B_PASS` /
+`REFERENCE_ASSETS_NOT_ACCESSIBLE` / `RUNTIME_DEPENDENCY_FAILURE`. It never submits,
+never modifies the M35-B CSV, and claims no score improvement. **M35-D/E are blocked
+`BLOCKED_PENDING_M35C_PASS`** until a genuine 100 %-recall export.
+
+**What remains blocked:** the REAL candidate export runs on Kaggle with the mounted
+reference pipeline + four GEFF stores; off that environment M35-C blocks honestly
+(`RUNTIME_DEPENDENCY_FAILURE`) and never fabricates candidates. The export machinery,
+schema, 100 % recall, dedup-provenance, and gating are unit-tested (29/29) on synthetic
+candidates. **M35-C is not claimed complete until real candidate edges are exported on
+Kaggle.** No guarantee of 0.975.
+
 ## What was genuinely executed vs. blocked
 - **M35-A — manifest-driven, PASSED on Kaggle.** All critical-file SHA256 matched
   `REFERENCE_BUNDLE_MANIFEST.json`. (Off the reference environment it reports
