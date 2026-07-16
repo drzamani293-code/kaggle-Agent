@@ -4250,10 +4250,16 @@ def _m35c_loop_targets(node):
 
 M35_C_EVENT_TYPES = ("pair_evaluated", "gate_rejected", "cost_computed", "hungarian_selected",
                      "assignment_rejected", "accepted", "node_created", "edge_added",
-                     "first_edge_added", "second_edge_added", "survived_final_filter")
+                     "first_edge_prepared", "second_edge_prepared",
+                     "first_edge_added", "second_edge_added", "survived_final_filter",
+                     "selected_by_sorted_order", "global_cap_rejected", "frame_cap_rejected",
+                     "target_conflict_rejected")
 # event types whose record MUST carry an explicitly-derived source_id AND target_id
 M35_C_IDENTITY_EVENTS = ("pair_evaluated", "gate_rejected", "cost_computed", "hungarian_selected",
-                         "accepted", "edge_added", "first_edge_added", "second_edge_added", "survived_final_filter")
+                         "accepted", "edge_added", "first_edge_prepared", "second_edge_prepared",
+                         "first_edge_added", "second_edge_added", "survived_final_filter",
+                         "selected_by_sorted_order", "global_cap_rejected", "frame_cap_rejected",
+                         "target_conflict_rejected")
 # gap bridge = TWO real graph edges (source->middle, middle->target); the consolidated
 # bridge proposal is `added_to_graph` only when BOTH edges were appended.
 M35_C_GAP_BOTH_EDGES = ("first_edge_added", "second_edge_added")
@@ -4351,7 +4357,8 @@ class M35CEventRecorder:
                         "appearance_cost": None, "disappearance_cost": None, "division_feature": 0.0,
                         "source_t": None, "target_t": None, "source_z": None, "source_y": None, "source_x": None,
                         "target_z": None, "target_y": None, "target_x": None, "gates_passed": g,
-                        "accepted_by_assignment": bool("hungarian_selected" in et or "accepted" in et),
+                        # entering the sorted-proposals loop must NEVER imply acceptance
+                        "accepted_by_assignment": bool("accepted" in et or "edge_added" in et),
                         "added_to_graph": _m35c_added_to_graph(st["origin"], et),
                         "survived_final_filter": bool("survived_final_filter" in et),
                         "source_det_conf": None, "target_det_conf": None,
@@ -4442,6 +4449,31 @@ def _m35c_assign_dict_value(stmt):
     return None
 
 
+def _m35c_is_new_edges_extend(stmt):
+    """True iff stmt is EXACTLY ``new_edges.extend([e1, e2])`` (receiver Name('new_edges'),
+    method 'extend', single List/Tuple arg of exactly Name('e1'), Name('e2')). This is the
+    statement at which the two gap bridge edges genuinely enter the graph."""
+    if not (isinstance(stmt, _ast35c.Expr) and isinstance(stmt.value, _ast35c.Call)):
+        return False
+    call = stmt.value
+    if not (isinstance(call.func, _ast35c.Attribute) and call.func.attr == "extend"
+            and isinstance(call.func.value, _ast35c.Name) and call.func.value.id == "new_edges"):
+        return False
+    if len(call.args) != 1 or not isinstance(call.args[0], (_ast35c.List, _ast35c.Tuple)):
+        return False
+    elts = call.args[0].elts
+    return (len(elts) == 2 and all(isinstance(e, _ast35c.Name) for e in elts)
+            and elts[0].id == "e1" and elts[1].id == "e2")
+
+
+def _m35c_if_test_src(node):
+    """Unparsed source of an If's test (for semantic condition matching); '' on failure."""
+    try:
+        return _ast35c.unparse(node.test)
+    except Exception:
+        return ""
+
+
 # ---- event-call templates (each references the EXACT real derivation expressions) --- #
 _EID_MOTION = ("f\"{_m35c_find_dataset()}|motion|{_m35c_ctx_var('t')}"
                "|{_m35c_ctx_var('pass_name')}|{source_id}|{target_id}\"")
@@ -4512,14 +4544,27 @@ def _m35c_gap_rules():
             "origin='gap-close', source_id=source_id, target_id=target_id, "
             "features={'middle_id': int(middle_id)})\n"),
          {"source_id", "target_id", "middle_id"}),
-        ("append:first_edge", "gap_addition_first_edge", _tmpl(
+        # e1/e2 dict assignments only PREPARE the bridge edges; NO *_edge_added here.
+        ("dict:first_edge", "gap_edge_dict_e1", _tmpl(
+            f"_m35c_EVT.create_or_update({_EID_GAP}, 'first_edge_prepared', dataset=_m35c_find_dataset(), "
+            "origin='gap-close', source_id=source_id, target_id=target_id, features={'middle_id': int(middle_id)})\n"),
+         {"source_id", "target_id", "middle_id"}),
+        ("dict:second_edge", "gap_edge_dict_e2", _tmpl(
+            f"_m35c_EVT.create_or_update({_EID_GAP}, 'second_edge_prepared', dataset=_m35c_find_dataset(), "
+            "origin='gap-close', source_id=source_id, target_id=target_id, features={'middle_id': int(middle_id)})\n"),
+         {"source_id", "target_id", "middle_id"}),
+        # the graph edges exist ONLY after new_edges.extend([e1, e2]); emit BOTH
+        # *_edge_added immediately AFTER the extend, with the actual edge endpoints.
+        ("extend:new_edges", "gap_extend", _tmpl(
             f"_m35c_EVT.create_or_update({_EID_GAP}, 'first_edge_added', dataset=_m35c_find_dataset(), "
-            "origin='gap-close', source_id=source_id, target_id=target_id, features={'middle_id': int(middle_id)})\n"),
-         {"source_id", "target_id", "middle_id"}),
-        ("append:second_edge", "gap_addition_second_edge", _tmpl(
+            "origin='gap-close', source_id=source_id, target_id=target_id, "
+            "features={'middle_id': int(middle_id), 'actual_edge_source_id': int(source_id), "
+            "'actual_edge_target_id': int(middle_id)})\n"
             f"_m35c_EVT.create_or_update({_EID_GAP}, 'second_edge_added', dataset=_m35c_find_dataset(), "
-            "origin='gap-close', source_id=source_id, target_id=target_id, features={'middle_id': int(middle_id)})\n"),
-         {"source_id", "target_id", "middle_id"}),
+            "origin='gap-close', source_id=source_id, target_id=target_id, "
+            "features={'middle_id': int(middle_id), 'actual_edge_source_id': int(middle_id), "
+            "'actual_edge_target_id': int(target_id)})\n"),
+         {"source_id", "target_id", "middle_id", "e1", "e2"}),
     ]
 
 
@@ -4543,10 +4588,29 @@ def _m35c_safe_rules():
             f"_m35c_EVT.create_or_update({_EID_SAFE}, 'gate_rejected', dataset=_m35c_find_dataset(), "
             "origin='safe-division', source_id=source_id, target_id=candidate_id, gates={'rejected': True})\n"),
          {"source_id", "candidate_id"}),
-        ("acceptance_loop", "safe_div_acceptance", _tmpl(
-            f"_m35c_EVT.create_or_update({_EID_SAFE}, 'accepted', dataset=_m35c_find_dataset(), "
+        # ACCEPTANCE loop (`for _, source_id, candidate_id, parent_dist, _ in proposals`):
+        # entering the sorted loop is NOT acceptance - it only emits selected_by_sorted_order.
+        ("accept_selected", "safe_div_selected", _tmpl(
+            f"_m35c_EVT.create_or_update({_EID_SAFE}, 'selected_by_sorted_order', dataset=_m35c_find_dataset(), "
             "origin='safe-division', source_id=source_id, target_id=candidate_id, "
             "gates={'selected_by_sorted_order': True})\n"),
+         {"source_id", "candidate_id"}),
+        ("accept_global_cap", "safe_div_global_cap_rejected", _tmpl(
+            f"_m35c_EVT.create_or_update({_EID_SAFE}, 'global_cap_rejected', dataset=_m35c_find_dataset(), "
+            "origin='safe-division', source_id=source_id, target_id=candidate_id, gates={'global_cap_rejected': True})\n"),
+         {"source_id", "candidate_id"}),
+        ("accept_frame_cap", "safe_div_frame_cap_rejected", _tmpl(
+            f"_m35c_EVT.create_or_update({_EID_SAFE}, 'frame_cap_rejected', dataset=_m35c_find_dataset(), "
+            "origin='safe-division', source_id=source_id, target_id=candidate_id, gates={'frame_cap_rejected': True})\n"),
+         {"source_id", "candidate_id"}),
+        ("accept_conflict", "safe_div_target_conflict_rejected", _tmpl(
+            f"_m35c_EVT.create_or_update({_EID_SAFE}, 'target_conflict_rejected', dataset=_m35c_find_dataset(), "
+            "origin='safe-division', source_id=source_id, target_id=candidate_id, gates={'target_conflict_rejected': True})\n"),
+         {"source_id", "candidate_id"}),
+        # accepted ONLY immediately before the real added.append({...}); edge_added AFTER it.
+        ("accept_before_append", "safe_div_acceptance", _tmpl(
+            f"_m35c_EVT.create_or_update({_EID_SAFE}, 'accepted', dataset=_m35c_find_dataset(), "
+            "origin='safe-division', source_id=source_id, target_id=candidate_id, gates={'accepted': True})\n"),
          {"source_id", "candidate_id"}),
         ("append:added", "safe_div_edge_added", _tmpl(
             f"_m35c_EVT.create_or_update({_EID_SAFE}, 'edge_added', dataset=_m35c_find_dataset(), "
@@ -4559,13 +4623,23 @@ def _m35c_missing_bindings(required, bound):
     return {n for n in required if n not in bound and not _m35c_is_constant_name(n)}
 
 
-def _m35c_inject_body(body, bound, rules, counts, binding_errors, origin):
+def _m35c_inject_body(body, bound, rules, counts, binding_errors, origin, accept_ctx=False):
     """Scope-aware injection: `bound` is the set of names definitely assigned on the
     enclosing path (function args + loop targets + prior assignments). An event is only
-    injected when its required local names are bound; otherwise it is a binding error."""
+    injected when its required local names are bound; otherwise it is a binding error.
+    `accept_ctx` is True while descending the safe-division sorted-proposals acceptance
+    loop, where cap/conflict rejections and post-gate acceptance replace the generic
+    gate-rejected handling."""
     out = []
     bound = set(bound)
     matchers = {m: (k, tmpl, req) for (m, k, tmpl, req) in rules}
+
+    def _emit(mk, before_stmt_list):
+        if mk in matchers:
+            k, tmpl, req = matchers[mk]
+            if not _m35c_missing_bindings(req, bound):
+                before_stmt_list.extend(tmpl()); counts[k] = counts.get(k, 0) + 1
+
     for stmt in body:
         # a nested def (e.g. assign_pass) gets its OWN params added to the bound set
         if isinstance(stmt, _ast35c.FunctionDef):
@@ -4592,27 +4666,56 @@ def _m35c_inject_body(body, bound, rules, counts, binding_errors, origin):
                 else:
                     stmt.body = tmpl() + stmt.body; counts[k] = counts.get(k, 0) + 1
                     inner |= {"source_id", "target_id"}
-            # safe-division acceptance loop: for _, source_id, candidate_id, parent_dist, _ in proposals
-            if "acceptance_loop" in matchers and {"source_id", "candidate_id", "parent_dist"} <= tgts:
-                k, tmpl, req = matchers["acceptance_loop"]
-                stmt.body = tmpl() + stmt.body; counts[k] = counts.get(k, 0) + 1
-            stmt.body = _m35c_inject_body(stmt.body, inner, rules, counts, binding_errors, origin)
-            stmt.orelse = _m35c_inject_body(stmt.orelse, bound, rules, counts, binding_errors, origin)
+            # safe-division ACCEPTANCE loop: for _, source_id, candidate_id, parent_dist, _ in proposals.
+            # Entering the sorted loop is NOT acceptance: emit selected_by_sorted_order at the top
+            # and descend in accept_ctx (cap/conflict rejections + post-gate acceptance).
+            child_accept = accept_ctx
+            if origin == "safe-division" and {"source_id", "candidate_id", "parent_dist"} <= tgts:
+                child_accept = True
+                if "accept_selected" in matchers:
+                    k, tmpl, req = matchers["accept_selected"]
+                    if not _m35c_missing_bindings(req, inner):
+                        stmt.body = tmpl() + stmt.body; counts[k] = counts.get(k, 0) + 1
+            stmt.body = _m35c_inject_body(stmt.body, inner, rules, counts, binding_errors, origin, child_accept)
+            stmt.orelse = _m35c_inject_body(stmt.orelse, bound, rules, counts, binding_errors, origin, accept_ctx)
             out.append(stmt); continue
+
+        # in the acceptance loop, an `if <cap/conflict>: ... break/continue` is a rejection
+        # gate: emit the cap/conflict-rejected event at the TOP of the if body (before the
+        # break/continue). This replaces the generic gate-rejected handling here.
+        if accept_ctx and origin == "safe-division" and isinstance(stmt, _ast35c.If):
+            test_src = _m35c_if_test_src(stmt)
+            has_break = any(isinstance(s, _ast35c.Break) for s in stmt.body)
+            has_continue = any(isinstance(s, _ast35c.Continue) for s in stmt.body)
+            mk = None
+            if has_break and "global_cap" in test_src:
+                mk = "accept_global_cap"
+            elif has_break and "frame_cap" in test_src:
+                mk = "accept_frame_cap"
+            elif has_continue and ("used_targets" in test_src or "incoming" in test_src):
+                mk = "accept_conflict"
+            if mk and mk in matchers:
+                k, tmpl, req = matchers[mk]
+                if not _m35c_missing_bindings(req, bound):
+                    stmt.body = tmpl() + stmt.body; counts[k] = counts.get(k, 0) + 1
+            out.append(stmt); continue
+
         for fld in ("body", "orelse", "finalbody"):
             child = getattr(stmt, fld, None)
             if isinstance(child, list):
-                setattr(stmt, fld, _m35c_inject_body(child, bound, rules, counts, binding_errors, origin))
+                setattr(stmt, fld, _m35c_inject_body(child, bound, rules, counts, binding_errors, origin, accept_ctx))
         for h in getattr(stmt, "handlers", []) or []:
-            h.body = _m35c_inject_body(h.body, bound, rules, counts, binding_errors, origin)
+            h.body = _m35c_inject_body(h.body, bound, rules, counts, binding_errors, origin, accept_ctx)
 
-        # gate_rejected BEFORE a continue (only if identity is bound here)
-        if isinstance(stmt, _ast35c.Continue):
-            for mk in ("before_continue",):
-                if mk in matchers:
-                    k, tmpl, req = matchers[mk]
-                    if not _m35c_missing_bindings(req, bound):
-                        out.extend(tmpl()); counts[k] = counts.get(k, 0) + 1
+        # gate_rejected BEFORE a continue (proposal-building gates only; SUPPRESSED in the
+        # acceptance loop, where target-conflict is handled at the enclosing `if`).
+        if isinstance(stmt, _ast35c.Continue) and not accept_ctx:
+            _emit("before_continue", out)
+        # `accepted` ONLY immediately before the real `added.append({...})`.
+        if accept_ctx and origin == "safe-division":
+            recv0, _a0 = _m35c_append_receiver(stmt)
+            if recv0 == "added":
+                _emit("accept_before_append", out)
         out.append(stmt)
 
         # after assignments to a named target
@@ -4643,32 +4746,40 @@ def _m35c_inject_body(body, bound, rules, counts, binding_errors, origin):
                 k, tmpl, req = matchers["append:frame_matches"]
                 out.extend(tmpl()); counts[k] = counts.get(k, 0) + 1
             elif origin == "safe-division" and recv == "added":
-                k, tmpl, req = matchers["append:added"]
+                k, tmpl, req = matchers["append:added"]      # edge_added AFTER added.append({...})
                 if not _m35c_missing_bindings(req, bound):
                     out.extend(tmpl()); counts[k] = counts.get(k, 0) + 1
 
-        # gap-close builds edge DICTS (not tuple appends): e1 with target_id==middle_id
-        # is the first edge (source->middle); e2 with source_id==middle_id is the second
-        # edge (middle->target). Anchor on the middle_id-valued endpoint of the dict.
+        # gap-close builds edge DICTS: e1 with target_id==middle_id PREPARES the first edge
+        # (source->middle); e2 with source_id==middle_id PREPARES the second edge
+        # (middle->target). The edges enter the graph only at new_edges.extend([e1, e2]).
         if origin == "gap-close":
             dnode = _m35c_assign_dict_value(stmt)
             if dnode is not None and {"source_id", "target_id", "distance_um"} <= _m35c_dict_keys(dnode):
                 first_target = _m35c_dict_value_name(dnode, "target_id")
                 second_source = _m35c_dict_value_name(dnode, "source_id")
                 if first_target == "middle_id" and second_source != "middle_id":
-                    k, tmpl, req = matchers["append:first_edge"]
+                    k, tmpl, req = matchers["dict:first_edge"]
                     miss = _m35c_missing_bindings(req, bound)
                     if miss:
                         binding_errors.append({"site": k, "missing": sorted(miss)})
                     else:
                         out.extend(tmpl()); counts[k] = counts.get(k, 0) + 1
                 elif second_source == "middle_id" and first_target != "middle_id":
-                    k, tmpl, req = matchers["append:second_edge"]
+                    k, tmpl, req = matchers["dict:second_edge"]
                     miss = _m35c_missing_bindings(req, bound)
                     if miss:
                         binding_errors.append({"site": k, "missing": sorted(miss)})
                     else:
                         out.extend(tmpl()); counts[k] = counts.get(k, 0) + 1
+            # first_edge_added / second_edge_added AFTER the actual extend (edges now exist)
+            if _m35c_is_new_edges_extend(stmt):
+                k, tmpl, req = matchers["extend:new_edges"]
+                miss = _m35c_missing_bindings(req, bound)
+                if miss:
+                    binding_errors.append({"site": k, "missing": sorted(miss)})
+                else:
+                    out.extend(tmpl()); counts[k] = counts.get(k, 0) + 1
 
         # extend bound with this statement's assigned names
         if isinstance(stmt, _ast35c.Assign):
@@ -4717,17 +4828,21 @@ M35_C_REQUIRED_EXPRS = {
     "motion_frame_matches_append": ["'accepted'"],
     "gap_matrix_pair": ["end_ids[int(i)]", "start_ids[int(j)]", "d[i, j]", "threshold_um"],
     "gap_hungarian": ["end_ids[int(r)]", "start_ids[int(c)]", "d[r, c]"],
-    "gap_addition_first_edge": ["'first_edge_added'", "middle_id"],
-    "gap_addition_second_edge": ["'second_edge_added'", "middle_id"],
+    "gap_edge_dict_e1": ["'first_edge_prepared'", "middle_id"],
+    "gap_edge_dict_e2": ["'second_edge_prepared'", "middle_id"],
+    "gap_extend": ["'first_edge_added'", "'second_edge_added'", "new_edges.extend"],
     "safe_div_pair": ["child_dist", "parent_dist", "SAFE_DIV_EXISTING_CHILD_MAX_UM", "SAFE_DIV_MAX_UM"],
     "safe_div_sister": ["sister_dist", "SAFE_DIV_SISTER_MAX_UM"],
+    "safe_div_selected": ["'selected_by_sorted_order'"],
     "safe_div_acceptance": ["'accepted'"],
 }
-# every one of these must be > 0 (item 6)
+# every one of these must be > 0 (gap dict/extend sites are additionally required == 1)
 M35_REQUIRED_SITE_KEYS = ("motion_pair_evaluation", "motion_hungarian", "motion_selected_edges_append",
                           "motion_frame_matches_append", "gap_matrix_pair", "gap_hungarian",
-                          "gap_addition_first_edge", "gap_addition_second_edge",
-                          "safe_div_pair", "safe_div_acceptance")
+                          "gap_edge_dict_e1", "gap_edge_dict_e2", "gap_extend",
+                          "safe_div_pair", "safe_div_selected", "safe_div_acceptance")
+# these gap sites must occur EXACTLY once (one e1 dict, one e2 dict, one extend)
+M35_GAP_EXACTLY_ONE_SITE_KEYS = ("gap_edge_dict_e1", "gap_edge_dict_e2", "gap_extend")
 
 
 def _m35_instrument_postprocess_source(cell4_src, _unused=None):
@@ -4803,7 +4918,7 @@ M35C_SELFTEST_CELL4 = (
     "            frame_matches.append((source_id, target_id, distance_um))\n"
     "            selected_edges.append({'source_id': source_id, 'target_id': target_id, 'distance_um': distance_um})\n"
     "    return selected_edges\n"
-    "def close_single_frame_gaps(dataset, end_points, start_points):\n"
+    "def close_single_frame_gaps(dataset, end_points, start_points, commit_sources):\n"
     "    end_ids = list(range(len(end_points))); start_ids = [10 + k for k in range(len(start_points))]\n"
     "    threshold_um = 5.0\n"
     "    d = np.zeros((len(end_points), len(start_points)))\n"
@@ -4811,7 +4926,7 @@ M35C_SELFTEST_CELL4 = (
     "        for j, sp in enumerate(start_points):\n"
     "            d[i, j] = float(abs(ep - sp))\n"
     "    rows = [i for i in range(len(end_points)) if float(d[i].min()) <= threshold_um]\n"
-    "    row_ind = rows[:1]; col_ind = [int(np.argmin(d[i])) for i in rows[:1]]\n"
+    "    row_ind = rows; col_ind = [int(np.argmin(d[i])) for i in rows]\n"
     "    edges = []; new_edges = []\n"
     "    for r, c in zip(row_ind, col_ind):\n"
     "        source_id = end_ids[int(r)]; target_id = start_ids[int(c)]\n"
@@ -4821,26 +4936,42 @@ M35C_SELFTEST_CELL4 = (
     "        middle_id = 100 + int(r)\n"
     "        e1 = {'source_id': source_id, 'target_id': middle_id, 'edge_prob': None, 'distance_um': edge_distance_um(source_id, middle_id), 'gap_closed': 1}\n"
     "        e2 = {'source_id': middle_id, 'target_id': target_id, 'edge_prob': None, 'distance_um': edge_distance_um(middle_id, target_id), 'gap_closed': 1}\n"
-    "        new_edges.extend([e1, e2])\n"
+    "        if source_id in commit_sources:\n"
+    "            new_edges.extend([e1, e2])\n"
     "    edges = [*edges, *new_edges]\n"
     "    return edges\n"
-    "def add_safe_divisions_postlink(dataset, source_ids, candidate_ids):\n"
-    "    proposals = []; added = []\n"
-    "    for source_id in source_ids:\n"
-    "        existing_child_id = source_id + 1\n"
-    "        child_dist = edge_distance_um(source_id, existing_child_id)\n"
-    "        for candidate_id in candidate_ids:\n"
-    "            parent_dist = edge_distance_um(source_id, candidate_id)\n"
+    "def add_safe_divisions_postlink(dataset, frames):\n"
+    "    added = []\n"
+    "    for frame in frames:\n"
+    "        source_ids = frame['source_ids']; candidate_ids = frame['candidate_ids']\n"
+    "        global_cap = frame['global_cap']; frame_cap = frame['frame_cap']\n"
+    "        used_targets = set(frame['used_targets']); incoming = set()\n"
+    "        proposals = []\n"
+    "        for source_id in source_ids:\n"
+    "            existing_child_id = source_id + 1\n"
+    "            child_dist = edge_distance_um(source_id, existing_child_id)\n"
     "            if child_dist > SAFE_DIV_EXISTING_CHILD_MAX_UM:\n"
     "                continue\n"
-    "            if parent_dist > SAFE_DIV_MAX_UM:\n"
+    "            for candidate_id in candidate_ids:\n"
+    "                parent_dist = edge_distance_um(source_id, candidate_id)\n"
+    "                if parent_dist > SAFE_DIV_MAX_UM:\n"
+    "                    continue\n"
+    "                sister_dist = edge_distance_um(existing_child_id, candidate_id)\n"
+    "                if sister_dist > SAFE_DIV_SISTER_MAX_UM:\n"
+    "                    continue\n"
+    "                proposals.append((parent_dist, source_id, candidate_id, parent_dist, sister_dist))\n"
+    "        proposals.sort(key=lambda item: item[0])\n"
+    "        added_this_frame = 0\n"
+    "        for _, source_id, candidate_id, parent_dist, _ in proposals:\n"
+    "            if len(added) >= global_cap:\n"
+    "                break\n"
+    "            if added_this_frame >= frame_cap:\n"
+    "                break\n"
+    "            if candidate_id in used_targets or candidate_id in incoming:\n"
     "                continue\n"
-    "            sister_dist = edge_distance_um(existing_child_id, candidate_id)\n"
-    "            if sister_dist > SAFE_DIV_SISTER_MAX_UM:\n"
-    "                continue\n"
-    "            proposals.append((parent_dist, source_id, candidate_id, parent_dist, None))\n"
-    "    for _, source_id, candidate_id, parent_dist, _ in proposals:\n"
-    "        added.append({'source_id': source_id, 'target_id': candidate_id})\n"
+    "            added.append({'source_id': source_id, 'target_id': candidate_id, 'distance_um': parent_dist})\n"
+    "            used_targets.add(candidate_id)\n"
+    "            added_this_frame += 1\n"
     "    return added\n"
     "def filter_output_graph(dataset, edges):\n"
     "    motion_edges = motion_relink_edges({}, {}, None)\n"
@@ -4848,8 +4979,12 @@ M35C_SELFTEST_CELL4 = (
     "    return survived\n"
     "for dataset in ['44b6_0113de3b']:\n"
     "    filter_output_graph(dataset, [(0, 1)])\n"
-    "    close_single_frame_gaps(dataset, [0, 5], [1, 20])\n"
-    "    add_safe_divisions_postlink(dataset, [4], [5, 70])\n")
+    "    close_single_frame_gaps(dataset, [0, 100], [1, 101], {0})\n"
+    "    add_safe_divisions_postlink(dataset, [\n"
+    "        {'source_ids': [4], 'candidate_ids': [5], 'global_cap': 10, 'frame_cap': 10, 'used_targets': []},\n"
+    "        {'source_ids': [4], 'candidate_ids': [6], 'global_cap': 10, 'frame_cap': 10, 'used_targets': [6]},\n"
+    "        {'source_ids': [7], 'candidate_ids': [8, 9], 'global_cap': 10, 'frame_cap': 1, 'used_targets': []},\n"
+    "        {'source_ids': [10], 'candidate_ids': [11], 'global_cap': 2, 'frame_cap': 10, 'used_targets': []}])\n")
 
 
 def _m35c_semantic_selftest():
@@ -4865,10 +5000,23 @@ def _m35c_semantic_selftest():
 
     def rows(origin, s, t):
         return [r for r in cons if r["origin"] == origin and r["source_id"] == s and r["target_id"] == t]
+    def et_of(rws):
+        return set(rws[0]["event_types"]) if rws else set()
+    def added_tg(rws):
+        return bool(rws and _m35c_added_to_graph("gap-close", set(rws[0]["event_types"])))
+    def sel_no_accept(rws):     # entered the sorted loop but was NOT accepted / added
+        e = et_of(rws)
+        return bool(rws and "selected_by_sorted_order" in e and "accepted" not in e and "edge_added" not in e)
+
     mot = rows("motion-relink", 0, 5); rej = rows("motion-relink", 0, 20)
     gap = [r for r in cons if r["origin"] == "gap-close"]
-    gap_bridge = [r for r in gap if _m35c_added_to_graph("gap-close", set(r["event_types"]))]
-    safe_acc = rows("safe-division", 4, 5); safe_rej = rows("safe-division", 4, 70)
+    # (0,10) commits the extend; (1,11) prepares e1/e2 but the extend is deliberately skipped
+    gap_added = rows("gap-close", 0, 10); gap_prep_only = rows("gap-close", 1, 11)
+    # safe-division: one accepted, one target-conflict, one frame-cap, one global-cap rejected
+    safe_acc = rows("safe-division", 4, 5)
+    safe_conflict = rows("safe-division", 4, 6)
+    safe_frame_cap = rows("safe-division", 7, 9)
+    safe_global_cap = rows("safe-division", 10, 11)
     no_none_ids = all("|None|" not in r["evaluation_id"] for r in cons)
     checks = {
         "rejected_and_accepted_present": bool(("gate_rejected" in evt or "assignment_rejected" in evt)
@@ -4876,20 +5024,35 @@ def _m35c_semantic_selftest():
         "motion_lifecycle_one_eval_id": bool(mot and {"pair_evaluated", "hungarian_selected", "accepted", "edge_added"}
                                              <= set(mot[0]["event_types"])),
         "motion_rejected_not_added": bool(rej and "edge_added" not in set(rej[0]["event_types"])),
-        "gap_bridge_two_edges": bool(gap_bridge and all({"first_edge_added", "second_edge_added"}
-                                                        <= set(r["event_types"]) for r in gap_bridge)),
+        # gap bridge edges enter the graph ONLY after the extend
+        "gap_real_extend_both_added": bool(gap_added and {"first_edge_added", "second_edge_added"} <= et_of(gap_added)
+                                           and added_tg(gap_added)),
+        "gap_skipped_prepared_not_added": bool(gap_prep_only
+                                               and {"first_edge_prepared", "second_edge_prepared"} <= et_of(gap_prep_only)
+                                               and "first_edge_added" not in et_of(gap_prep_only)
+                                               and "second_edge_added" not in et_of(gap_prep_only)
+                                               and not added_tg(gap_prep_only)),
+        "gap_added_to_graph_only_after_both_events": bool(added_tg(gap_added) and not added_tg(gap_prep_only)),
         "gap_matrix_pairs_are_candidates": bool(len(gap) >= 1),
-        "safe_division_accepted": bool(safe_acc and "edge_added" in set(safe_acc[0]["event_types"])),
-        "safe_division_rejected_not_added": bool(safe_rej and "edge_added" not in set(safe_rej[0]["event_types"])),
+        # entering the sorted loop is NOT acceptance
+        "safe_division_accepted": bool(safe_acc and {"accepted", "edge_added"} <= et_of(safe_acc)),
+        "safe_conflict_selected_not_accepted": bool(sel_no_accept(safe_conflict)
+                                                    and "target_conflict_rejected" in et_of(safe_conflict)),
+        "safe_frame_cap_selected_not_accepted": bool(sel_no_accept(safe_frame_cap)
+                                                     and "frame_cap_rejected" in et_of(safe_frame_cap)),
+        "safe_global_cap_selected_not_accepted": bool(sel_no_accept(safe_global_cap)
+                                                      and "global_cap_rejected" in et_of(safe_global_cap)),
         "no_missing_identity": all(r["dataset"] == D and r["source_id"] is not None and r["target_id"] is not None
                                    for r in cons),
         "no_none_in_eval_ids": no_none_ids,
         "no_frame_t_in_ids": report["no_frame_t_in_ids"],
         "no_identity_conflicts": bool(len(rec.conflicts) == 0),
         "binding_ok": report["binding_ok"],
+        "binding_errors_empty": bool(len(report["binding_errors"]) == 0),
         "feature_value_matches": bool(mot and abs((mot[0]["features"].get("raw_distance") or -1) - 5.0) < 1e-9),
         "all_required_exprs_present": bool(report["all_required_exprs_present"]),
         "all_required_sites_present": all(report["required_sites_present"].values()),
+        "gap_sites_exactly_one": all(report["site_counts"].get(k, 0) == 1 for k in M35_GAP_EXACTLY_ONE_SITE_KEYS),
         "dataset_propagation_patched": bool(report["dataset_propagation_patch_count"] == 2),
     }
     return {"passed": all(checks.values()), "checks": checks, "site_counts": report["site_counts"],
@@ -5444,6 +5607,24 @@ def run_m35_c_structural_preflight(working_dir=KAGGLE_WORKING_DIR, search_roots=
                         _fail(f"required expression missing at {sk}: {e}")
             if report["dataset_propagation_patch_count"] <= 0:
                 _fail("dataset propagation patch count == 0 (motion def/call not patched)")
+            # gap bridge: exactly one e1 dict, one e2 dict, and one extend site
+            for sk in M35_GAP_EXACTLY_ONE_SITE_KEYS:
+                if report["site_counts"].get(sk, 0) != 1:
+                    _fail(f"gap site {sk} count == {report['site_counts'].get(sk, 0)} (expected exactly 1)")
+            pre["gap_extend_ordering_ok"] = None
+            # the *_edge_added calls must be emitted AFTER new_edges.extend([e1, e2]),
+            # never after the e1/e2 dict assignments (edges do not exist until the extend)
+            i_ext = _patched.find("new_edges.extend")
+            i_first = _patched.find("'first_edge_added'")
+            i_second = _patched.find("'second_edge_added'")
+            i_prep1 = _patched.find("'first_edge_prepared'")
+            i_prep2 = _patched.find("'second_edge_prepared'")
+            ordering_ok = bool(i_ext >= 0 and i_first > i_ext and i_second > i_ext
+                               and 0 <= i_prep1 < i_ext and 0 <= i_prep2 < i_ext)
+            pre["gap_extend_ordering_ok"] = ordering_ok
+            if not ordering_ok:
+                _fail("gap *_edge_added must occur AFTER new_edges.extend([e1, e2]) "
+                      "and *_edge_prepared before it (edges do not exist until the extend)")
         except M35CInstrumentationError as exc:
             pre["site_counts"] = {}; _fail(f"exact-site instrumentation: {exc}")
         # ALL THREE cell-1 assignments must be patchable (REPO_DIR/SUBMISSION_PATH/RUN_STATS_PATH)
@@ -6605,17 +6786,26 @@ def _m35_t_event_recorder_semantic_selftest():
     c = res["checks"]
     # pair_evaluated -> hungarian_selected -> accepted -> edge_added share ONE eval_id
     assert c["motion_lifecycle_one_eval_id"] and c["motion_rejected_not_added"]
-    # gap bridge = TWO real edges (first+second); matrix pairs are candidates
-    assert c["gap_bridge_two_edges"] and c["gap_matrix_pairs_are_candidates"]
-    # safe-division uses the real gates; rejected candidates not added
-    assert c["safe_division_accepted"] and c["safe_division_rejected_not_added"]
+    # gap bridge edges enter the graph ONLY after new_edges.extend([e1, e2]):
+    # the committed row produces both *_edge_added; the skipped row has only *_edge_prepared
+    assert c["gap_real_extend_both_added"] and c["gap_skipped_prepared_not_added"]
+    assert c["gap_added_to_graph_only_after_both_events"] and c["gap_matrix_pairs_are_candidates"]
+    assert c["gap_sites_exactly_one"]
+    # safe-division: entering the sorted loop is NOT acceptance; each cap/conflict proposal
+    # carries selected_by_sorted_order but neither accepted nor edge_added
+    assert c["safe_division_accepted"]
+    assert c["safe_conflict_selected_not_accepted"]
+    assert c["safe_frame_cap_selected_not_accepted"]
+    assert c["safe_global_cap_selected_not_accepted"]
     # no stale/conflicting IDs, no |None|/frame_t in ids, AST bindings all valid
     assert c["no_identity_conflicts"] and c["no_none_in_eval_ids"] and c["no_frame_t_in_ids"] and c["binding_ok"]
+    assert c["binding_errors_empty"]
     assert c["no_missing_identity"] and c["feature_value_matches"] and res["binding_errors"] == []
     assert res["dataset_propagation_patch_count"] == 2
     for sk in ("motion_pair_evaluation", "motion_hungarian", "motion_selected_edges_append",
                "motion_frame_matches_append", "gap_matrix_pair", "gap_hungarian",
-               "gap_addition_first_edge", "gap_addition_second_edge", "safe_div_pair", "safe_div_acceptance"):
+               "gap_edge_dict_e1", "gap_edge_dict_e2", "gap_extend",
+               "safe_div_pair", "safe_div_selected", "safe_div_acceptance"):
         assert res["site_counts"].get(sk, 0) >= 1, f"site {sk} not injected"
 
 
@@ -6731,12 +6921,17 @@ def _m35_t_structural_preflight_no_gpu():
         assert pre["cell_bindings"] == {"environment": 0, "configuration": 1, "dependency": 2, "inference": 3, "postprocess": 4}
         assert pre["dependency_split_ok"] is True
         assert set(pre["postprocess_functions_found"]) >= {"motion_relink_edges", "close_single_frame_gaps", "add_safe_divisions_postlink"}
-        # distinct per-site counts all > 0 (incl. gap first/second edge + motion appends)
+        # distinct per-site counts all > 0 (incl. gap e1/e2 dict + extend + motion appends)
         assert all(pre["required_sites_present"].values())
         for sk in ("motion_pair_evaluation", "motion_hungarian", "motion_selected_edges_append",
                    "motion_frame_matches_append", "gap_matrix_pair", "gap_hungarian",
-                   "gap_addition_first_edge", "gap_addition_second_edge", "safe_div_pair", "safe_div_acceptance"):
+                   "gap_edge_dict_e1", "gap_edge_dict_e2", "gap_extend",
+                   "safe_div_pair", "safe_div_selected", "safe_div_acceptance"):
             assert pre["site_counts"].get(sk, 0) > 0
+        # the gap dict/extend sites occur EXACTLY once and the added events follow the extend
+        for sk in ("gap_edge_dict_e1", "gap_edge_dict_e2", "gap_extend"):
+            assert pre["site_counts"].get(sk, 0) == 1
+        assert pre["gap_extend_ordering_ok"] is True
         assert pre["binding_ok"] is True and pre["no_frame_t_in_ids"] is True
         assert pre["dataset_propagation_patch_count"] == 2
         assert pre["output_assignment_patch"]["repo_dir_patched"] and pre["output_assignment_patch"]["submission_patched"] \
@@ -6798,9 +6993,15 @@ def _m35_t_real_notebook_preflight_if_present():
     bound = _m35_bind_cells_by_index(code_cells)
     patched, report = _m35_instrument_postprocess_source(bound["postprocess"][1])
     compile(patched, "<real_cell4>", "exec")                  # instrumented source compiles
-    # the two gap edges are DISTINCT graph edges in the REAL source (dict-shaped, not tuples)
-    assert report["site_counts"].get("gap_addition_first_edge", 0) > 0
-    assert report["site_counts"].get("gap_addition_second_edge", 0) > 0
+    # the two gap edges are DISTINCT dict edges PREPARED at e1/e2 and only ADDED after the
+    # real new_edges.extend([e1, e2]); each site occurs EXACTLY once in the real source.
+    for sk in ("gap_edge_dict_e1", "gap_edge_dict_e2", "gap_extend"):
+        assert report["site_counts"].get(sk, 0) == 1, f"real cell4 gap site {sk} != 1"
+    # first_edge_added / second_edge_added are emitted AFTER the extend, never after e1/e2
+    assert patched.find("'first_edge_added'") > patched.find("new_edges.extend") >= 0
+    assert patched.find("'second_edge_added'") > patched.find("new_edges.extend")
+    assert 0 <= patched.find("'first_edge_prepared'") < patched.find("new_edges.extend")
+    assert 0 <= patched.find("'second_edge_prepared'") < patched.find("new_edges.extend")
     for sk in M35_REQUIRED_SITE_KEYS:
         assert report["site_counts"].get(sk, 0) > 0, f"real cell4 site {sk} == 0"
     assert report["all_required_exprs_present"], report["required_exprs_present"]

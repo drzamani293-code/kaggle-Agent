@@ -14,16 +14,20 @@ remain `SUPERSEDED_BY_M35_REFERENCE_0902` (files kept, not promoted).
   graph_valid. Notebook SHA256 **`beb17b03…5437e`**; controlled 400ep weight SHA256
   **`12f6881e…2fe771`**. The public LB **0.902** is USER-OBSERVED — not independently
   verified from the Kaggle leaderboard.
-- **M35-C = `M35_C_REAL_NOTEBOOK_AST_SEMANTIC_PREFLIGHT_PASS` +
-  `M35_C_KAGGLE_DATASET_PREFLIGHT_PENDING` → `M35-C = BLOCKED_NOT_YET_RUN`.** The AST +
-  semantic instrumentation passes against the SUPPLIED audited notebook (`beb17b03…`,
-  verified locally in git-ignored `.local_reference/`): the two gap bridge edges are now
-  detected (`gap_addition_first_edge = 1`, `gap_addition_second_edge = 1`),
-  `binding_errors = []`, `no_frame_t_in_ids = true`, `dataset_propagation_patch_count = 2`,
-  `semantic_selftest.passed = true`, `reasons = []`. The four mounted `.zarr` dataset
-  stems were **not** verifiable locally, so the full `M35_C_STRUCTURAL_PREFLIGHT_PASS` is
-  attainable **only** on Kaggle with the mounted competition `test/`. No candidate export
-  exists; none is claimed.
+- **M35-C = `M35_C_REAL_NOTEBOOK_STATIC_AST_MATCH_PASS` (event semantics fixed in Rev12) +
+  `M35_C_KAGGLE_DATASET_PREFLIGHT_PENDING` → `M35-C = BLOCKED_NOT_YET_RUN`.** The
+  instrumentation is verified against the SUPPLIED audited notebook (`beb17b03…`, held
+  locally in git-ignored `.local_reference/`). Rev11 achieved the static-AST match; Rev12
+  corrects two event-semantics defects (gap `*_edge_added` must fire AFTER
+  `new_edges.extend([e1, e2])`, not at the `e1`/`e2` dicts; safe-division `accepted` must
+  fire AFTER the cap/conflict gates, not at the sorted-proposals loop top). On the real
+  cell 4: `gap_edge_dict_e1 = gap_edge_dict_e2 = gap_extend = 1`, added events ordered
+  after the extend; `safe_div_selected / global_cap_rejected / frame_cap_rejected /
+  target_conflict_rejected / safe_div_acceptance = 1` each; `binding_errors = []`,
+  `no_frame_t_in_ids = true`, `dataset_propagation_patch_count = 2`,
+  `semantic_selftest.passed = true`. The four mounted `.zarr` dataset stems remain **not**
+  verifiable locally, so the full `M35_C_STRUCTURAL_PREFLIGHT_PASS` is attainable **only**
+  on Kaggle with the mounted competition `test/`. No candidate export exists; none is claimed.
 
 The verified production runner is
 `M35_B_TWO_PHASE_CURRENT_KERNEL_REPRO_NOT_SUBMIT.txt` (`run_m35_b_two_phase`). It
@@ -260,6 +264,47 @@ running on Kaggle with the mounted competition `test/` directory and confirming 
 four `.zarr` stems. No GPU inference, no full M35-C, no M35-D/E were run; no candidate
 export success and no `0.975` are claimed.
 
+*Rev11 reporting correction.* The Rev11 commit (`9cef669`) changed **13** files (not 12).
+Its accurate scoped status is **`M35_C_REAL_NOTEBOOK_STATIC_AST_MATCH_PASS`** — the static
+AST match on the real cell 4 passed — with **`M35_C_EVENT_SEMANTICS_PENDING_FIX`**: two
+event-semantics defects remained (gap `*_edge_added` was emitted at the `e1`/`e2` dict
+assignments rather than after the real `new_edges.extend([e1, e2])`; safe-division
+`accepted` was emitted at the top of the sorted-proposals loop, before the cap/conflict
+gates, falsely marking rejected proposals accepted). Do not read Rev11 as a full
+event-semantics pass.
+
+*Rev12 — event semantics corrected on the real source.* (1) **Gap bridge edges enter the
+graph only at the extend.** The `e1`/`e2` dict assignments now emit `first_edge_prepared`
+/ `second_edge_prepared` (never `*_edge_added`); a new exact AST matcher for
+`new_edges.extend([e1, e2])` (receiver `Name('new_edges')`, method `extend`, a
+List/Tuple of exactly `Name('e1')`, `Name('e2')`, all of `e1`/`e2`/`source_id`/`target_id`
+/`middle_id` bound) emits `first_edge_added` (`actual_edge_source_id=source_id`,
+`actual_edge_target_id=middle_id`) and `second_edge_added` (`actual_edge_source_id=
+middle_id`, `actual_edge_target_id=target_id`) **immediately after** the extend. The
+consolidated bridge is `added_to_graph=True` only when **both** post-extend events exist.
+The preflight requires `gap_edge_dict_e1 == 1`, `gap_edge_dict_e2 == 1`, `gap_extend == 1`
+and verifies the `*_edge_added` calls occur after the extend and the `*_edge_prepared`
+calls before it. (2) **Safe-division acceptance is post-gate.** Entering
+`for _, source_id, candidate_id, parent_dist, _ in proposals:` emits only
+`selected_by_sorted_order`; `global_cap_rejected` / `frame_cap_rejected` /
+`target_conflict_rejected` are emitted before the respective `break`/`break`/`continue`
+(matched on the enclosing `if` test); `accepted` is emitted only immediately before the
+real `added.append({...})` and `edge_added` immediately after. Raw candidate logic:
+`accepted_by_assignment = accepted OR edge_added` — entering the sorted loop never implies
+acceptance. (3) The deterministic semantic self-test now includes a safe-division proposal
+accepted+added, one rejected by global cap, one by frame cap, one by target/incoming
+conflict, and a gap bridge whose `e1`/`e2` are prepared but whose extend is deliberately
+skipped; it asserts cap/conflict proposals carry `selected_by_sorted_order` without
+`accepted`/`edge_added`, the skipped bridge has prepared-only edges and `added_to_graph`
+False, a real extend yields both `*_edge_added` with `added_to_graph` True, no identity
+conflicts, and `binding_errors == []`. Verified on the real cell 4 (unmodified preflight
+logic): all gap/safe sites present with the exact counts above, ordering correct,
+`semantic_selftest.passed = true`, `binding_errors = []`. **49/49** tests pass;
+`py_compile` passes. Status unchanged: **`M35_C_REAL_NOTEBOOK_STATIC_AST_MATCH_PASS`** (now
+with correct event semantics) + **`M35_C_KAGGLE_DATASET_PREFLIGHT_PENDING`** →
+**`M35-C = BLOCKED_NOT_YET_RUN`**. No GPU inference, no full M35-C, no M35-D/E; no
+candidate-export success and no `0.975` claimed.
+
 ## What was genuinely executed vs. blocked
 - **M35-A — manifest-driven, PASSED on Kaggle.** All critical-file SHA256 matched
   `REFERENCE_BUNDLE_MANIFEST.json`. (Off the reference environment it reports
@@ -442,9 +487,10 @@ gate**. New this build:
 M19-C 0.880 historical; M29-A 0.876 failed; M30-C pending; M31 blocked; M32/M32.1
 unresolved; M33 operationally paused; M34 A–D superseded. 0.902 recorded user-observed.
 **M35-A = VERIFIED_PASS_ON_KAGGLE; M35-B = VERIFIED_REPRO_PASS_EXACT_ON_KAGGLE;
-M35-C = BLOCKED_NOT_YET_RUN** (real-notebook AST/semantic preflight PASSED locally
-against the audited `beb17b03…` cell 4 =
-`M35_C_REAL_NOTEBOOK_AST_SEMANTIC_PREFLIGHT_PASS`; the four mounted `.zarr` stem check is
+M35-C = BLOCKED_NOT_YET_RUN** (real-notebook static-AST match + event semantics verified
+locally against the audited `beb17b03…` cell 4 =
+`M35_C_REAL_NOTEBOOK_STATIC_AST_MATCH_PASS` (Rev12 fixed the post-extend gap events and
+post-gate safe-division acceptance); the four mounted `.zarr` stem check is
 `M35_C_KAGGLE_DATASET_PREFLIGHT_PENDING`; machinery genuine; still needs the instrumented
 predict subprocess + postprocess re-run on Kaggle); M35-D/E `BLOCKED_PENDING_M35C_PASS`.
 **Next action on Kaggle: run the full `run_m35_c_structural_preflight` (mounted `test/`,
