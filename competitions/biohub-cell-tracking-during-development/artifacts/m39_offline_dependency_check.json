@@ -1,0 +1,144 @@
+{
+  "checked": [
+    "numpy",
+    "pandas",
+    "scipy",
+    "scipy.optimize",
+    "networkx",
+    "zarr",
+    "tifffile",
+    "skimage",
+    "torch",
+    "torchvision",
+    "tracksdata",
+    "geff",
+    "tracking_cellmot",
+    "tracking_cellmot.metrics",
+    "royerlab_tracking",
+    "hoct",
+    "gurobipy",
+    "pulp"
+  ],
+  "importable": [
+    "numpy",
+    "pandas",
+    "scipy",
+    "scipy.optimize",
+    "networkx",
+    "zarr",
+    "tifffile",
+    "skimage"
+  ],
+  "missing": [
+    "torch",
+    "torchvision",
+    "tracksdata",
+    "geff",
+    "tracking_cellmot",
+    "tracking_cellmot.metrics",
+    "royerlab_tracking",
+    "hoct",
+    "gurobipy",
+    "pulp"
+  ],
+  "results": [
+    {
+      "file": "/usr/local/lib/python3.11/dist-packages/numpy/__init__.py",
+      "importable": true,
+      "name": "numpy",
+      "version": "2.4.6"
+    },
+    {
+      "file": "/usr/local/lib/python3.11/dist-packages/pandas/__init__.py",
+      "importable": true,
+      "name": "pandas",
+      "version": "3.0.3"
+    },
+    {
+      "file": "/usr/local/lib/python3.11/dist-packages/scipy/__init__.py",
+      "importable": true,
+      "name": "scipy",
+      "version": "1.17.1"
+    },
+    {
+      "file": "/usr/local/lib/python3.11/dist-packages/scipy/optimize/__init__.py",
+      "importable": true,
+      "name": "scipy.optimize",
+      "version": null
+    },
+    {
+      "file": "/usr/local/lib/python3.11/dist-packages/networkx/__init__.py",
+      "importable": true,
+      "name": "networkx",
+      "version": "3.6.1"
+    },
+    {
+      "file": "/usr/local/lib/python3.11/dist-packages/zarr/__init__.py",
+      "importable": true,
+      "name": "zarr",
+      "version": "3.1.6"
+    },
+    {
+      "file": "/usr/local/lib/python3.11/dist-packages/tifffile/__init__.py",
+      "importable": true,
+      "name": "tifffile",
+      "version": "2026.3.3"
+    },
+    {
+      "file": "/usr/local/lib/python3.11/dist-packages/skimage/__init__.py",
+      "importable": true,
+      "name": "skimage",
+      "version": "0.26.0"
+    },
+    {
+      "error": "spec_not_found",
+      "importable": false,
+      "name": "torch"
+    },
+    {
+      "error": "spec_not_found",
+      "importable": false,
+      "name": "torchvision"
+    },
+    {
+      "error": "spec_not_found",
+      "importable": false,
+      "name": "tracksdata"
+    },
+    {
+      "error": "spec_not_found",
+      "importable": false,
+      "name": "geff"
+    },
+    {
+      "error": "spec_not_found",
+      "importable": false,
+      "name": "tracking_cellmot"
+    },
+    {
+      "error": "find_spec ImportError: No module named 'tracking_cellmot'",
+      "importable": false,
+      "name": "tracking_cellmot.metrics"
+    },
+    {
+      "error": "spec_not_found",
+      "importable": false,
+      "name": "royerlab_tracking"
+    },
+    {
+      "error": "spec_not_found",
+      "importable": false,
+      "name": "hoct"
+    },
+    {
+      "error": "spec_not_found",
+      "importable": false,
+      "name": "gurobipy"
+    },
+    {
+      "error": "spec_not_found",
+      "importable": false,
+      "name": "pulp"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "declared_split_name": "PENDING_REAL_ENV",
+  "membership_csv_path": "artifacts/m39_split_membership.csv",
+  "membership_csv_sha256": "PENDING_REAL_ENV",
+  "notes": "no manifest, checkpoint metadata, or explicit split file found under reference/ or artifacts/; cannot prove split_0 offline",
+  "reconstruction_from_seed": false,
+  "split_source": "PENDING_REAL_ENV",
+  "split_source_path": "PENDING_REAL_ENV",
+  "split_source_sha256": "PENDING_REAL_ENV",
+  "status": "PENDING_REAL_ENV",
+  "train_datasets": [],
+  "train_validation_overlap": [],
+  "validation_datasets": []
+}

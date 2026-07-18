@@ -1,0 +1,22 @@
+{
+  "internet_disabled_import_ok": false,
+  "license_present": false,
+  "match_distance_micrometres": 7.0,
+  "pinned_commit": "PENDING_REAL_ENV",
+  "pinned_version": "PENDING_REAL_ENV",
+  "reproduces_division_jaccard": "PENDING_REAL_ENV",
+  "reproduces_edge_jaccard": "PENDING_REAL_ENV",
+  "reproduces_node_penalty": "PENDING_REAL_ENV",
+  "silent_fallback_to_local_metric_blocked": true,
+  "source_repo": "PENDING_REAL_ENV",
+  "status": "PENDING_REAL_ENV",
+  "synthetic_case_matches": {
+    "one_false_division_missing_daughter": "PENDING_REAL_ENV",
+    "one_false_edge": "PENDING_REAL_ENV",
+    "perfect_graph": "PENDING_REAL_ENV"
+  },
+  "vendored_files": [],
+  "voxel_scale_x": 0.40625,
+  "voxel_scale_y": 0.40625,
+  "voxel_scale_z": 1.625
+}

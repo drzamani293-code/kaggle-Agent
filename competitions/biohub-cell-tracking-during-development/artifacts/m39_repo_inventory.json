@@ -1,0 +1,1389 @@
+{
+  "competition_dir": "/home/user/kaggle-Agent/competitions/biohub-cell-tracking-during-development",
+  "counts": {
+    "kaggle_cells_py": 43,
+    "notebooks": 26,
+    "one_cell_txt": 100,
+    "reports_md": 18,
+    "runners_py": 25
+  },
+  "env": {
+    "cuda_available": false,
+    "has_torch": false,
+    "kaggle_mount_present": false,
+    "platform": "linux",
+    "python_version": "3.11.15",
+    "torch_version": null
+  },
+  "generated_by": "m39_m40.inventory.build_inventory",
+  "git": {
+    "branch": "claude/biohub-submission-pipeline-4pggio",
+    "dirty": true,
+    "head_sha": "4e4bc9fb55caad062eeeabe144ce798c6ce47df4",
+    "repo_root": "/home/user/kaggle-Agent"
+  },
+  "m19c_archive": {
+    "archive_path": "/home/user/kaggle-Agent/competitions/biohub-cell-tracking-during-development/archive/m19c",
+    "files": [
+      {
+        "match": true,
+        "name": "M19_VARIANT_C_FULL_CHAIN.txt",
+        "present": true,
+        "sha256_expected": "9e6b6d277b3af225cfb116844bc1a7e9556d1e250ac3f412946234f3f7df0f25",
+        "sha256_got": "9e6b6d277b3af225cfb116844bc1a7e9556d1e250ac3f412946234f3f7df0f25"
+      },
+      {
+        "match": true,
+        "name": "kaggle_cell_milestone19_metric_postprocess_runner.py",
+        "present": true,
+        "sha256_expected": "422c37287e7283b3dce0590be765a09a1cf897deb58fe8550e8f2de5f117ee5a",
+        "sha256_got": "422c37287e7283b3dce0590be765a09a1cf897deb58fe8550e8f2de5f117ee5a"
+      },
+      {
+        "match": true,
+        "name": "milestone19_metric_postprocess_runner.py",
+        "present": true,
+        "sha256_expected": "536d1bf94106eb98a1d4e9619e3d8d23fa9a326e80a3f8f95e2e2a0de21137b7",
+        "sha256_got": "536d1bf94106eb98a1d4e9619e3d8d23fa9a326e80a3f8f95e2e2a0de21137b7"
+      },
+      {
+        "match": true,
+        "name": "milestone19_metric_postprocess_runner.ipynb",
+        "present": true,
+        "sha256_expected": "1fad54169645e14a29150c77429502bdbb0ce1d064d162eeed0172bdf6614c26",
+        "sha256_got": "1fad54169645e14a29150c77429502bdbb0ce1d064d162eeed0172bdf6614c26"
+      }
+    ],
+    "manifest_ok": true,
+    "manifest_present": true
+  },
+  "m38_runner": {
+    "runner_py": {
+      "path": "competitions/biohub-cell-tracking-during-development/M38_HIDDEN_RESILIENT_REFERENCE_0902_SUBMIT.py",
+      "sha256": "04bd2b05db6cdd44aa0f7107b6f5ca6f03fb173c32f24cc576ac77fc42c4b6d0",
+      "sha_scope": "full",
+      "size_bytes": 55024
+    },
+    "runner_txt": {
+      "path": "competitions/biohub-cell-tracking-during-development/M38_HIDDEN_RESILIENT_REFERENCE_0902_SUBMIT.txt",
+      "sha256": "745151750aa514d03eb9706b286653050d7c5717bebda9faecaff5fc697cb7fe",
+      "sha_scope": "full",
+      "size_bytes": 54918
+    }
+  },
+  "milestone": "M39",
+  "milestone_files": {
+    "kaggle_cells_py": [
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_boundary_detector.py",
+        "sha256": "284cf5a29e67d0feab6fea128e72661b20ce74718a60b4f86ceb1a9ebbd55c78",
+        "sha_scope": "full",
+        "size_bytes": 51780
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_centroid_detector.py",
+        "sha256": "202b0d818ece7a3ecd63ac8e0ff467b7c3475ca4b77db8811548f414ed2c71aa",
+        "sha_scope": "full",
+        "size_bytes": 64257
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_classical_detector.py",
+        "sha256": "edc6e5e9258c6b0845cd67b124f78e5d29b70e22e5e119a524b7bd0841c8029b",
+        "sha_scope": "full",
+        "size_bytes": 39776
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_conservative_tracker.py",
+        "sha256": "8ef31266fa01fc2446127f9a462efa99f26b9293690f796f512ec0b149898d0b",
+        "sha_scope": "full",
+        "size_bytes": 60757
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_detector_calibration.py",
+        "sha256": "87352a012f49c8b105fab436af2b2a4b945ac37361fa7c7db4e13911f855fb42",
+        "sha_scope": "full",
+        "size_bytes": 27245
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_geff_reader.py",
+        "sha256": "9937995a96b505527b57ab361360c8569c9566d2f1a09c848780e3006abd95b6",
+        "sha_scope": "full",
+        "size_bytes": 15695
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_gt_failure_analysis.py",
+        "sha256": "7045c952a4273ac17f58c062b9cb8a0fc99375a2a0f8169c6509c85a6770689c",
+        "sha_scope": "full",
+        "size_bytes": 45005
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_local_metric.py",
+        "sha256": "34e19fa823fd7fd7600cd8e0a81f58e5d79575bbef564f0ffdaaea59ceefdbc3",
+        "sha_scope": "full",
+        "size_bytes": 30279
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone10_edge_classifier_diagnosis.py",
+        "sha256": "8e95b99fb10677b67c661fa019a0f28ed2fe68f529b3c204972f5bb7f39142a4",
+        "sha_scope": "full",
+        "size_bytes": 94670
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone11_classifier_tracklet_validation.py",
+        "sha256": "2ff063107fbcf8cae53b5cbde97681dba9f441be3e4154349a1f32f49eb6586d",
+        "sha_scope": "full",
+        "size_bytes": 119883
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone12_classifier_tracklet_submission.py",
+        "sha256": "e0a80be5fc811819c8efd9dfdd696bb6da414cea770bfeec306c4da59be65e65",
+        "sha_scope": "full",
+        "size_bytes": 107144
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone13_top_solution_audit.py",
+        "sha256": "1b497e11eef97744535aacf2d1f4c89673202e9bb4051865c392bac47a7d5a91",
+        "sha_scope": "full",
+        "size_bytes": 79484
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone14_graph_repair_hybrid.py",
+        "sha256": "a0103804591972be955ce0adc8b6d94107557c37145b6f0789f90d3ff8178eba",
+        "sha_scope": "full",
+        "size_bytes": 156587
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone15_motion_relink_submission.py",
+        "sha256": "bddd8535128661f448e5668e6e0a7a21aae6c55c5f5a5b8c1f2f59d6d7e06ef6",
+        "sha_scope": "full",
+        "size_bytes": 139931
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone16_reference_learned_graph_runner.py",
+        "sha256": "44a32e3cd6af1150b80e9ecf7a875a86036ed4f80771ecc08c5b9f6569d1c722",
+        "sha_scope": "full",
+        "size_bytes": 70409
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone17_reference_tuning_runner.py",
+        "sha256": "7eb075611d3ac34db834dfdacbf0c6b2afabd6974e2335d350a7a6538b901444",
+        "sha_scope": "full",
+        "size_bytes": 87511
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone18_edge_prune_runner.py",
+        "sha256": "91f824dc401515d4ba8e14c146b6047a3187976c5ead1a168504e3182f9aa4f4",
+        "sha_scope": "full",
+        "size_bytes": 97976
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone19_metric_postprocess_runner.py",
+        "sha256": "422c37287e7283b3dce0590be765a09a1cf897deb58fe8550e8f2de5f117ee5a",
+        "sha_scope": "full",
+        "size_bytes": 124471
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone20_fullchain_tuned_fixed_runner.py",
+        "sha256": "435cad8381dca764cb5786a2466fbb8dc9612c7ccdc578cb030b3bad1de0ca63",
+        "sha_scope": "full",
+        "size_bytes": 129162
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone20_fullchain_tuned_runner.py",
+        "sha256": "cc5fae8814339cd35981275c9f0d2c98d50e69764e817b2629cf6df13cda519e",
+        "sha_scope": "full",
+        "size_bytes": 122159
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone21_pilkwang_experiment_pack_runner.py",
+        "sha256": "025d8df59b68854825146ceb970c7fd21da782bddfaeb8cd527407c04732edbb",
+        "sha_scope": "full",
+        "size_bytes": 134404
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone22_truebase_runner.py",
+        "sha256": "78ad39e225179011d3e71d0466edde3d32dcff68d413db10e066ff1504a7a83c",
+        "sha_scope": "full",
+        "size_bytes": 134841
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone23_node_penalty_repair_runner.py",
+        "sha256": "8b41003a0c957057a5817eae7904ea811920a08aa687640220f3f63d441dd414",
+        "sha_scope": "full",
+        "size_bytes": 148831
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone24_400ep_clean_graph_runner.py",
+        "sha256": "ba9fcd5abd71d6813134c32b152bf87e86739da63d9c9ba7466f92f98ea43cc7",
+        "sha_scope": "full",
+        "size_bytes": 132629
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone25_pilkwang350_prune_tuning_runner.py",
+        "sha256": "2ca06ffaebd48169df7c8e15b0fed05b7491b196cf835ba40a0c575d02b063bd",
+        "sha_scope": "full",
+        "size_bytes": 149389
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone26_multi_artifact_ensemble_runner.py",
+        "sha256": "696ca1ada20a5903de99736006856fe532d799aa9f28dddb8cc65ee877fc28bf",
+        "sha_scope": "full",
+        "size_bytes": 144964
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone27_public_notebook_repro_runner.py",
+        "sha256": "27114cc872637d4a259c70849e92bef17f804050af1ed26cd7057db243f0abf7",
+        "sha_scope": "full",
+        "size_bytes": 166092
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone28_metric_aware_recall_expansion_runner.py",
+        "sha256": "b2271f266f305cd06fc2de0fd418b41705b314c95349e8dbcfc6441602585ba9",
+        "sha_scope": "full",
+        "size_bytes": 133974
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone29_winning_engine_integration_runner.py",
+        "sha256": "c995194f027578efee3c4c6991bbd44b3579df446c9a6e92ba65859836653a2b",
+        "sha_scope": "full",
+        "size_bytes": 152348
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone30_metric_aware_global_relinker_v2_runner.py",
+        "sha256": "523359f054fb0a5ce40e26e8659ddd28e685ef2fdb6c7d5759a350f6936da872",
+        "sha_scope": "full",
+        "size_bytes": 174635
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone31_tta6_deepcenter_repro_runner.py",
+        "sha256": "8edec9c1cba7c9f42514eaf1aad5a1ed6a436a70ff0e3daa55c173b0eacf2a37",
+        "sha_scope": "full",
+        "size_bytes": 170970
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone32_1_official_metric_vendor_runner.py",
+        "sha256": "09d37572378c2c3185f62996078a8734eab35e6981b3f8f03c06d6a42084968a",
+        "sha_scope": "full",
+        "size_bytes": 155880
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone32_official_local_cv_runner.py",
+        "sha256": "9f4b59cf4bc0576eb24707d93e2f9a32fdd135bbccec448f8b9bab90603e0377",
+        "sha_scope": "full",
+        "size_bytes": 158297
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone33_corrected_ensemble_runner.py",
+        "sha256": "467ec12988b50df0966d73bed45c59a280a61cc3ffa4953c0297a81b1d073e9c",
+        "sha_scope": "full",
+        "size_bytes": 164900
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone34_self_contained_tta_runner.py",
+        "sha256": "d0f2421d603de8cfc06be3a1f88ee09c3388d94410957f44325e814906aa66aa",
+        "sha_scope": "full",
+        "size_bytes": 172184
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone35_reference_0902_foundation_runner.py",
+        "sha256": "fb2893ffe49ae898b0b1707a7ecc92c5b239e04dbb6df885efcec238dc93e797",
+        "sha_scope": "full",
+        "size_bytes": 444974
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone7_edge_bottleneck_diagnosis.py",
+        "sha256": "5e2a71a7ecc092e8190ccf0f0f98f4d0de9428a841e6e1f297f974b989abbc49",
+        "sha_scope": "full",
+        "size_bytes": 51762
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone8_node_filter_recovery.py",
+        "sha256": "88ceccb28b4481ebd0ed9ae156d5abd334fb49f2a187f1059e7eff6c367c149d",
+        "sha_scope": "full",
+        "size_bytes": 63229
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_milestone9_edge_fp_control.py",
+        "sha256": "20b5331928db3e305d7d86811d88cb517ecd8172d32431a2889f7d6fee1ff3d4",
+        "sha_scope": "full",
+        "size_bytes": 88449
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_recall_recovery_tracker.py",
+        "sha256": "bdcf74a89ccbf43ffac2cb5eb999474439347028fca6b01cf235c10134278b42",
+        "sha_scope": "full",
+        "size_bytes": 84605
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_simple_tracker.py",
+        "sha256": "1400c0267460e1f6e038c9d23c560e7839b0e7e945a65690ffc43ee3e1dd63c8",
+        "sha_scope": "full",
+        "size_bytes": 47464
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_tracklet_precision_tracker.py",
+        "sha256": "6f07efafdc7810bce3287eec22fa436c831ae4a96cadbb9a637a718fe6cd43d4",
+        "sha_scope": "full",
+        "size_bytes": 70285
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/kaggle_cell_visualize_diagnostics.py",
+        "sha256": "9c495c3443d80e7a93bbc570de1c850f7b460a98afba19d48ff24c37a0ba6ef8",
+        "sha_scope": "full",
+        "size_bytes": 19038
+      }
+    ],
+    "notebooks": [
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/boundary_detector.ipynb",
+        "sha256": "e40cadfd91a63c351f7b92dae3e97c86cbcd20ffa723675a9843de7d4b2422ac",
+        "sha_scope": "full",
+        "size_bytes": 69267
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/centroid_detector.ipynb",
+        "sha256": "76ec54c7ba5b6950ac175208a436d1406067bf032b9c48fbe05fdc747f8b4893",
+        "sha_scope": "full",
+        "size_bytes": 85336
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/classical_detector.ipynb",
+        "sha256": "797a8b6ce3d650e27c95e14e870707a536a3935d1afd51ffb8317667afd58d12",
+        "sha_scope": "full",
+        "size_bytes": 56645
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/conservative_tracker.ipynb",
+        "sha256": "342670958234b215178e6ac4111df4206d6ad8a4960a1be8a9dcedc951d4688a",
+        "sha_scope": "full",
+        "size_bytes": 82218
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/detector_calibration.ipynb",
+        "sha256": "32ce02493c8658617994b51851c96a119896d8026e4d6cfc3636d5f414518e6b",
+        "sha_scope": "full",
+        "size_bytes": 37635
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/geff_reader.ipynb",
+        "sha256": "0179691dfd235fbde63356485469df996aa5a426ed2465f93a210c465e8ce5af",
+        "sha_scope": "full",
+        "size_bytes": 24684
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/gt_failure_analysis.ipynb",
+        "sha256": "6a7ebd183cbf5ff4d5a9bee9c5173317e07c67476bff28918d23d0fb0d078a53",
+        "sha_scope": "full",
+        "size_bytes": 62237
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/local_metric.ipynb",
+        "sha256": "74b5cf229d13c1344ec00f1372e79bca640c237a194943297bb872dae595e9a7",
+        "sha_scope": "full",
+        "size_bytes": 44250
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone10_edge_classifier_diagnosis.ipynb",
+        "sha256": "7638fbc8effe5cc3b9841a4928ec90cf532465524b621fff831f0f14b690ada9",
+        "sha_scope": "full",
+        "size_bytes": 120292
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone11_classifier_tracklet_validation.ipynb",
+        "sha256": "b79ce187432ff6a7f49e1dba0a37f1b7aa33b6b56e0ccf65e329214ae252313b",
+        "sha_scope": "full",
+        "size_bytes": 152386
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone12_classifier_tracklet_submission.ipynb",
+        "sha256": "d532a475534bf70160a579aec39fb421f563d1329c77f2b6588cc752104f6956",
+        "sha_scope": "full",
+        "size_bytes": 135645
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone13_top_solution_audit.ipynb",
+        "sha256": "d7d3db0783be1340bbe906dda4e941776da9fa272b583fc1393eb7ff65264f07",
+        "sha_scope": "full",
+        "size_bytes": 99543
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone14_graph_repair_hybrid.ipynb",
+        "sha256": "e348929e4152da59f02d79732c85aa71b25933f9aedd10c9647a2c8b147c6cbd",
+        "sha_scope": "full",
+        "size_bytes": 196008
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone15_motion_relink_submission.ipynb",
+        "sha256": "1b362a7041924b89fd9ca62f123896ff95972dc8873580c03fc4711346d37765",
+        "sha_scope": "full",
+        "size_bytes": 176342
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone16_reference_learned_graph_runner.ipynb",
+        "sha256": "134599af182686520ab02c5f75078b92fbed15bef10aa0b424742065d7825d19",
+        "sha_scope": "full",
+        "size_bytes": 88354
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone17_reference_tuning_runner.ipynb",
+        "sha256": "21af539c7e6acc7bbb9f7e472ef23019ab426b3a7297cf112eb0dfa3785f6788",
+        "sha_scope": "full",
+        "size_bytes": 108682
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone18_edge_prune_runner.ipynb",
+        "sha256": "9a5077fc6789a56cc61edd2eed9055353b6911b3f5ad278bfd8a64616c21148a",
+        "sha_scope": "full",
+        "size_bytes": 121929
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone19_metric_postprocess_runner.ipynb",
+        "sha256": "1fad54169645e14a29150c77429502bdbb0ce1d064d162eeed0172bdf6614c26",
+        "sha_scope": "full",
+        "size_bytes": 151887
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone7_edge_bottleneck_diagnosis.ipynb",
+        "sha256": "1e9a7e34e5aa5f9d55556fa1cceb7b44916d8831cd9ff133dc67bd06751943e8",
+        "sha_scope": "full",
+        "size_bytes": 69119
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone8_node_filter_recovery.ipynb",
+        "sha256": "77dfca8fa9d695b9c417df0f626712debd2f7d007caa4c861ccba238e9cca6d3",
+        "sha_scope": "full",
+        "size_bytes": 84514
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone9_edge_fp_control.ipynb",
+        "sha256": "063b054a524b06b14c19c6994e3f08ea6393be006872c576890d73a1fa65abf5",
+        "sha_scope": "full",
+        "size_bytes": 115080
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/recall_recovery_tracker.ipynb",
+        "sha256": "4e39885491f7210b40fb3888b1b43eb9c889d530d6130023bd6fa0e43673cd1c",
+        "sha_scope": "full",
+        "size_bytes": 111023
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/simple_tracker.ipynb",
+        "sha256": "53d978d4c8e617aac1e5c06fda4dc78c927b0a479bc97b6353db2a5b0d240161",
+        "sha_scope": "full",
+        "size_bytes": 66460
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/submission_pipeline.ipynb",
+        "sha256": "e565e8a43b690e5dcd096d7d3d8987965153a0ef7ec050eb63b2893ef0b9b9f7",
+        "sha_scope": "full",
+        "size_bytes": 16791
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/tracklet_precision_tracker.ipynb",
+        "sha256": "c680aefcec9233735f808b4690339013f804f1cc00bafb79bc8b19daa0e9af60",
+        "sha_scope": "full",
+        "size_bytes": 94519
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/visualize_diagnostics.ipynb",
+        "sha256": "0668e99919314e4862d0bfc71f34cb72051c62b49430814684215d38e59a8968",
+        "sha_scope": "full",
+        "size_bytes": 28157
+      }
+    ],
+    "one_cell_txt": [
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/KAGGLE_FINAL_SUBMISSION_6D_SAFE.txt",
+        "sha256": "5fe7158b3b15f051675ae0fba5aef76ddab8c2fcce8ad4da26ea8a0011c0b9d9",
+        "sha_scope": "full",
+        "size_bytes": 51065
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/KAGGLE_ONE_CELL_MILESTONE10_EDGE_CLASSIFIER_DIAGNOSIS.txt",
+        "sha256": "8e95b99fb10677b67c661fa019a0f28ed2fe68f529b3c204972f5bb7f39142a4",
+        "sha_scope": "full",
+        "size_bytes": 94670
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/KAGGLE_ONE_CELL_MILESTONE11_CLASSIFIER_TRACKLET_VALIDATION.txt",
+        "sha256": "2ff063107fbcf8cae53b5cbde97681dba9f441be3e4154349a1f32f49eb6586d",
+        "sha_scope": "full",
+        "size_bytes": 119883
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/KAGGLE_ONE_CELL_MILESTONE12_CLASSIFIER_TRACKLET_SUBMISSION.txt",
+        "sha256": "e0a80be5fc811819c8efd9dfdd696bb6da414cea770bfeec306c4da59be65e65",
+        "sha_scope": "full",
+        "size_bytes": 107144
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/KAGGLE_ONE_CELL_MILESTONE13_TOP_SOLUTION_AUDIT.txt",
+        "sha256": "1b497e11eef97744535aacf2d1f4c89673202e9bb4051865c392bac47a7d5a91",
+        "sha_scope": "full",
+        "size_bytes": 79484
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/KAGGLE_ONE_CELL_MILESTONE14_GRAPH_REPAIR_HYBRID.txt",
+        "sha256": "a0103804591972be955ce0adc8b6d94107557c37145b6f0789f90d3ff8178eba",
+        "sha_scope": "full",
+        "size_bytes": 156587
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/KAGGLE_ONE_CELL_MILESTONE15_MOTION_RELINK_SUBMISSION.txt",
+        "sha256": "bddd8535128661f448e5668e6e0a7a21aae6c55c5f5a5b8c1f2f59d6d7e06ef6",
+        "sha_scope": "full",
+        "size_bytes": 139931
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/KAGGLE_ONE_CELL_MILESTONE16_REFERENCE_LEARNED_GRAPH_RUNNER.txt",
+        "sha256": "44a32e3cd6af1150b80e9ecf7a875a86036ed4f80771ecc08c5b9f6569d1c722",
+        "sha_scope": "full",
+        "size_bytes": 70409
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/KAGGLE_ONE_CELL_MILESTONE7_DIAGNOSIS.txt",
+        "sha256": "5e2a71a7ecc092e8190ccf0f0f98f4d0de9428a841e6e1f297f974b989abbc49",
+        "sha_scope": "full",
+        "size_bytes": 51762
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/KAGGLE_ONE_CELL_MILESTONE8_NODE_FILTER_RECOVERY.txt",
+        "sha256": "88ceccb28b4481ebd0ed9ae156d5abd334fb49f2a187f1059e7eff6c367c149d",
+        "sha_scope": "full",
+        "size_bytes": 63229
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/KAGGLE_ONE_CELL_MILESTONE9_EDGE_FP_CONTROL.txt",
+        "sha256": "20b5331928db3e305d7d86811d88cb517ecd8172d32431a2889f7d6fee1ff3d4",
+        "sha_scope": "full",
+        "size_bytes": 88449
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/KAGGLE_ONE_CELL_RECALL_RECOVERY_6D.txt",
+        "sha256": "bdcf74a89ccbf43ffac2cb5eb999474439347028fca6b01cf235c10134278b42",
+        "sha_scope": "full",
+        "size_bytes": 84605
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/KAGGLE_ONE_CELL_TRACKLET_PRECISION.txt",
+        "sha256": "6f07efafdc7810bce3287eec22fa436c831ae4a96cadbb9a637a718fe6cd43d4",
+        "sha_scope": "full",
+        "size_bytes": 70285
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M17_VARIANT_A_REFERENCE_EXACT.txt",
+        "sha256": "301ecf23b5c514d4695ceeca31deb7073b8e43c33dfa043f12c2737338903238",
+        "sha_scope": "full",
+        "size_bytes": 87511
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M17_VARIANT_B_GAP_RECOVERY.txt",
+        "sha256": "5099762502a8fbea7056fb82efbc45bef0a8e860396115349a76b8a3cc5f38d2",
+        "sha_scope": "full",
+        "size_bytes": 87511
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M17_VARIANT_C_TUNED_ILP.txt",
+        "sha256": "7eb075611d3ac34db834dfdacbf0c6b2afabd6974e2335d350a7a6538b901444",
+        "sha_scope": "full",
+        "size_bytes": 87511
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M18_VARIANT_A_DET_0995.txt",
+        "sha256": "8567e2ba627bd3f8b8e8c789465c26ac85352caaad7526308c20b51f6b881573",
+        "sha_scope": "full",
+        "size_bytes": 97976
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M18_VARIANT_B_DET_0975.txt",
+        "sha256": "a46efac7917d3c8c9df772aea2d272f88344ca6ad81df217630351e07922ee1f",
+        "sha_scope": "full",
+        "size_bytes": 97976
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M18_VARIANT_C_EDGE_PRUNE.txt",
+        "sha256": "91f824dc401515d4ba8e14c146b6047a3187976c5ead1a168504e3182f9aa4f4",
+        "sha_scope": "full",
+        "size_bytes": 97976
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M19_VARIANT_A_SAFE_DIVISIONS_PRUNE.txt",
+        "sha256": "422c37287e7283b3dce0590be765a09a1cf897deb58fe8550e8f2de5f117ee5a",
+        "sha_scope": "full",
+        "size_bytes": 124471
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M19_VARIANT_B_GAP_RECOVERY_PRUNE.txt",
+        "sha256": "57cebe4022540215cfe59f2bdeaae76c0d861a768e602f21d37ab8af9d065b54",
+        "sha_scope": "full",
+        "size_bytes": 124471
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M19_VARIANT_C_FULL_CHAIN.txt",
+        "sha256": "9e6b6d277b3af225cfb116844bc1a7e9556d1e250ac3f412946234f3f7df0f25",
+        "sha_scope": "full",
+        "size_bytes": 124471
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M20_A_FULLCHAIN_TUNED.txt",
+        "sha256": "cc5fae8814339cd35981275c9f0d2c98d50e69764e817b2629cf6df13cda519e",
+        "sha_scope": "full",
+        "size_bytes": 122159
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M20_A_FULLCHAIN_TUNED_FIXED.txt",
+        "sha256": "435cad8381dca764cb5786a2466fbb8dc9612c7ccdc578cb030b3bad1de0ca63",
+        "sha_scope": "full",
+        "size_bytes": 129162
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M21_A_PILKWANG350_M19C_GATES.txt",
+        "sha256": "025d8df59b68854825146ceb970c7fd21da782bddfaeb8cd527407c04732edbb",
+        "sha_scope": "full",
+        "size_bytes": 134404
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M21_B_PILKWANG350_SAFE_DIV_ONLY.txt",
+        "sha256": "5436743bcc135abb7e0155c340e6d192d84fef7d8a2a1b5075de96b75f4a410c",
+        "sha_scope": "full",
+        "size_bytes": 134404
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M21_C_PILKWANG350_LIGHT_GAP.txt",
+        "sha256": "a6c38ec9cb9fa51294f202d97530f4e99dec7c8e5ac022357d9d118dcb57fa7f",
+        "sha_scope": "full",
+        "size_bytes": 134404
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M22_ARTIFACT_FORENSIC_DIAGNOSTIC.txt",
+        "sha256": "06eb8cbfd4c340426279acc1817e044c888eefcbcf67c55ce6ac6bde46cb87cb",
+        "sha_scope": "full",
+        "size_bytes": 82438
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M22_A_TRUEBASE_SAFE_DIV_TUNE.txt",
+        "sha256": "78ad39e225179011d3e71d0466edde3d32dcff68d413db10e066ff1504a7a83c",
+        "sha_scope": "full",
+        "size_bytes": 134841
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M22_B_TRUEBASE_LIGHT_GAP.txt",
+        "sha256": "4cb04e08f06ec282ea9f5f1e8d253a0c1c65f1747f2b3cfd409475f4d445a283",
+        "sha_scope": "full",
+        "size_bytes": 134841
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M22_C_TRUEBASE_DIV_PLUS_GAP1_ONLY.txt",
+        "sha256": "c9c87de4fccd75b30c1a0ffe56e4e320a2736ad22717781b76cb0bc7b58b3693",
+        "sha_scope": "full",
+        "size_bytes": 134841
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M23_A_PILKWANG350_NODE_PRUNE_LIGHT.txt",
+        "sha256": "a30dafb5802f6028aad83d8aed232b7b343c4bbc67228f9c91d7f4e57f711751",
+        "sha_scope": "full",
+        "size_bytes": 148831
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M23_B_PILKWANG350_NODE_PRUNE_SAFE_DIV_ONLY.txt",
+        "sha256": "8b41003a0c957057a5817eae7904ea811920a08aa687640220f3f63d441dd414",
+        "sha_scope": "full",
+        "size_bytes": 148831
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M23_C_PILKWANG350_EDGE_NODE_BALANCED.txt",
+        "sha256": "dc05ec603fe3333c0792b7343570aed9475c57f8b4dbab031a56d2c0b8c5de1d",
+        "sha_scope": "full",
+        "size_bytes": 148831
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M24_A_400EP_FULLCHAIN_M19C_GATES.txt",
+        "sha256": "ba9fcd5abd71d6813134c32b152bf87e86739da63d9c9ba7466f92f98ea43cc7",
+        "sha_scope": "full",
+        "size_bytes": 132629
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M24_B_400EP_GAP1_ONLY.txt",
+        "sha256": "3880a24f41f41724158c2096fd4b554f19bc343e72271e7b60abadd7527f8f71",
+        "sha_scope": "full",
+        "size_bytes": 132629
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M24_C_400EP_SAFE_DIV_ONLY.txt",
+        "sha256": "9e984dd815f7f7b9c59ce9dfa5fc556958611f8e502e1fee766c451eef0f759e",
+        "sha_scope": "full",
+        "size_bytes": 132629
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M25_A_PRUNE_MILD_SAFE_DIV.txt",
+        "sha256": "2ca06ffaebd48169df7c8e15b0fed05b7491b196cf835ba40a0c575d02b063bd",
+        "sha_scope": "full",
+        "size_bytes": 149389
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M25_B_PRUNE_STRONG_SAFE_DIV.txt",
+        "sha256": "6255b51b4c2ec0cd21bc485b227ad65dd476e918587fe00d1243386aa0045689",
+        "sha_scope": "full",
+        "size_bytes": 149389
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M25_C_PRUNE_M23B_PLUS_MICRO_GAP1.txt",
+        "sha256": "0bf5339ca1c9ff178a445b43b48ff95e3719a9a5770bd46d548d10427a53f613",
+        "sha_scope": "full",
+        "size_bytes": 149389
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M26_ARTIFACT_ZOO_DIAGNOSTIC.txt",
+        "sha256": "f2498d78546d4abc3021f70fc53566c9106a8c6a9892495687d1d6abc86f4543",
+        "sha_scope": "full",
+        "size_bytes": 128739
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M26_A_CONSENSUS_2OFN_PRECISION.txt",
+        "sha256": "696ca1ada20a5903de99736006856fe532d799aa9f28dddb8cc65ee877fc28bf",
+        "sha_scope": "full",
+        "size_bytes": 144964
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M26_B_PRIMARY_M19C_STYLE_PLUS_CONSENSUS_EDGES.txt",
+        "sha256": "8701802db6bfcf632f0418d924639ce98c1c7fd23cd753815102ed129a264bfe",
+        "sha_scope": "full",
+        "size_bytes": 144964
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M26_C_WEIGHTED_ENSEMBLE_FULLCHAIN_LIGHT.txt",
+        "sha256": "3ea6ea1a176a4ff0852a86ac331caa34db2e8f60d0b8558d4484029d1e4fc241",
+        "sha_scope": "full",
+        "size_bytes": 144964
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M27_A_PUBLIC_REPRO_EXACT_SAFETY.txt",
+        "sha256": "27114cc872637d4a259c70849e92bef17f804050af1ed26cd7057db243f0abf7",
+        "sha_scope": "full",
+        "size_bytes": 166092
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M27_B_PUBLIC_REPRO_NO_EDGE_VETO.txt",
+        "sha256": "83d9c0c90081a87c2ccc55409c59eac61d05ef2b512b3bae5e5abbf78cf113fb",
+        "sha_scope": "full",
+        "size_bytes": 166092
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M27_C_PUBLIC_REPRO_MINLEN5.txt",
+        "sha256": "0b0d4508cb60253986273d439add4eb685231089ec71719f36d6373a887928e3",
+        "sha_scope": "full",
+        "size_bytes": 166092
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M27_D_PUBLIC_REPRO_STRICT_PRECISION.txt",
+        "sha256": "0af7fbd8eda6c13b79c9f11abed47201d5a985b6287a9e46b9ba4e6413b47d24",
+        "sha_scope": "full",
+        "size_bytes": 166092
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M28_A_M19C_GAP_CAPS_OPEN.txt",
+        "sha256": "b2271f266f305cd06fc2de0fd418b41705b314c95349e8dbcfc6441602585ba9",
+        "sha_scope": "full",
+        "size_bytes": 133974
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M28_B_M19C_GAP3_ADDED.txt",
+        "sha256": "f4a781e8f24f6e26016b958a61ebf2050cbf6d7efd405d8143b6779e17cfedb5",
+        "sha_scope": "full",
+        "size_bytes": 133974
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M28_C_DIVISION_CAP_OPEN.txt",
+        "sha256": "e8b679ee7a06de656bfe8c20d45e2061967a4638ce0e3b822aa9528a4c9601e9",
+        "sha_scope": "full",
+        "size_bytes": 133974
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M28_D_GAP_OPEN_PLUS_DIV_OPEN_NO_LINEFIT.txt",
+        "sha256": "88e268f82d8f9dab4d8e998ebec35216f40f01dc0711e2e9176a8793fb51b78f",
+        "sha_scope": "full",
+        "size_bytes": 133974
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M28_E_DET095_M19C_SAFE.txt",
+        "sha256": "23a07b222d2bc58f7423760b4a79c6e33817dfa0c898317e0ebc6ef1f2d8c71f",
+        "sha_scope": "full",
+        "size_bytes": 133974
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M29_A_WINNING_ENGINE_DEFAULT.txt",
+        "sha256": "c995194f027578efee3c4c6991bbd44b3579df446c9a6e92ba65859836653a2b",
+        "sha_scope": "full",
+        "size_bytes": 152348
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M29_B_ENGINE_GAP12_ONLY.txt",
+        "sha256": "01acd24b84bdb43876e34a9002434f7d83392750efe981a1e1c58904007c2952",
+        "sha_scope": "full",
+        "size_bytes": 152348
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M29_C_ENGINE_LINEFIT_ON.txt",
+        "sha256": "833ce1c07cf21fe9b61049c1906f95afb1591f29355026cb80e2dc2f2df22897",
+        "sha_scope": "full",
+        "size_bytes": 152348
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M29_D_ENGINE_RELINK_ON.txt",
+        "sha256": "9f020c59a3de6a701cf709150390460039c65707cbb4e28e6b5980a67e63d8bc",
+        "sha_scope": "full",
+        "size_bytes": 152348
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M29_E_ENGINE_DET095_SAFE.txt",
+        "sha256": "51f2252d07f2a89f361c19b3a835044eb1ebb717554afeae7630d7877df8eda2",
+        "sha_scope": "full",
+        "size_bytes": 152348
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M29_LOCAL_CV_HARNESS_INTEGRATION_NOT_SUBMIT.txt",
+        "sha256": "46e7e9b480185390b19bf37b301d7cca9f9faeefaeec53637e32a43299faf78c",
+        "sha_scope": "full",
+        "size_bytes": 152346
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M30_A_V2_FULL_CANDIDATES_BALANCED.txt",
+        "sha256": "523359f054fb0a5ce40e26e8659ddd28e685ef2fdb6c7d5759a350f6936da872",
+        "sha_scope": "full",
+        "size_bytes": 174635
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M30_B_V2_FULL_CANDIDATES_GAP123.txt",
+        "sha256": "546f7803fe8dac2adbc16f74fbcbb65dc8796579bdeb41272f5d98afd7a0b2a5",
+        "sha_scope": "full",
+        "size_bytes": 174635
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M30_CANDIDATE_GRAPH_DIAGNOSTIC_NOT_SUBMIT.txt",
+        "sha256": "8e9042362d6b22a15bb29cc3c435d664dbeea1ebf2b1465da4682d1cdf92e940",
+        "sha_scope": "full",
+        "size_bytes": 174635
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M30_C_V2_AUTO_SPARSE_KNN_TIGHT.txt",
+        "sha256": "2ed94e3d7000c735016a6e2e93055d61d10ecb6f7684d6fbf86932c5836dddbf",
+        "sha_scope": "full",
+        "size_bytes": 174635
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M30_D_V2_AUTO_DET095.txt",
+        "sha256": "7a1078b6495e7bd8114cc80a2a7e1ba5c37b0be0aa7c58e980e5c5a03bfad389",
+        "sha_scope": "full",
+        "size_bytes": 174635
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M30_E_V2_DIVISION_RELAXED.txt",
+        "sha256": "141d93022cb014523de44b239974e65379afc608774637acb4c8bbdf8aa08fcc",
+        "sha_scope": "full",
+        "size_bytes": 174635
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M30_V2_LOCAL_CV_HARNESS_NOT_SUBMIT.txt",
+        "sha256": "d9c06fdcaf02bfccbd908645b40ada95c68a898e03a310d6f599e90a0a3f18b4",
+        "sha_scope": "full",
+        "size_bytes": 174633
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M31_A_EXACT_09_REPRO.txt",
+        "sha256": "c6bf8ae4f72d04da275063998b778875a515f5c90bbc9673886f10d849719117",
+        "sha_scope": "full",
+        "size_bytes": 170975
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M31_B_DEEPCENTER_SHADOW_NOT_SUBMIT.txt",
+        "sha256": "8b9219d53c669695d13db67b54089138b8e3896eec8071ae7ed0485de33108d5",
+        "sha_scope": "full",
+        "size_bytes": 170971
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M31_C_DEEPCENTER_GATE_BASE_CAPS.txt",
+        "sha256": "5dfa60655182c0d9b08f442a5ecf578f0b7b287ab345e30668d460c7d0c10406",
+        "sha_scope": "full",
+        "size_bytes": 170975
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M31_D_DEEPCENTER_GATE_GAP2_OPEN.txt",
+        "sha256": "8ec85ba8a5c0c8bca49195f609b4a459a8f7c490c64cfffd20c584d3713f474c",
+        "sha_scope": "full",
+        "size_bytes": 170975
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M31_E_DEEPCENTER_GATE_DIVISION_RELAXED.txt",
+        "sha256": "686ed84f7ed2cda7da28a25f0b50e37134c19b76cdd41eab617d2f7c02d25e23",
+        "sha_scope": "full",
+        "size_bytes": 170975
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M31_LOCAL_CV_HARNESS_NOT_SUBMIT.txt",
+        "sha256": "ce4f22b41f7d670ab2b7b203e06713ea165d3dd8c2ffc5af110cd3c258ad6462",
+        "sha_scope": "full",
+        "size_bytes": 170973
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M31_REFERENCE_AUDIT_NOT_SUBMIT.txt",
+        "sha256": "8edec9c1cba7c9f42514eaf1aad5a1ed6a436a70ff0e3daa55c173b0eacf2a37",
+        "sha_scope": "full",
+        "size_bytes": 170970
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M32_1_A_OFFICIAL_METRIC_VENDOR_AUDIT_NOT_SUBMIT.txt",
+        "sha256": "09d37572378c2c3185f62996078a8734eab35e6981b3f8f03c06d6a42084968a",
+        "sha_scope": "full",
+        "size_bytes": 155880
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M32_1_B_OFFICIAL_CV_REAUDIT_NOT_SUBMIT.txt",
+        "sha256": "2923a4b0db64b237263d44262a255764d24c81ae9a87a026965ebf623d26f5ef",
+        "sha_scope": "full",
+        "size_bytes": 155875
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M32_A_OFFICIAL_CV_AUDIT_NOT_SUBMIT.txt",
+        "sha256": "9f4b59cf4bc0576eb24707d93e2f9a32fdd135bbccec448f8b9bab90603e0377",
+        "sha_scope": "full",
+        "size_bytes": 158297
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M32_B_OFFICIAL_CV_REPLAY_NOT_SUBMIT.txt",
+        "sha256": "29a38f7aa9caf7d90f542927d5dd38c4d6a848c1ab1685026fc9eda3b0717224",
+        "sha_scope": "full",
+        "size_bytes": 158298
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M32_C_OFFICIAL_SMALL_SWEEP_NOT_SUBMIT.txt",
+        "sha256": "f276ac72e1797d217075e0027a35f906fe48e8026bc49edc3e09f9c671258479",
+        "sha_scope": "full",
+        "size_bytes": 158297
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M32_D_DET_THRESHOLD_PILOT_NOT_SUBMIT.txt",
+        "sha256": "fbd78dbb112f8429364ed655486d62caf0ba59033bfc5a2c2a5d7abbab85d530",
+        "sha_scope": "full",
+        "size_bytes": 158301
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M33_A_ENSEMBLE_INPUT_AUDIT_NOT_SUBMIT.txt",
+        "sha256": "467ec12988b50df0966d73bed45c59a280a61cc3ffa4953c0297a81b1d073e9c",
+        "sha_scope": "full",
+        "size_bytes": 164900
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M33_B_CORRECTED_OUTPUT_BLEND_DIAGNOSTIC_NOT_SUBMIT.txt",
+        "sha256": "5a374d27c2756b83153d2a8f7322cd633bf06f253135bb6133feaad1c26ad09d",
+        "sha_scope": "full",
+        "size_bytes": 164906
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M33_C_CORRECTED_OUTPUT_BLEND_CANDIDATE.txt",
+        "sha256": "f50b59e59389ee5f167a02f2e83b300d9fe32792f2cc27ab12c35ffdffb5b2c9",
+        "sha_scope": "full",
+        "size_bytes": 164911
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M33_D_PROBABILITY_FUSION_AUDIT_NOT_SUBMIT.txt",
+        "sha256": "9688e12026b9d59bf2f2e3bfd12e2ec5429fb51c155cdca885b568e649594c71",
+        "sha_scope": "full",
+        "size_bytes": 164906
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M33_E_CORRECTED_PROBABILITY_ENSEMBLE_CANDIDATE.txt",
+        "sha256": "d6e2a12e83c80d45c11d4308a5801437dae793624cb365e391e9dbf037b5e8af",
+        "sha_scope": "full",
+        "size_bytes": 164909
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M34_A_TTA_GEOMETRY_AND_SOURCE_AUDIT_NOT_SUBMIT.txt",
+        "sha256": "d0f2421d603de8cfc06be3a1f88ee09c3388d94410957f44325e814906aa66aa",
+        "sha_scope": "full",
+        "size_bytes": 172184
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M34_B_TTA4_FUSION_DIAGNOSTIC_NOT_SUBMIT.txt",
+        "sha256": "fcf82022b75bef7d5132411c232b896daa1dbe298132bdef1ffac163b255b640",
+        "sha_scope": "full",
+        "size_bytes": 172187
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M34_C_TTA4_CONSERVATIVE_FUSION_CANDIDATE.txt",
+        "sha256": "ecaf48b573f0b0cb01885e8618f4c643e1541f451b0e2458cc93a8cd6fe81232",
+        "sha_scope": "full",
+        "size_bytes": 172186
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M34_D_TTA8_D4_OPTIONAL_CANDIDATE.txt",
+        "sha256": "51d35deb589d6f1a115f1cb6481abef4fdd759c9e40f930571d2f675c6a52ea5",
+        "sha_scope": "full",
+        "size_bytes": 172186
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M35_A_REFERENCE_BUNDLE_AUDIT_NOT_SUBMIT.txt",
+        "sha256": "fb2893ffe49ae898b0b1707a7ecc92c5b239e04dbb6df885efcec238dc93e797",
+        "sha_scope": "full",
+        "size_bytes": 444974
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M35_B_REFERENCE_0902_REPRO_NOT_SUBMIT.txt",
+        "sha256": "0af89636c114c9e41c94886d6d7380cc0d3983ec95cbde4414bbc2fd6fe63d73",
+        "sha_scope": "full",
+        "size_bytes": 444974
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M35_B_TWO_PHASE_CURRENT_KERNEL_REPRO_NOT_SUBMIT.txt",
+        "sha256": "6f04b9d46ff5dcc74364749ddc5e1c5f4cd2796d7d1bb831a595d54d81efe5b2",
+        "sha_scope": "full",
+        "size_bytes": 444974
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M35_C_CANDIDATE_EDGE_EXPORT_NOT_SUBMIT.txt",
+        "sha256": "cd2bd700d511fb60be652c90d36de78841708d251c3197526e3d3568963cc6c3",
+        "sha_scope": "full",
+        "size_bytes": 444975
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M35_C_FULL_PREILP_CANDIDATE_EXPORT_NOT_SUBMIT.txt",
+        "sha256": "b18e82ea29c360882277026e675c2d99391d6d36f48feddc40c9a8972c711461",
+        "sha_scope": "full",
+        "size_bytes": 444980
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M35_C_SCALE_PREFLIGHT_NOT_SUBMIT.txt",
+        "sha256": "351b9dbc916a3cc0412809fc5e7a8605d8fcc549124affe70b61453f2fe75129",
+        "sha_scope": "full",
+        "size_bytes": 444976
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M35_C_STRUCTURAL_PREFLIGHT_NOT_SUBMIT.txt",
+        "sha256": "6842f5d6851fc7c1d4d0e0789fedc7ae24447d3ec2f7ad86287721cd00c34f1d",
+        "sha_scope": "full",
+        "size_bytes": 444981
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M35_D_EDGE_TTA_D4_DIAGNOSTIC_NOT_SUBMIT.txt",
+        "sha256": "54bc271ffe4e89b8a85c8aa750b19e2c2e2025e504054ef98c4df3d7c729cc1b",
+        "sha_scope": "full",
+        "size_bytes": 444978
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M35_E_FULL_CANDIDATE_JOINT_SOLVER_CANDIDATE.txt",
+        "sha256": "b4e7f178aa18b7612131645b80513eaf91475f4d23d719967aa3ab73913ebd85",
+        "sha_scope": "full",
+        "size_bytes": 444980
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M36_FAST_REFERENCE_0902_SUBMIT.txt",
+        "sha256": "c33dc6dfdf536b19021b3d22d376488383aa2fce634f58f3145f4322621603e7",
+        "sha_scope": "full",
+        "size_bytes": 19311
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M37_HIDDEN_SAFE_REFERENCE_0902_SUBMIT.txt",
+        "sha256": "d5b2025bde0e11ad592097b2068c1698725fd61fc88774cb9a5178b66634bff5",
+        "sha_scope": "full",
+        "size_bytes": 23118
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M38_HIDDEN_RESILIENT_REFERENCE_0902_SUBMIT.txt",
+        "sha256": "745151750aa514d03eb9706b286653050d7c5717bebda9faecaff5fc697cb7fe",
+        "sha_scope": "full",
+        "size_bytes": 54918
+      }
+    ],
+    "reports_md": [
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M20_A_FULLCHAIN_TUNED_FIXED_REPORT.md",
+        "sha256": "343dbc5f4a9ec1d0ebec3b78b0ad9ef80e316abe63725e7a114b53ab98d50013",
+        "sha_scope": "full",
+        "size_bytes": 7364
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M20_A_FULLCHAIN_TUNED_REPORT.md",
+        "sha256": "bbe244157aeee42694702c00a6f63b6848b9a24e9d2bb58f43b11363eb6fd4f9",
+        "sha_scope": "full",
+        "size_bytes": 6144
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M21_EXPERIMENT_PACK_REPORT.md",
+        "sha256": "3743ce6ff26025a10519ced19983bb69ed7ede6cfcf367be134474960e22c3f3",
+        "sha_scope": "full",
+        "size_bytes": 6454
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M22_TRUEBASE_RECOVERY_AND_JUMP_PACK_REPORT.md",
+        "sha256": "10fcd4deb9089176d63a6041f8d604645a07e5c323a531b560842abdb740aad0",
+        "sha_scope": "full",
+        "size_bytes": 7102
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M23_NODE_PENALTY_REPAIR_PACK_REPORT.md",
+        "sha256": "a407b0bb759c34f510f68b7697291ee93e418e8fc8b8cb364dad6443ad8aeb2c",
+        "sha_scope": "full",
+        "size_bytes": 6662
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M24_400EP_CLEAN_GRAPH_JUMP_PACK_REPORT.md",
+        "sha256": "431dfc72d3c0d9945bdfce563b1732620173a726dccfc9adf126a70da4526644",
+        "sha_scope": "full",
+        "size_bytes": 5954
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M25_PILKWANG350_PRUNE_TUNING_PACK_REPORT.md",
+        "sha256": "2c2d89d1cb4920a4b07a7f3c1c303f7f01fb288ef38d6c647ff08774b76351f1",
+        "sha_scope": "full",
+        "size_bytes": 5987
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M26_MULTI_ARTIFACT_ENSEMBLE_JUMP_PACK_REPORT.md",
+        "sha256": "012147cac2f7f612c0477e6d91bb7786de31fed7e7fb0b94b1e9cf021191dd30",
+        "sha_scope": "full",
+        "size_bytes": 7592
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M27_PUBLIC_NOTEBOOK_REPRO_EDGE_POLICY_VETO_PACK_REPORT.md",
+        "sha256": "48f14b69f98ac2cf189050628df7c6b5339d9c3b28c88cebecef07e3865d2864",
+        "sha_scope": "full",
+        "size_bytes": 6547
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M28_METRIC_AWARE_RECALL_EXPANSION_PACK_REPORT.md",
+        "sha256": "dddd510e0257723fa50b2cd69cd34a6b43550254c73e546025e54eaabcad022d",
+        "sha_scope": "full",
+        "size_bytes": 6329
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M29_WINNING_ENGINE_INTEGRATION_PACK_REPORT.md",
+        "sha256": "4013011ff7a7165146bfcb3e8cd9f87175af18ff8b08c09aed862e7a342bab7b",
+        "sha_scope": "full",
+        "size_bytes": 7274
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M30_METRIC_AWARE_GLOBAL_RELINKER_V2_PACK_REPORT.md",
+        "sha256": "5db9e3745d9c330a95c9943c3b3f1c9f91a56c7435b7d42e10c76cc0a15e48c3",
+        "sha_scope": "full",
+        "size_bytes": 8358
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M31_TTA6_DEEPCENTER_REPRO_AND_GATED_EXPANSION_PACK_REPORT.md",
+        "sha256": "8b0c6196bd01384e277127f88589a0956c7a6adc803baaaca1a8eaf827062e3c",
+        "sha_scope": "full",
+        "size_bytes": 8102
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M32_1_OFFICIAL_METRIC_VENDOR_AND_SPLIT_RECOVERY_REPORT.md",
+        "sha256": "066f40dd7373518b56e10174f4c91b3ceaf4114cff7492cf78f757451c3fefc5",
+        "sha_scope": "full",
+        "size_bytes": 7477
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M32_OFFICIAL_LOCAL_CV_PACK_REPORT.md",
+        "sha256": "7bf9280bb2649d2a655fa49112ac8ed717718ade1c467abc0e2f7b7e9cbd5f44",
+        "sha_scope": "full",
+        "size_bytes": 8079
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M33_ENSEMBLE_PACK_REPORT.md",
+        "sha256": "d97542bbd9a334aa4908e0fdcd7e2bfdfad1b24218208cd028bafa1527d9f047",
+        "sha_scope": "full",
+        "size_bytes": 8119
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M34_SELF_CONTAINED_TTA_REPORT.md",
+        "sha256": "68153c2fd6d08f2820a9f038ff3e3c214c4a6c5ad7341995adfc495145229b0f",
+        "sha_scope": "full",
+        "size_bytes": 8266
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M35_REFERENCE_0902_FOUNDATION_REPORT.md",
+        "sha256": "8657da7a079cf8c34830a4bb92c466082dda383edd035a974ec391d21f08c759",
+        "sha_scope": "full",
+        "size_bytes": 50097
+      }
+    ],
+    "runners_py": [
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M36_FAST_REFERENCE_0902_SUBMIT.py",
+        "sha256": "1c89505629bc1bbb6ef1e6d4a7b61ef879c1c9bef01dd624694265c83baaa519",
+        "sha_scope": "full",
+        "size_bytes": 19417
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M37_HIDDEN_SAFE_REFERENCE_0902_SUBMIT.py",
+        "sha256": "9d36e7da82f7bcda60d23342851130e48e89cab63ccebe6fda2c3ea54078c0db",
+        "sha_scope": "full",
+        "size_bytes": 23224
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/M38_HIDDEN_RESILIENT_REFERENCE_0902_SUBMIT.py",
+        "sha256": "04bd2b05db6cdd44aa0f7107b6f5ca6f03fb173c32f24cc576ac77fc42c4b6d0",
+        "sha_scope": "full",
+        "size_bytes": 55024
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone16_reference_learned_graph_runner.py",
+        "sha256": "3b259740e0ccbf5dc91baf32b46143a5316eb2c1a4d8a5b9bfe5abe348c0a87e",
+        "sha_scope": "full",
+        "size_bytes": 70440
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone17_reference_tuning_runner.py",
+        "sha256": "f0863707e431e9d63f134b804f4e4383edae24726e7b4074465caa96100ce0e3",
+        "sha_scope": "full",
+        "size_bytes": 87554
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone18_edge_prune_runner.py",
+        "sha256": "22aa5a4df35171ad19c414dd1a10b270973388c2815966f3e0f5309af3179c72",
+        "sha_scope": "full",
+        "size_bytes": 98023
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone19_metric_postprocess_runner.py",
+        "sha256": "536d1bf94106eb98a1d4e9619e3d8d23fa9a326e80a3f8f95e2e2a0de21137b7",
+        "sha_scope": "full",
+        "size_bytes": 124518
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone20_fullchain_tuned_fixed_runner.py",
+        "sha256": "9ebea6d332f9a46519c4932cb20964e7aa03b73b73dfe9775b9d1d580e0e040a",
+        "sha_scope": "full",
+        "size_bytes": 129209
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone20_fullchain_tuned_runner.py",
+        "sha256": "a0c73387097f7fbd40dba4678ea20ecdfbb2e17e216814c1359f1d59e1a24f92",
+        "sha_scope": "full",
+        "size_bytes": 122206
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone21_pilkwang_experiment_pack_runner.py",
+        "sha256": "194e1dc0898186a19fb6eb6f501719f2af301dafeb04d662b7d1221a7c41821b",
+        "sha_scope": "full",
+        "size_bytes": 134451
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone22_truebase_runner.py",
+        "sha256": "d92a0bacf5c9977821b6bcdeb9839ca1abcb9a15590bf9815b6d293092e5db70",
+        "sha_scope": "full",
+        "size_bytes": 134888
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone23_node_penalty_repair_runner.py",
+        "sha256": "000cc62e652e172e6e935f56312e078fb3499b29b39d3bbd3b80c598d32be31c",
+        "sha_scope": "full",
+        "size_bytes": 148878
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone24_400ep_clean_graph_runner.py",
+        "sha256": "036fa19e2ffbf969aaba6127f06c0c17b700b7ec20f72ae490f446a833a5b2af",
+        "sha_scope": "full",
+        "size_bytes": 132676
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone25_pilkwang350_prune_tuning_runner.py",
+        "sha256": "6c698f7857f3821d43d2443b3262a00ad9b710226f5b15a1dea9b935616d50d8",
+        "sha_scope": "full",
+        "size_bytes": 149436
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone26_multi_artifact_ensemble_runner.py",
+        "sha256": "a2228e5e44091851a8ed6b29fc5cb2e321df59f070c4c1293bdd04bb0e35c102",
+        "sha_scope": "full",
+        "size_bytes": 145011
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone27_public_notebook_repro_runner.py",
+        "sha256": "145936f370c33ffb6fad28e5eeef16064546fc8b383dc253a0f2cb4f5568bcb1",
+        "sha_scope": "full",
+        "size_bytes": 166139
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone28_metric_aware_recall_expansion_runner.py",
+        "sha256": "b983115d6f67484ad1a302549cf8b5d617a13a3ec26721554d4de90b554582f8",
+        "sha_scope": "full",
+        "size_bytes": 134021
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone29_winning_engine_integration_runner.py",
+        "sha256": "ff695ccc70e8467af67b161561c6a280a594dbbd4e8f2818b5f0dc18bfde02ac",
+        "sha_scope": "full",
+        "size_bytes": 152395
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone30_metric_aware_global_relinker_v2_runner.py",
+        "sha256": "dc90a3a5bf61386a28f7aea4cae2fd8d925babca91e544ad57e7d3914660caf7",
+        "sha_scope": "full",
+        "size_bytes": 174682
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone31_tta6_deepcenter_repro_runner.py",
+        "sha256": "9b5ebb6a83c7f02777bacab2f38c391d71d552ce6b22171253daced92e3ba90d",
+        "sha_scope": "full",
+        "size_bytes": 171022
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone32_1_official_metric_vendor_runner.py",
+        "sha256": "6c6600706e8257f17ab491c888104233d8169c3d1467e04760c623b76fefcd66",
+        "sha_scope": "full",
+        "size_bytes": 155911
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone32_official_local_cv_runner.py",
+        "sha256": "e4c733bed90fb142c3c3b901ae84c446bd7584972b64291b457a8f7d9d463a39",
+        "sha_scope": "full",
+        "size_bytes": 158328
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone33_corrected_ensemble_runner.py",
+        "sha256": "31e22cfab5aa0f9bfbc9119d2e855de033ceced51d4f045f28b75e15736bc8b5",
+        "sha_scope": "full",
+        "size_bytes": 164931
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone34_self_contained_tta_runner.py",
+        "sha256": "07f0d861e03a82a5195bce41aa54eb4fc75ec14b1caca7bf646eb7564b19ecbf",
+        "sha_scope": "full",
+        "size_bytes": 172215
+      },
+      {
+        "path": "competitions/biohub-cell-tracking-during-development/milestone35_reference_0902_foundation_runner.py",
+        "sha256": "7a40019f729db35d97a5873c1dbf68ff9df732304380b9f29eb61385d83479f7",
+        "sha_scope": "full",
+        "size_bytes": 445005
+      }
+    ]
+  },
+  "reference_and_support": [
+    {
+      "exists": false,
+      "path": "competitions/biohub-cell-tracking-during-development/.local_reference/biohub-competition-solution.ipynb"
+    },
+    {
+      "exists": false,
+      "path": "competitions/biohub-cell-tracking-during-development/reference/biohub-competition-solution.ipynb"
+    },
+    {
+      "exists": false,
+      "path": "competitions/biohub-cell-tracking-during-development/reference/official_metric"
+    },
+    {
+      "exists": false,
+      "path": "competitions/biohub-cell-tracking-during-development/reference/tracking_cellmot"
+    },
+    {
+      "exists": false,
+      "path": "competitions/biohub-cell-tracking-during-development/reference/hoct"
+    },
+    {
+      "exists": false,
+      "path": "competitions/biohub-cell-tracking-during-development/reference/hoct_weights"
+    },
+    {
+      "exists": true,
+      "path": "competitions/biohub-cell-tracking-during-development/artifacts"
+    }
+  ]
+}

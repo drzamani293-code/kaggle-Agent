@@ -1,0 +1,16 @@
+{
+  "aggregate_official_score": "PENDING_REAL_ENV",
+  "macro_official_score": "PENDING_REAL_ENV",
+  "metric_name": "PENDING_REAL_ENV",
+  "n_configs": 5,
+  "n_datasets": "PENDING_REAL_ENV",
+  "notes": "scaffold; awaits real Kaggle environment",
+  "official_metric_audit_ok": false,
+  "peak_memory_mb": "PENDING_REAL_ENV",
+  "per_config_scores": {},
+  "runtime_seconds_total": "PENDING_REAL_ENV",
+  "split_audit_ok": false,
+  "status": "PENDING_REAL_ENV",
+  "winner_config_id": "PENDING_REAL_ENV",
+  "winner_official_score": "PENDING_REAL_ENV"
+}

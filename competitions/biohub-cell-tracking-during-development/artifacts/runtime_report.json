@@ -1,0 +1,218 @@
+{
+  "active_phase": null,
+  "annotation": "SCAFFOLD_TEMPLATE_PENDING_REAL_ENV",
+  "current_level": "GREEN",
+  "elapsed_seconds": 0.011000000000000003,
+  "events": [
+    {
+      "action": "run_full_selected_plan",
+      "elapsed_seconds": 0.0,
+      "estimated_next_phase_seconds": 1,
+      "experimental_seconds_available": 5700.0,
+      "level": "GREEN",
+      "remaining_absolute_seconds": 7200.0,
+      "remaining_engineering_seconds": 6300.0,
+      "type": "decision"
+    },
+    {
+      "action": "run_full_selected_plan",
+      "elapsed_seconds": 0.001,
+      "estimated_next_phase_seconds": 1,
+      "experimental_seconds_available": 5699.999,
+      "level": "GREEN",
+      "remaining_absolute_seconds": 7199.999,
+      "remaining_engineering_seconds": 6299.999,
+      "type": "decision"
+    },
+    {
+      "action": "run_full_selected_plan",
+      "elapsed_seconds": 0.002,
+      "estimated_next_phase_seconds": 1,
+      "experimental_seconds_available": 5699.998,
+      "level": "GREEN",
+      "remaining_absolute_seconds": 7199.998,
+      "remaining_engineering_seconds": 6299.998,
+      "type": "decision"
+    },
+    {
+      "action": "run_full_selected_plan",
+      "elapsed_seconds": 0.003,
+      "estimated_next_phase_seconds": 1,
+      "experimental_seconds_available": 5699.997,
+      "level": "GREEN",
+      "remaining_absolute_seconds": 7199.997,
+      "remaining_engineering_seconds": 6299.997,
+      "type": "decision"
+    },
+    {
+      "action": "run_full_selected_plan",
+      "elapsed_seconds": 0.004,
+      "estimated_next_phase_seconds": 1,
+      "experimental_seconds_available": 5699.996,
+      "level": "GREEN",
+      "remaining_absolute_seconds": 7199.996,
+      "remaining_engineering_seconds": 6299.996,
+      "type": "decision"
+    },
+    {
+      "action": "run_full_selected_plan",
+      "elapsed_seconds": 0.005,
+      "estimated_next_phase_seconds": 1,
+      "experimental_seconds_available": 5699.995,
+      "level": "GREEN",
+      "remaining_absolute_seconds": 7199.995,
+      "remaining_engineering_seconds": 6299.995,
+      "type": "decision"
+    },
+    {
+      "action": "run_full_selected_plan",
+      "elapsed_seconds": 0.006,
+      "estimated_next_phase_seconds": 1,
+      "experimental_seconds_available": 5699.994,
+      "level": "GREEN",
+      "remaining_absolute_seconds": 7199.994,
+      "remaining_engineering_seconds": 6299.994,
+      "type": "decision"
+    },
+    {
+      "action": "run_full_selected_plan",
+      "elapsed_seconds": 0.007,
+      "estimated_next_phase_seconds": 1,
+      "experimental_seconds_available": 5699.993,
+      "level": "GREEN",
+      "remaining_absolute_seconds": 7199.993,
+      "remaining_engineering_seconds": 6299.993,
+      "type": "decision"
+    },
+    {
+      "action": "run_full_selected_plan",
+      "elapsed_seconds": 0.008,
+      "estimated_next_phase_seconds": 1,
+      "experimental_seconds_available": 5699.992,
+      "level": "GREEN",
+      "remaining_absolute_seconds": 7199.992,
+      "remaining_engineering_seconds": 6299.992,
+      "type": "decision"
+    },
+    {
+      "action": "run_full_selected_plan",
+      "elapsed_seconds": 0.009000000000000001,
+      "estimated_next_phase_seconds": 1,
+      "experimental_seconds_available": 5699.991,
+      "level": "GREEN",
+      "remaining_absolute_seconds": 7199.991,
+      "remaining_engineering_seconds": 6299.991,
+      "type": "decision"
+    },
+    {
+      "action": "run_full_selected_plan",
+      "elapsed_seconds": 0.010000000000000002,
+      "estimated_next_phase_seconds": 1,
+      "experimental_seconds_available": 5699.99,
+      "level": "GREEN",
+      "remaining_absolute_seconds": 7199.99,
+      "remaining_engineering_seconds": 6299.99,
+      "type": "decision"
+    }
+  ],
+  "phases": [
+    {
+      "duration_seconds": 0.001,
+      "end_elapsed_seconds": 0.001,
+      "metadata": {},
+      "name": "environment_setup",
+      "start_elapsed_seconds": 0.0,
+      "status": "scaffold_placeholder"
+    },
+    {
+      "duration_seconds": 0.001,
+      "end_elapsed_seconds": 0.002,
+      "metadata": {},
+      "name": "data_discovery",
+      "start_elapsed_seconds": 0.001,
+      "status": "scaffold_placeholder"
+    },
+    {
+      "duration_seconds": 0.001,
+      "end_elapsed_seconds": 0.003,
+      "metadata": {},
+      "name": "model_loading",
+      "start_elapsed_seconds": 0.002,
+      "status": "scaffold_placeholder"
+    },
+    {
+      "duration_seconds": 0.001,
+      "end_elapsed_seconds": 0.004,
+      "metadata": {},
+      "name": "detection",
+      "start_elapsed_seconds": 0.003,
+      "status": "scaffold_placeholder"
+    },
+    {
+      "duration_seconds": 0.001,
+      "end_elapsed_seconds": 0.005,
+      "metadata": {},
+      "name": "candidate_graph_construction",
+      "start_elapsed_seconds": 0.004,
+      "status": "scaffold_placeholder"
+    },
+    {
+      "duration_seconds": 0.001,
+      "end_elapsed_seconds": 0.006,
+      "metadata": {},
+      "name": "association_inference",
+      "start_elapsed_seconds": 0.005,
+      "status": "scaffold_placeholder"
+    },
+    {
+      "duration_seconds": 0.001,
+      "end_elapsed_seconds": 0.007,
+      "metadata": {},
+      "name": "ilp_graph_solve",
+      "start_elapsed_seconds": 0.006,
+      "status": "scaffold_placeholder"
+    },
+    {
+      "duration_seconds": 0.001,
+      "end_elapsed_seconds": 0.008,
+      "metadata": {},
+      "name": "post_processing",
+      "start_elapsed_seconds": 0.007,
+      "status": "scaffold_placeholder"
+    },
+    {
+      "duration_seconds": 0.0010000000000000009,
+      "end_elapsed_seconds": 0.009000000000000001,
+      "metadata": {},
+      "name": "validation",
+      "start_elapsed_seconds": 0.008,
+      "status": "scaffold_placeholder"
+    },
+    {
+      "duration_seconds": 0.0010000000000000009,
+      "end_elapsed_seconds": 0.010000000000000002,
+      "metadata": {},
+      "name": "csv_write",
+      "start_elapsed_seconds": 0.009000000000000001,
+      "status": "scaffold_placeholder"
+    },
+    {
+      "duration_seconds": 0.0010000000000000009,
+      "end_elapsed_seconds": 0.011000000000000003,
+      "metadata": {},
+      "name": "fallback",
+      "start_elapsed_seconds": 0.010000000000000002,
+      "status": "scaffold_placeholder"
+    }
+  ],
+  "policy": {
+    "absolute_seconds": 7200,
+    "amber_fraction": 0.68,
+    "fallback_fraction": 0.91,
+    "finalization_reserve_seconds": 600,
+    "hard_engineering_seconds": 6300,
+    "hidden_safety_seconds": 6600,
+    "red_fraction": 0.82,
+    "target_seconds": 5400
+  }
+}
