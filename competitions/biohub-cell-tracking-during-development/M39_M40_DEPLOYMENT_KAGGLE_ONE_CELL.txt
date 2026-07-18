@@ -1,0 +1,186 @@
+# =====================================================================
+# M39/M40 KAGGLE DEPLOYMENT — SINGLE CELL RUNNER
+# =====================================================================
+# Paste this ENTIRE cell into a NEW Kaggle notebook.
+# Notebook settings:
+#     Accelerator     : GPU (any of P100, T4x2, L4x4, A100 — the runner
+#                       auto-detects and adapts).
+#     Internet        : Off  (required — the runner is fully offline).
+#     Persistence     : Off.
+#     Session timeout : leave default 12h; the runner self-caps at 105m.
+#
+# Attach these datasets (order does not matter; the runner discovers them):
+#   1.  Competition data (built-in for the biohub cell-tracking comp):
+#         /kaggle/input/competitions/biohub-cell-tracking-during-development
+#   2.  Reference bundle 0902 (audited notebook + weights):
+#         /kaggle/input/datasets/<your-username>/biohub-0902-reference-bundle
+#         Must contain:
+#           reference/biohub-competition-solution.ipynb
+#           weights/unet_transformer/split_0/edge_predictor_best.pth
+#           reference/dataset_splits.json          (or similar upstream file)
+#   3.  M39/M40 offline bundle (built with m39_m40.deployment.bundle_builder):
+#         /kaggle/input/datasets/<your-username>/m39-m40-bundle
+#         MUST contain the marker file M39_M40_BUNDLE.marker and a verified
+#         BUNDLE_MANIFEST.json. Its layout is:
+#           M39_M40_BUNDLE.marker
+#           BUNDLE_MANIFEST.json
+#           vendor/royerlab_cellmot/                (official metric, pinned)
+#           m39_m40/                                (scaffolding)
+#           archive/m19c/                           (byte-preserved fallback)
+#           hoct/                                   (vendored MIT source)
+#           weights/hoct/general_v0/                (general_v0 checkpoint)
+#
+# The runner NEVER auto-submits to Kaggle. To submit, use the notebook's
+# built-in Submit UI once /kaggle/working/submission.csv is produced.
+# =====================================================================
+
+import os, sys, time, json, traceback
+from pathlib import Path
+
+# ------------------------------------------------------------------
+# 1) Discover the mounted M39/M40 bundle by its marker file
+# ------------------------------------------------------------------
+def _find_bundle():
+    for root in (Path("/kaggle/input/datasets"), Path("/kaggle/input")):
+        if not root.is_dir():
+            continue
+        for path in sorted(root.rglob("M39_M40_BUNDLE.marker")):
+            return path.parent
+    return None
+
+BUNDLE = _find_bundle()
+if BUNDLE is None:
+    print("BUNDLE NOT FOUND — cannot proceed. Aborting to fallback path.")
+else:
+    print(f"BUNDLE_ROOT = {BUNDLE}")
+
+# ------------------------------------------------------------------
+# 2) Make the mounted bundle importable
+# ------------------------------------------------------------------
+if BUNDLE is not None:
+    if str(BUNDLE) not in sys.path:
+        sys.path.insert(0, str(BUNDLE))
+    # tracking_cellmot lives inside vendor/royerlab_cellmot/src
+    metric_src = BUNDLE / "vendor" / "royerlab_cellmot" / "src"
+    if metric_src.is_dir() and str(metric_src) not in sys.path:
+        sys.path.insert(0, str(metric_src))
+
+# ------------------------------------------------------------------
+# 3) Register the baseline + HOCT solvers.
+#    Both solvers live inside the reference-0902 notebook that ships in
+#    the reference bundle. They are wrapped into functions matching the
+#    Baseline/HOCT request/result contracts defined in
+#    m39_m40.deployment.{baseline_association,hoct_association}.
+#    THE OPERATOR MUST PROVIDE THESE FUNCTIONS — the runner refuses to
+#    proceed to the experimental path if either is missing.
+# ------------------------------------------------------------------
+if BUNDLE is not None:
+    try:
+        from m39_m40.deployment import baseline_association as _ba
+        from m39_m40.deployment import hoct_association as _ha
+        from m39_m40.deployment.baseline_association import (
+            BaselineAssociationRequest, BaselineAssociationResult,
+        )
+        from m39_m40.deployment.hoct_association import (
+            HoctAssociationRequest, HoctAssociationResult,
+        )
+        from m39_m40.hoct_adapter import HoctAdapterConfig
+
+        # -----------------------------------------------------------
+        # OPERATOR PLACEHOLDERS — replace these with your real solvers.
+        # -----------------------------------------------------------
+        def _baseline_reference_0902(req: BaselineAssociationRequest):
+            """Run the reference-0902 baseline association on cached
+            detections. MUST NOT mutate req.cached_detections."""
+            raise NotImplementedError(
+                "operator must supply _baseline_reference_0902; the runner "
+                "will fall back to M19-C otherwise"
+            )
+
+        def _hoct_general_v0(req: HoctAssociationRequest):
+            """Run HOCT (general_v0) association on the SAME cached
+            detections. MUST set detections_reused=True and MUST use the
+            exact HoctAdapterConfig passed in."""
+            raise NotImplementedError(
+                "operator must supply _hoct_general_v0; the runner will "
+                "fall back to M19-C otherwise"
+            )
+
+        _ba.register("reference_0902_current_kernel", _baseline_reference_0902)
+        _ha.register("hoct_general_v0", _hoct_general_v0)
+        print("REGISTERED baseline + HOCT solvers")
+    except Exception as e:
+        print("SOLVER_REGISTRATION_FAILED:", repr(e))
+        traceback.print_exc()
+
+# ------------------------------------------------------------------
+# 4) Detection provider: a callable that returns the SAME cached
+#    detections object for baseline and HOCT (so identity holds).
+# ------------------------------------------------------------------
+_DETECTION_CACHE: dict = {}
+
+def _detection_provider(dataset: str):
+    if dataset in _DETECTION_CACHE:
+        return _DETECTION_CACHE[dataset]
+    # OPERATOR: run the shared detector here (unet_transformer/split_0),
+    # convert to the format the baseline + HOCT solvers both accept, and
+    # return the same object. NEVER return a fresh object per call.
+    raise NotImplementedError(
+        "operator must supply _detection_provider; the runner will fall "
+        "back to M19-C otherwise"
+    )
+
+# ------------------------------------------------------------------
+# 5) Kick off the pipeline. The runner enforces every gate G1..G11.
+# ------------------------------------------------------------------
+if BUNDLE is not None:
+    try:
+        from m39_m40.deployment.kaggle_one_cell_runner import main as _run
+        result = _run(
+            bundle_root=BUNDLE,
+            baseline_name="reference_0902_current_kernel",
+            hoct_name="hoct_general_v0",
+            datasets_to_score=(),           # empty = use observed val_datasets
+            detection_provider=_detection_provider,
+            output_path=Path("/kaggle/working/submission.csv"),
+        )
+        print("\n===== RUNNER RESULT =====")
+        print(json.dumps(result.to_dict(), indent=2, sort_keys=True)[:8000])
+        print("...(truncated for display; see /kaggle/working/m39_m40_result.json)")
+        (Path("/kaggle/working") / "m39_m40_result.json").write_text(
+            json.dumps(result.to_dict(), indent=2, sort_keys=True)
+        )
+    except Exception as e:
+        print("PIPELINE_ABORTED:", repr(e))
+        traceback.print_exc()
+        result = None
+else:
+    result = None
+
+# ------------------------------------------------------------------
+# 6) Fallback path (unconditional): if the experimental runner did NOT
+#    produce a valid submission, exec the M19-C one-cell (byte-preserved)
+#    which is proven to score 0.880 on the public LB.
+# ------------------------------------------------------------------
+_sub = Path("/kaggle/working/submission.csv")
+_ok = _sub.is_file() and _sub.stat().st_size > 0
+if not _ok:
+    print("\n===== FALLBACK: EXEC M19-C =====")
+    if BUNDLE is not None:
+        one_cell = BUNDLE / "archive" / "m19c" / "M19_VARIANT_C_FULL_CHAIN.txt"
+        if one_cell.is_file():
+            print(f"exec: {one_cell}")
+            exec(compile(one_cell.read_text(), str(one_cell), "exec"), {"__name__": "__main__"})
+        else:
+            print("M19-C archive missing from bundle — cannot fall back")
+    else:
+        print("Bundle missing — cannot fall back automatically. "
+              "Attach the M39/M40 bundle Kaggle Dataset and re-run.")
+
+# ------------------------------------------------------------------
+# 7) Final sanity check
+# ------------------------------------------------------------------
+if _sub.is_file() and _sub.stat().st_size > 0:
+    print(f"\nOK  submission.csv exists ({_sub.stat().st_size} bytes)")
+else:
+    print("\nFAIL  no submission.csv was produced")
