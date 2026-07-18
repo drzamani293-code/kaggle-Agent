@@ -47,6 +47,8 @@ M38_WORKING_DIR = "/kaggle/working"
 M38_OUTPUT = "/kaggle/working/submission.csv"
 M38_CHECKPOINT_DIR = "/kaggle/working/m38_geff_checkpoint"
 M38_STATUS_JSON = "/kaggle/working/m38_status.json"
+# reference evidence CSV whose DATASET SET (not names in code) defines a public dev run.
+M38_REFERENCE_EVIDENCE_CSV = "/kaggle/input/datasets/mohammadjafarzamani/biohub-0902-reference-bundle/evidence/submission.csv"
 
 M38_NOTEBOOK_REL = "reference/biohub-competition-solution.ipynb"
 M38_WEIGHT_REL = "weights/unet_transformer/split_0/edge_predictor_best.pth"
@@ -61,6 +63,7 @@ M38_EDGE_MANDATORY = ["source_id", "target_id"]
 M38_SOFT_TOTAL_TARGET_S = 120 * 60            # target total < 2h
 M38_SOFT_INFERENCE_DEADLINE_S = 95 * 60       # stop LAUNCHING new inference around 95 min
 M38_POSTPROCESS_RESERVE_S = 15 * 60           # reserve >= 15 min for postprocess + write
+M38_PER_DATASET_MAX_S = 40 * 60               # hard per-dataset subprocess timeout (bounded)
 
 
 class M38Error(RuntimeError):
@@ -288,6 +291,17 @@ def _m38_validate_submission(path, discovered_stems):
             "public_fingerprint_match_informational": public_fp}
 
 
+def _m38_safe_validate(path, discovered_stems):
+    """Validate WITHOUT ever raising; on any error returns a failing result. Used both for
+    the pre-inference fallback verification and the final labelling gate."""
+    try:
+        return _m38_validate_submission(path, discovered_stems)
+    except Exception as exc:                                     # noqa: BLE001
+        return {"checks": {}, "counts": {}, "all_gates_pass": False,
+                "public_fingerprint_match_informational": False,
+                "error": f"{type(exc).__name__}: {exc}"}
+
+
 def _m38_public_exactness_gate(sha256, counts):
     """PUBLIC development-run policy ONLY (never a hidden gate): the generated submission
     must byte-reproduce the M37 public SHA and fingerprint. Reported informationally on
@@ -298,6 +312,37 @@ def _m38_public_exactness_gate(sha256, counts):
                                              and counts.get("rows") == M38_PUBLIC_FINGERPRINT["rows"]
                                              and counts.get("divisions") == M38_PUBLIC_FINGERPRINT["divisions"]),
             "public_reference_sha256": M38_PUBLIC_REFERENCE_SHA256}
+
+
+def _m38_reference_dataset_stems(reference_csv=None):
+    """DYNAMICALLY read the dataset-name set from the reference bundle's evidence CSV. No
+    public stems are hardcoded; the set is derived at runtime. Returns a sorted list, or
+    None if the reference CSV is absent/unreadable/malformed."""
+    path = reference_csv or M38_REFERENCE_EVIDENCE_CSV
+    if not Path(path).exists():
+        return None
+    try:
+        stems = set()
+        with open(path, newline="") as fh:
+            reader = csv.DictReader(fh)
+            if "dataset" not in (reader.fieldnames or []):
+                return None
+            for r in reader:
+                d = str(r.get("dataset", "")).strip()
+                if d:
+                    stems.add(d)
+        return sorted(stems) if stems else None
+    except (OSError, csv.Error):
+        return None
+
+
+def _m38_is_public_dev_run(discovered_stems, reference_csv=None):
+    """A PUBLIC development run iff the discovered test stems exactly equal the reference
+    evidence CSV's dataset set. On the hidden rerun these differ -> False (informational)."""
+    ref = _m38_reference_dataset_stems(reference_csv)
+    if ref is None:
+        return False, None
+    return (set(discovered_stems) == set(ref)), ref
 
 
 # --------------------------------------------------------------------------- #
@@ -378,8 +423,11 @@ class _M38KaggleEngine:
     def _predictions_glob(self):
         return sorted((self.repo_dir / "predictions").glob(f"*/{M38_METHOD}/split_0/*.geff"))
 
-    def infer_one(self, dataset):
-        """Run the EXACT audited predict command for ONE dataset (own split JSON), check=False."""
+    def infer_one(self, dataset, timeout_seconds):
+        """Run the EXACT audited predict command for ONE dataset (own split JSON), check=False,
+        with a BOUNDED timeout. On TimeoutExpired the child process is already killed by
+        subprocess.run; we capture the partial stdout/stderr and return a failed result so the
+        orchestrator keeps the fallback for this dataset. NO timeout exception escapes."""
         splits_path = self.repo_dir / f"m38_split_{dataset}.json"
         splits_path.write_text(json.dumps([{"split": 0, "train": [], "test": [dataset]}]))
         cmd = list(self.predict_cmd)
@@ -389,13 +437,24 @@ class _M38KaggleEngine:
                 cmd[i + 1] = splits_path.name
                 break
         t0 = time.time()
-        proc = self._real_subprocess.run(cmd, cwd=self._pred_cwd, env=self._pred_env,
-                                         check=False, capture_output=True, text=True)
-        runtime = time.time() - t0
-        geffs = [p for p in self._predictions_glob() if p.stem == dataset]
-        return {"returncode": int(proc.returncode), "runtime": runtime,
-                "stdout": proc.stdout or "", "stderr": proc.stderr or "",
-                "geff_src": str(geffs[0]) if geffs else None}
+        try:
+            proc = self._real_subprocess.run(cmd, cwd=self._pred_cwd, env=self._pred_env,
+                                             check=False, capture_output=True, text=True,
+                                             timeout=timeout_seconds)
+            runtime = time.time() - t0
+            geffs = [p for p in self._predictions_glob() if p.stem == dataset]
+            return {"returncode": int(proc.returncode), "runtime": runtime, "timed_out": False,
+                    "timeout_seconds": timeout_seconds, "stdout": proc.stdout or "",
+                    "stderr": proc.stderr or "", "geff_src": str(geffs[0]) if geffs else None}
+        except self._real_subprocess.TimeoutExpired as exc:
+            runtime = time.time() - t0
+            out = exc.stdout or b""; err = exc.stderr or b""
+            if isinstance(out, bytes):
+                out = out.decode("utf-8", "replace")
+            if isinstance(err, bytes):
+                err = err.decode("utf-8", "replace")
+            return {"returncode": None, "runtime": runtime, "timed_out": True,
+                    "timeout_seconds": timeout_seconds, "stdout": out, "stderr": err, "geff_src": None}
 
     def checkpoint(self, dataset, geff_src):
         """Copy the freshly produced GEFF store to the checkpoint dir and verify readable."""
@@ -454,17 +513,64 @@ def run_m38_hidden_resilient_reference_submit(engine=None, sample_submission_pat
         test_dir, stems = eng.discover()
         status["discovered_stems"] = stems
         print(f"  discovered {len(stems)} dataset(s): {stems}")
-        # (4) build a valid emergency fallback covering EVERY discovered dataset, BEFORE inference
-        fallback_rows, fb_source = _m38_write_fallback_submission(M38_OUTPUT, stems, sample_submission_path)
-        status["fallback_source"] = fb_source
-        print(f"  emergency fallback submission written ({fb_source}); every dataset covered")
-    except Exception as exc:                                     # noqa: BLE001 (before fallback exists)
+    except Exception as exc:                                     # noqa: BLE001 (before any submission)
         status["exception"] = f"{type(exc).__name__}: {exc}"
         status["label"] = "M38_NO_SUBMISSION"
         _m38_write_status(status)
-        print(f"  FATAL before fallback (no submission possible): {status['exception']}")
+        print(f"  FATAL before discovery (no submission possible): {status['exception']}")
         traceback.print_exc()
         return status
+
+    # (3)+(4) Build a VERIFIED emergency fallback covering EVERY discovered dataset BEFORE any
+    # inference. Prefer the competition sample_submission, but ONLY if it passes the full
+    # dynamic validator; otherwise replace it with a synthetic one-node-per-dataset submission
+    # and validate THAT immediately. Inference may start only after a validated fallback exists.
+    status["fallback_attempts"] = []
+    fb_source = None
+    sample_rows = _m38_try_sample_submission_rows(stems, sample_submission_path)
+    if sample_rows is not None:
+        _m38_write_rows(M38_OUTPUT, sample_rows)
+        v_sample = _m38_safe_validate(M38_OUTPUT, stems)
+        status["fallback_attempts"].append(
+            {"source": "sample_submission", "all_gates_pass": bool(v_sample["all_gates_pass"]),
+             "failed_checks": [k for k, x in v_sample.get("checks", {}).items() if not x]})
+        if v_sample["all_gates_pass"]:
+            fallback_rows, fb_source = sample_rows, "sample_submission"
+            print("  emergency fallback = competition sample_submission (validated)")
+        else:
+            print(f"  sample_submission REJECTED by validator "
+                  f"{status['fallback_attempts'][-1]['failed_checks']}; falling back to synthetic")
+    else:
+        status["fallback_attempts"].append(
+            {"source": "sample_submission", "all_gates_pass": False,
+             "failed_checks": ["absent_or_schema_or_datasets_mismatch"]})
+
+    if fallback_rows is None:
+        synth = _m38_fallback_rows(stems)
+        _m38_write_rows(M38_OUTPUT, synth)
+        v_synth = _m38_safe_validate(M38_OUTPUT, stems)
+        status["fallback_attempts"].append(
+            {"source": "synthetic_node_per_dataset", "all_gates_pass": bool(v_synth["all_gates_pass"]),
+             "failed_checks": [k for k, x in v_synth.get("checks", {}).items() if not x]})
+        if v_synth["all_gates_pass"]:
+            fallback_rows, fb_source = synth, "synthetic_node_per_dataset"
+            print("  emergency fallback = synthetic one-node-per-dataset (validated)")
+        else:
+            # No validated fallback could be produced -> return normally, NO READY label, NO raise.
+            status["fallback_source"] = None
+            status["validation"] = v_synth
+            status["submission_sha256"] = _m38_sha256_file(M38_OUTPUT) if Path(M38_OUTPUT).exists() else None
+            status["label"] = "M38_NO_VALID_SUBMISSION"
+            status["mode"] = "NO_VALID_SUBMISSION"
+            status["reasons"].append("no validated fallback could be created before inference")
+            _m38_write_status(status)
+            print(f"  synthetic fallback FAILED validation "
+                  f"{status['fallback_attempts'][-1]['failed_checks']}; cannot guarantee a valid submission")
+            print("M38_NO_VALID_SUBMISSION")
+            return status
+
+    status["fallback_source"] = fb_source
+    print(f"  VERIFIED emergency fallback in place ({fb_source}); every dataset covered; inference may start")
 
     # From here on NOTHING may escape: a valid submission.csv already exists.
     successful, failed = [], []
@@ -474,24 +580,40 @@ def run_m38_hidden_resilient_reference_submit(engine=None, sample_submission_pat
         for ds in stems:
             rec = {"started": False, "completed": False, "returncode": None, "runtime": None,
                    "checkpoint_path": None, "checkpoint_sha256": None, "error_type": None,
-                   "stderr_tail": None, "fallback_used": True}
-            # (3) SOFT deadline: stop LAUNCHING new inference near 95 min, reserving 15 min
-            if _elapsed() > M38_SOFT_INFERENCE_DEADLINE_S:
+                   "timeout_seconds": None, "stdout_tail": None, "stderr_tail": None, "fallback_used": True}
+            # (1) BOUNDED launch. Compute the remaining inference budget before the soft
+            # deadline; do NOT launch when <= 60s remain (reserve time for postprocess+write).
+            remaining = M38_SOFT_INFERENCE_DEADLINE_S - _elapsed()
+            if remaining <= 60:
                 rec["error_type"] = "soft_deadline_skip"
                 status["per_dataset"][ds] = rec
                 failed.append(ds)
-                print(f"  [{ds}] SKIPPED (soft {M38_SOFT_INFERENCE_DEADLINE_S//60}min inference deadline; fallback kept)")
+                print(f"  [{ds}] SKIPPED (soft {M38_SOFT_INFERENCE_DEADLINE_S//60}min inference deadline; "
+                      f"{remaining:.0f}s remaining; fallback kept)")
                 continue
+            # BOUNDED per-dataset subprocess timeout: never unbounded, never larger than the
+            # remaining budget nor the hard per-dataset cap.
+            timeout_seconds = max(60, min(M38_PER_DATASET_MAX_S, remaining))
             rec["started"] = True
+            rec["timeout_seconds"] = timeout_seconds
             try:
-                res = eng.infer_one(ds)
-                rec["returncode"] = res["returncode"]
-                rec["runtime"] = res["runtime"]
+                res = eng.infer_one(ds, timeout_seconds=timeout_seconds)
+                rec["returncode"] = res.get("returncode")
+                rec["runtime"] = res.get("runtime")
+                rec["timeout_seconds"] = res.get("timeout_seconds", timeout_seconds)
+                rec["stdout_tail"] = (res.get("stdout") or "")[-2000:]
                 rec["stderr_tail"] = (res.get("stderr") or "")[-2000:]
-                if res["returncode"] != 0 or not res.get("geff_src"):
-                    rec["error_type"] = "predict_returncode" if res["returncode"] != 0 else "no_geff_output"
+                if res.get("timed_out"):
+                    # (1) subprocess.TimeoutExpired handled per dataset: child already killed,
+                    # partial stdout/stderr captured; keep the fallback for this dataset.
+                    rec["error_type"] = "TimeoutExpired"
                     failed.append(ds)
-                    print(f"  [{ds}] inference FAILED rc={res['returncode']} (kept fallback)")
+                    print(f"  [{ds}] inference TIMEOUT after {rec['timeout_seconds']:.0f}s "
+                          f"(child killed; kept fallback)")
+                elif res.get("returncode") != 0 or not res.get("geff_src"):
+                    rec["error_type"] = "predict_returncode" if res.get("returncode") != 0 else "no_geff_output"
+                    failed.append(ds)
+                    print(f"  [{ds}] inference FAILED rc={res.get('returncode')} (kept fallback)")
                 else:
                     ck_path, ck_sha = eng.checkpoint(ds, res["geff_src"])
                     rec["checkpoint_path"] = ck_path
@@ -534,30 +656,60 @@ def run_m38_hidden_resilient_reference_submit(engine=None, sample_submission_pat
         traceback.print_exc()
         _m38_write_rows(M38_OUTPUT, fallback_rows)
 
-    # --- validate + label (never raises) ---
-    try:
-        val = _m38_validate_submission(M38_OUTPUT, stems)
-    except Exception as exc:                                     # noqa: BLE001
-        val = {"checks": {}, "counts": {}, "all_gates_pass": False,
-               "public_fingerprint_match_informational": False}
-        status["reasons"].append(f"validation error: {exc}")
-    status["submission_sha256"] = _m38_sha256_file(M38_OUTPUT) if Path(M38_OUTPUT).exists() else None
-    status["validation"] = val
-    pub = _m38_public_exactness_gate(status["submission_sha256"], val.get("counts", {}))
-    status["public_exactness_informational"] = pub
-
+    # --- validate; restore synthetic if invalid; then label (never raises) ---
     n_ok, n_all = len(successful), len(stems or [])
-    if status.get("postprocess_ok") and n_ok == n_all and n_all > 0:
+    val = _m38_safe_validate(M38_OUTPUT, stems)
+
+    if not (val.get("all_gates_pass") and Path(M38_OUTPUT).exists()):
+        # (2) The merged/postprocessed output failed validation: overwrite with a synthetic
+        # one-node-per-dataset fallback and validate AGAIN. A READY label prints only if that
+        # revalidation passes. If even the synthetic fallback fails, print M38_NO_VALID_SUBMISSION,
+        # return normally, NO READY label, NO raise.
+        failed_now = [k for k, v in val.get("checks", {}).items() if not v] or ["missing_or_unreadable"]
+        status["reasons"].append(f"merged output failed validation {failed_now}; restoring synthetic fallback")
+        print(f"  merged output failed validation {failed_now}; restoring synthetic one-node-per-dataset fallback")
+        _m38_write_rows(M38_OUTPUT, _m38_fallback_rows(stems))
+        val = _m38_safe_validate(M38_OUTPUT, stems)
+        if not (val.get("all_gates_pass") and Path(M38_OUTPUT).exists()):
+            status["validation"] = val
+            status["submission_sha256"] = _m38_sha256_file(M38_OUTPUT) if Path(M38_OUTPUT).exists() else None
+            status["label"] = "M38_NO_VALID_SUBMISSION"
+            status["mode"] = "NO_VALID_SUBMISSION"
+            status["reasons"].append("synthetic fallback ALSO failed validation")
+            _m38_write_status(status)
+            print("--- M38 RESULT ---")
+            print(f"  successful: {n_ok}/{n_all}  failed: {failed}")
+            print(f"  validation all_gates_pass: False (synthetic fallback ALSO failed)")
+            print(f"  status json: {M38_STATUS_JSON}   output: {M38_OUTPUT}")
+            print("M38_NO_VALID_SUBMISSION")
+            return status
+        # synthetic restore succeeded -> this is a FALLBACK submission
+        label = "M38_FALLBACK_SUBMIT_READY"
+    elif status.get("postprocess_ok") and n_ok == n_all and n_all > 0:
         label = "M38_FULL_SUBMIT_READY"
     elif status.get("postprocess_ok") and n_ok >= 1:
         label = "M38_PARTIAL_SUBMIT_READY"
     else:
         label = "M38_FALLBACK_SUBMIT_READY"
+
+    status["validation"] = val
+    status["submission_sha256"] = _m38_sha256_file(M38_OUTPUT) if Path(M38_OUTPUT).exists() else None
     status["label"] = label
     status["mode"] = {"M38_FULL_SUBMIT_READY": "FULL", "M38_PARTIAL_SUBMIT_READY": "PARTIAL",
                       "M38_FALLBACK_SUBMIT_READY": "FALLBACK"}[label]
 
-    valid_and_present = bool(val.get("all_gates_pass") and Path(M38_OUTPUT).exists())
+    pub = _m38_public_exactness_gate(status["submission_sha256"], val.get("counts", {}))
+    status["public_exactness_informational"] = pub
+
+    # (4) PUBLIC dev-run exactness gate. Dynamically detect a public run from the reference
+    # evidence CSV's DATASET SET (no public stems hardcoded). On a public dev run a FULL
+    # output MUST byte-reproduce the reference SHA and fingerprint; otherwise retain
+    # submission.csv, emit M38_PUBLIC_EXACTNESS_FAILED, print NO READY label, return normally.
+    public_dev_run, ref_stems = _m38_is_public_dev_run(stems)
+    status["public_dev_run"] = bool(public_dev_run)
+    status["public_reference_stems_count"] = (len(ref_stems) if ref_stems else None)
+    public_exact = bool(pub["public_sha_exact"] and pub["public_fingerprint_exact"])
+
     _m38_write_status(status)
 
     c = val.get("counts", {})
@@ -567,17 +719,26 @@ def run_m38_hidden_resilient_reference_submit(engine=None, sample_submission_pat
     print(f"  datasets ({c.get('n_datasets')}): {c.get('datasets')}")
     print(f"  submission sha256: {status['submission_sha256']}")
     print(f"  validation all_gates_pass: {val.get('all_gates_pass')}")
-    print(f"  [informational, NOT a hidden gate] public exact reproduction: {pub['public_sha_exact']} "
+    print(f"  public_dev_run (dynamic, via reference evidence CSV dataset set): {public_dev_run}")
+    kind = "GATE" if public_dev_run else "informational, NOT a hidden gate"
+    print(f"  [{kind}] public exact reproduction: {pub['public_sha_exact']} "
           f"(sha) / {pub['public_fingerprint_exact']} (fingerprint)")
     print(f"  total runtime: {_elapsed()/60.0:.2f} min (soft target < {M38_SOFT_TOTAL_TARGET_S//60} min)")
     print(f"  status json: {M38_STATUS_JSON}   output: {M38_OUTPUT}")
-    if valid_and_present:
-        print(label)
-    else:
-        # even here we do NOT raise - the fallback submission remains on disk
-        print(f"  WARNING: validation gates not all passed ({[k for k,v in val.get('checks',{}).items() if not v]}); "
-              f"submission.csv retained")
-        print(label)
+
+    if public_dev_run and status["mode"] == "FULL" and not public_exact:
+        # (4) Public dev gate FAILED: submission.csv retained, NO READY label, return normally, NO raise.
+        status["public_exactness_gate_failed"] = True
+        status["reasons"].append("public dev run: FULL output did not byte-reproduce reference SHA/fingerprint")
+        _m38_write_status(status)
+        print("  PUBLIC DEV RUN: FULL output did NOT byte-reproduce the reference SHA/fingerprint; "
+              "submission.csv retained")
+        print("M38_PUBLIC_EXACTNESS_FAILED")
+        return status
+
+    # A READY label prints only here: submission.csv exists AND validation.all_gates_pass True
+    # (and, on a public dev FULL run, exact reproduction verified above).
+    print(label)
     return status
 
 
@@ -597,29 +758,43 @@ def _m38_write_status(status):
 class _M38FakeEngine:
     """Simulates the Kaggle engine deterministically for CPU tests."""
 
-    def __init__(self, stems, fail=(), missing_checkpoint=(), pp_raises=False, per_infer_seconds=1.0):
+    def __init__(self, stems, fail=(), missing_checkpoint=(), pp_raises=False,
+                 per_infer_seconds=1.0, timeout=(), bad_postprocess=False, keep_sorted=True):
         self.stems = stems
         self.fail = set(fail)
         self.missing_checkpoint = set(missing_checkpoint)
         self.pp_raises = pp_raises
         self.per_infer_seconds = per_infer_seconds
+        self.timeout = set(timeout)
+        self.bad_postprocess = bad_postprocess
+        self.keep_sorted = keep_sorted
+        self.last_timeouts = {}                 # ds -> timeout_seconds actually received
         self.tmp = None
 
     def discover(self):
-        return "/fake/test", sorted(self.stems)
+        return "/fake/test", (sorted(self.stems) if self.keep_sorted else list(self.stems))
 
     def prepare(self):
         import tempfile
         self.tmp = tempfile.mkdtemp(prefix="m38fake_")
 
-    def infer_one(self, ds):
+    def infer_one(self, ds, timeout_seconds):
+        # every launch must receive a finite, positive, bounded timeout
+        self.last_timeouts[ds] = timeout_seconds
+        assert timeout_seconds is not None and timeout_seconds != float("inf") and timeout_seconds > 0, \
+            f"infer_one got a non-finite timeout: {timeout_seconds!r}"
+        if ds in self.timeout:
+            return {"returncode": None, "runtime": self.per_infer_seconds, "timed_out": True,
+                    "timeout_seconds": timeout_seconds, "stdout": f"partial-{ds}",
+                    "stderr": f"timeout for {ds}", "geff_src": None}
         if ds in self.fail:
-            return {"returncode": 1, "runtime": self.per_infer_seconds, "stdout": "",
+            return {"returncode": 1, "runtime": self.per_infer_seconds, "timed_out": False,
+                    "timeout_seconds": timeout_seconds, "stdout": "",
                     "stderr": f"boom for {ds}", "geff_src": None}
         p = Path(self.tmp) / f"{ds}.geff"; p.mkdir(parents=True, exist_ok=True)
         (p / "data").write_text(f"geff:{ds}")
-        return {"returncode": 0, "runtime": self.per_infer_seconds, "stdout": "ok",
-                "stderr": "", "geff_src": str(p)}
+        return {"returncode": 0, "runtime": self.per_infer_seconds, "timed_out": False,
+                "timeout_seconds": timeout_seconds, "stdout": "ok", "stderr": "", "geff_src": str(p)}
 
     def checkpoint(self, ds, geff_src):
         if ds in self.missing_checkpoint:
@@ -631,15 +806,18 @@ class _M38FakeEngine:
     def postprocess(self, successful):
         if self.pp_raises:
             raise M38Error("simulated postprocess failure")
-        # emit a valid postprocess submission for the successful datasets (2 nodes + 1 edge each)
+        # emit a postprocess submission for the successful datasets (2 nodes + 1 edge each).
+        # When bad_postprocess: the edge references NON-EXISTENT endpoints so the merged output
+        # fails validation (edge_endpoints_exist_in_dataset), forcing a synthetic restore.
         rows = []
         rid = 0
         for ds in successful:
             for nid, t in ((0, 0), (1, 1)):
                 rows.append({"id": rid, "dataset": ds, "row_type": "node", "node_id": nid,
                              "t": t, "z": 0.0, "y": 0.0, "x": 0.0, "source_id": -1, "target_id": -1}); rid += 1
+            s_id, t_id = (7, 8) if self.bad_postprocess else (0, 1)
             rows.append({"id": rid, "dataset": ds, "row_type": "edge", "node_id": -1,
-                         "t": -1, "z": 0.0, "y": 0.0, "x": 0.0, "source_id": 0, "target_id": 1}); rid += 1
+                         "t": -1, "z": 0.0, "y": 0.0, "x": 0.0, "source_id": s_id, "target_id": t_id}); rid += 1
         out = Path(self.tmp) / "pp_submission.csv"
         _m38_write_rows(out, rows)
         return str(out)
@@ -687,9 +865,9 @@ def run_m38_selftests():
         state, now = _m38_clock()
 
         class _SlowEngine(_M38FakeEngine):
-            def infer_one(self, ds):
+            def infer_one(self, ds, timeout_seconds):
                 state["t"] += 40 * 60          # each dataset advances the clock 40 min
-                return super().infer_one(ds)
+                return super().infer_one(ds, timeout_seconds)
         st = run_m38_hidden_resilient_reference_submit(engine=_SlowEngine(hidden), now=now)
         assert any(r.get("error_type") == "soft_deadline_skip" for r in st["per_dataset"].values())
         assert st["validation"]["all_gates_pass"] and Path(_redir_output()).exists()
@@ -736,7 +914,112 @@ def run_m38_selftests():
     vk = _m38_validate_submission_keys()
     assert not any("public" in k for k in vk)
 
-    print("M38 self-tests passed (9/9) - CPU only, resilient, no GPU inference, no submission")
+    # ---- Additional defect-specific tests (10-17) ----
+
+    # 10) Defect 1: every subprocess launch receives a FINITE, positive, bounded timeout.
+    with tempfile.TemporaryDirectory() as w:
+        _redirect_outputs(w)
+        eng = _M38FakeEngine(hidden)
+        st = run_m38_hidden_resilient_reference_submit(engine=eng)
+        assert set(eng.last_timeouts) == set(hidden)
+        for ds, to in eng.last_timeouts.items():
+            assert to is not None and to != float("inf") and 0 < to <= M38_PER_DATASET_MAX_S, (ds, to)
+        assert st["label"] == "M38_FULL_SUBMIT_READY"
+
+    # 11) Defect 1: TimeoutExpired on ONE dataset -> PARTIAL, no exception, recorded as TimeoutExpired.
+    with tempfile.TemporaryDirectory() as w:
+        _redirect_outputs(w)
+        st, out = _m38_capture_run(engine=_M38FakeEngine(hidden, timeout={"hidden_c"}))
+        assert st["exception"] is None
+        assert st["label"] == "M38_PARTIAL_SUBMIT_READY" and "hidden_c" in st["failed"]
+        assert st["per_dataset"]["hidden_c"]["error_type"] == "TimeoutExpired"
+        assert st["per_dataset"]["hidden_c"]["timeout_seconds"] and st["per_dataset"]["hidden_c"]["stderr_tail"]
+        assert st["validation"]["all_gates_pass"]
+
+    # 12) Defect 3: a schema-matching but SEMANTICALLY INVALID sample_submission is rejected
+    #     by the pre-inference validator and replaced with the synthetic fallback.
+    with tempfile.TemporaryDirectory() as w:
+        _redirect_outputs(w)
+        bad_sample = str(Path(w) / "bad_sample.csv")
+        bad_rows = _m38_fallback_rows(hidden)                       # one node per dataset ...
+        bad_rows.append({"id": len(bad_rows), "dataset": hidden[0], "row_type": "edge",
+                         "node_id": -1, "t": -1, "z": 0.0, "y": 0.0, "x": 0.0,
+                         "source_id": 99, "target_id": 98})         # ... plus a dangling edge
+        _m38_write_rows(bad_sample, _m38_reassign_ids(bad_rows))
+        st = run_m38_hidden_resilient_reference_submit(
+            engine=_M38FakeEngine(hidden, fail=set(hidden)),        # force fallback to remain
+            sample_submission_path=bad_sample)
+        srcs = {a["source"]: a for a in st["fallback_attempts"]}
+        assert srcs["sample_submission"]["all_gates_pass"] is False
+        assert st["fallback_source"] == "synthetic_node_per_dataset"
+        assert st["validation"]["all_gates_pass"]
+
+    # 13) Defect 3/2: no validated fallback possible (duplicate discovered stems make the
+    #     synthetic fallback invalid) -> M38_NO_VALID_SUBMISSION, NO READY label, no exception.
+    with tempfile.TemporaryDirectory() as w:
+        _redirect_outputs(w)
+        dup = _M38FakeEngine(["dupe", "dupe"], keep_sorted=False)
+        st, out = _m38_capture_run(engine=dup)
+        assert st["label"] == "M38_NO_VALID_SUBMISSION" and st["exception"] is None
+        assert "M38_NO_VALID_SUBMISSION" in out
+        assert "READY" not in out
+
+    # 14) Defect 2: a merged output that fails validation is replaced by a validated synthetic
+    #     fallback (READY only after revalidation) -> FALLBACK, restore reason recorded.
+    with tempfile.TemporaryDirectory() as w:
+        _redirect_outputs(w)
+        st, out = _m38_capture_run(engine=_M38FakeEngine(hidden, bad_postprocess=True))
+        assert st["label"] == "M38_FALLBACK_SUBMIT_READY"
+        assert st["validation"]["all_gates_pass"]
+        assert any("restoring synthetic fallback" in r for r in st["reasons"])
+        assert "M38_FALLBACK_SUBMIT_READY" in out
+
+    # 15) Defect 4: public-dev-run detection is DYNAMIC via the reference evidence CSV's
+    #     dataset set (no hardcoded stems).
+    with tempfile.TemporaryDirectory() as w:
+        ref_csv = str(Path(w) / "evidence.csv")
+        ref_stems = ["ref_x", "ref_y", "ref_z"]
+        _m38_write_rows(ref_csv, _m38_fallback_rows(ref_stems))
+        got_public, got = _m38_is_public_dev_run(ref_stems, reference_csv=ref_csv)
+        assert got_public is True and got == sorted(ref_stems)
+        assert _m38_is_public_dev_run(["other"], reference_csv=ref_csv)[0] is False
+        assert _m38_is_public_dev_run(ref_stems, reference_csv=str(Path(w) / "absent.csv"))[0] is False
+
+    # 16) Defect 4: on a detected public dev run whose FULL output does NOT byte-reproduce the
+    #     reference SHA/fingerprint -> M38_PUBLIC_EXACTNESS_FAILED, NO READY label, no exception.
+    with tempfile.TemporaryDirectory() as w:
+        _redirect_outputs(w)
+        ref_csv = str(Path(w) / "evidence.csv")
+        ref_stems = ["pub_a", "pub_b"]
+        _m38_write_rows(ref_csv, _m38_fallback_rows(ref_stems))
+        _prev_ref = M38_REFERENCE_EVIDENCE_CSV
+        _redirect_reference(ref_csv)
+        try:
+            st, out = _m38_capture_run(engine=_M38FakeEngine(ref_stems))
+        finally:
+            _redirect_reference(_prev_ref)
+        assert st["public_dev_run"] is True and st["mode"] == "FULL"
+        assert st.get("public_exactness_gate_failed") is True
+        assert "M38_PUBLIC_EXACTNESS_FAILED" in out and "READY" not in out
+        assert st["exception"] is None and Path(_redir_output()).exists()
+
+    # 17) Defect 4: arbitrary HIDDEN stems (!= reference set) do NOT activate the public gate;
+    #     the run labels normally (READY).
+    with tempfile.TemporaryDirectory() as w:
+        _redirect_outputs(w)
+        ref_csv = str(Path(w) / "evidence.csv")
+        _m38_write_rows(ref_csv, _m38_fallback_rows(["pub_a", "pub_b"]))   # different from hidden
+        _prev_ref = M38_REFERENCE_EVIDENCE_CSV
+        _redirect_reference(ref_csv)
+        try:
+            st, out = _m38_capture_run(engine=_M38FakeEngine(hidden))
+        finally:
+            _redirect_reference(_prev_ref)
+        assert st["public_dev_run"] is False
+        assert st.get("public_exactness_gate_failed") is not True
+        assert st["label"] == "M38_FULL_SUBMIT_READY" and "M38_FULL_SUBMIT_READY" in out
+
+    print("M38 self-tests passed (17/17) - CPU only, resilient, no GPU inference, no submission")
 
 
 # small test utilities (redirect the fixed output paths into a temp dir)
@@ -753,6 +1036,21 @@ def _redirect_outputs(root):
 
 def _redir_output():
     return M38_OUTPUT
+
+
+def _redirect_reference(path):
+    global M38_REFERENCE_EVIDENCE_CSV
+    M38_REFERENCE_EVIDENCE_CSV = path
+
+
+def _m38_capture_run(**kwargs):
+    """Run the orchestrator capturing stdout so tests can assert on the printed labels."""
+    import io
+    import contextlib
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        st = run_m38_hidden_resilient_reference_submit(**kwargs)
+    return st, buf.getvalue()
 
 
 def _m38_validate_submission_keys():
