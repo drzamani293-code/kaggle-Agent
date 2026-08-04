@@ -1,0 +1,78 @@
+python 3.11.15   cwd /home/user/kaggle-Agent/PHASE2B_GLOBAL_DEFECT
+
+=== 1. Boolean identities, exhaustive ===
+[PASS] D1 XOR/OR form exact on all 64 assignments
+[PASS] D2 ANF form exact on all 64 assignments
+[PASS] D3 Delta table matches ANF on all 16 assignments
+[PASS] Delta table has 16 rows
+[PASS] D4 Delta(u,v,0,g) = g AND NOT u
+[PASS] D4 Delta(u,v,e,0) = e AND NOT v
+[PASS] a black centre cell with no defect masks the defect on its right
+
+=== 2. identities on the real single-cell orbit ===
+[PASS] defect step equation exact, p=1  -- 24400 cells, 0 mismatches
+[PASS] defect step equation exact, p=3  -- 24400 cells, 0 mismatches
+[PASS] defect step equation exact, p=7  -- 24400 cells, 0 mismatches
+[PASS] defect step equation exact, p=16  -- 24400 cells, 0 mismatches
+[PASS] defect step equation exact, p=27  -- 24400 cells, 0 mismatches
+
+=== 3. zero-wall lemmas where their hypotheses occur ===
+[PASS] W1 wall relation, p=1  -- hypothesis met 2018 times, 0 violations
+[PASS] W4 left slaving, p=1  -- hypothesis met 1020 times, 0 violations
+[PASS] W1 wall relation, p=3  -- hypothesis met 2015 times, 0 violations
+[PASS] W4 left slaving, p=3  -- hypothesis met 1038 times, 0 violations
+[PASS] W1 wall relation, p=7  -- hypothesis met 2025 times, 0 violations
+[PASS] W4 left slaving, p=7  -- hypothesis met 1021 times, 0 violations
+[PASS] W1 wall relation, p=16  -- hypothesis met 1984 times, 0 violations
+[PASS] W4 left slaving, p=16  -- hypothesis met 983 times, 0 violations
+[PASS] W1 wall relation, p=27  -- hypothesis met 1999 times, 0 violations
+[PASS] W4 left slaving, p=27  -- hypothesis met 1016 times, 0 violations
+[PASS] W3 ones-run triangle, p=3  -- 343 windows, 1029 cells, 0 violations
+[PASS] W3 ones-run triangle, p=7  -- 315 windows, 1269 cells, 0 violations
+[PASS] W3 ones-run triangle, p=16  -- 304 windows, 1231 cells, 0 violations
+[PASS] W3 ones-run triangle, p=27  -- 331 windows, 1362 cells, 0 violations
+[PASS] W3 hypothesis is vacuous at p=1 (documented negative result)  -- windows found: 0
+
+=== 4. support-edge theorem D7 ===
+[PASS] D7 edges exact for p=1  -- 401 rows
+[PASS] D7 edges exact for p=2  -- 401 rows
+[PASS] D7 edges exact for p=7  -- 401 rows
+[PASS] D7 edges exact for p=27  -- 401 rows
+[PASS] D7 edges exact for p=64  -- 401 rows
+[PASS] D7 edges exact for p=1324  -- 401 rows
+[PASS] defect field is never empty (implied by D7)  -- leftmost/rightmost are exactly -+(t+p)
+
+=== 5. edge-aligned theorems ===
+[PASS] EA1 one-sided update exact  -- 98047 cells, 0 mismatches
+[PASS] EA3 centre column equals the diagonal w_t(t)  -- t <= 800
+[PASS] EA2 prefix K=8 is eventually periodic  -- preperiod 4, period 4
+[PASS] EA2 prefix K=32 is eventually periodic  -- preperiod 36, period 8
+[PASS] EA2 prefix K=128 is eventually periodic  -- preperiod 171, period 8
+[PASS] EA2 prefix K=512 is eventually periodic  -- preperiod 654, period 16
+[PASS] G5 observation: T(K) > K on every K measured  -- []
+
+=== 6. wall automaton ===
+[PASS] automaton r=1 reproduces published counts  -- 32 states, 16 invariant (expected 32, 16)
+[PASS] automaton r=1 invariant set is NON-empty (no impossibility)
+[PASS] automaton r=2 reproduces published counts  -- 512 states, 128 invariant (expected 512, 128)
+[PASS] automaton r=2 invariant set is NON-empty (no impossibility)
+[PASS] automaton r=3 reproduces published counts  -- 8192 states, 992 invariant (expected 8192, 992)
+[PASS] automaton r=3 invariant set is NON-empty (no impossibility)
+[PASS] automaton r=4 reproduces published counts  -- 131072 states, 7616 invariant (expected 131072, 7616)
+[PASS] automaton r=4 invariant set is NON-empty (no impossibility)
+
+=== 7. stored results match the documents ===
+[PASS] identities recorded as exact
+[PASS] support-edge theorem holds for every lag in the sweep  -- 83 lags
+[PASS] 83 lags swept  -- 83
+[PASS] longest real wall over all lags is 18 at p=59  -- 18 at p=59
+[PASS] every orbit lemma check was exact  -- 20 checks
+[PASS] automaton invariant sets non-empty for every radius computed  -- radii [1, 2, 3, 4, 5]
+[PASS] automaton r=5 recorded  -- 59136
+[PASS] EA1 exact in the stored run
+[PASS] EA3 exact in the stored run
+[PASS] periods observed are the doubling hierarchy  -- [1, 2, 4, 8, 16]
+[PASS] mean T(K)/K > 1 for K>=64  -- 1.291
+
+======================================================================
+60 passed, 0 FAILED   (16.9 s)

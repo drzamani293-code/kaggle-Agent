@@ -1,0 +1,89 @@
+
+=== 1. exhaustive Boolean verification ===
+  step identity over all 64 assignments: XOR/OR=True  ANF=True
+  Delta ANF matches truth table (16 assignments): True
+  wall reduction Delta(u,v,0,g) = g AND NOT u: True
+
+=== 2. identities re-checked on the real orbit ===
+  20 checks, all exact: True
+    W1_p1      hypothesis met   2018 times, violations 0
+    W1_p16     hypothesis met   1984 times, violations 0
+    W1_p27     hypothesis met   1999 times, violations 0
+    W1_p3      hypothesis met   2015 times, violations 0
+    W1_p7      hypothesis met   2025 times, violations 0
+    W3_p1      hypothesis met      0 times, violations 0
+    W3_p16     hypothesis met   1231 times, violations 0
+    W3_p27     hypothesis met   1362 times, violations 0
+    W3_p3      hypothesis met   1029 times, violations 0
+    W3_p7      hypothesis met   1269 times, violations 0
+
+=== 3. defect geometry over 83 lags ===
+  support-edge defect theorem holds for every lag: True
+     p   meandens   wallfrac     runs/row  cross/row
+     1    0.50358    0.56146      375.468      0.439
+     2    0.50364    0.45515      375.930      0.545
+     7    0.49966    0.57475      378.392      0.425
+    16    0.49219    0.48173      374.259      0.518
+    27    0.49787    0.46512      386.781      0.535
+    64    0.49649    0.47176      404.857      0.528
+  1024    0.49992    0.48505      888.505      0.515
+  1324    0.49998    0.50498     1036.704      0.495
+  2750    0.50097    0.51827     1754.794      0.482
+
+=== 4. wall runs in the real orbit ===
+     p  n_walls    longest         mean
+     1     7472         15        2.001
+     2     7436         14        2.025
+     7     7505         11        1.999
+    16     7580         12        1.977
+    27     7471         14        2.006
+    64     7521         18        2.018
+  1024     7505         16        1.990
+  1324     7553         12        1.993
+  2750     7554         15        1.978
+  longest wall over all lags: 18 (at p=59)
+
+=== 5. zero-wall automaton (exhaustive) ===
+  r=1  wall states=       32  maximal invariant=      16 (0.5000)  empty=False  0.0s
+  r=2  wall states=      512  maximal invariant=     128 (0.2500)  empty=False  0.0s
+  r=3  wall states=     8192  maximal invariant=     992 (0.1211)  empty=False  0.6s
+  r=4  wall states=   131072  maximal invariant=    7616 (0.0581)  empty=False  11.8s
+  r=5  wall states=  2097152  maximal invariant=   59136 (0.0282)  empty=False  245.3s
+
+=== 6. observed wall states vs locally admissible ===
+  r=1  admissible=     32  invariant=     16  observed=     32  observed&invariant=     16  invariant-not-observed=      0
+  r=2  admissible=    512  invariant=    128  observed=    512  observed&invariant=    128  invariant-not-observed=      0
+  r=3  admissible=   8192  invariant=    992  observed=   8025  observed&invariant=    977  invariant-not-observed=     15
+  r=4  admissible= 131072  invariant=   7616  observed=  31080  observed&invariant=   1763  invariant-not-observed=   5853
+
+=== 7. edge-aligned coordinates ===
+  one-sided update w_{t+1}(k) = w_t(k-2) XOR (w_t(k-1) OR w_t(k)): True
+  centre column equals the diagonal w_t(t): True
+       K  preperiod   period   T(K)/K
+       1          1        1    1.000
+       2          2        1    1.000
+       3          2        2    0.667
+       4          2        2    0.500
+       6          3        2    0.500
+       8          4        4    0.500
+      12          8        4    0.667
+      16         16        4    1.000
+      24         27        4    1.125
+      32         36        8    1.125
+      48         71        8    1.479
+      64         91        8    1.422
+      96        130        8    1.354
+     128        171        8    1.336
+     192        248        8    1.292
+     256        319        8    1.246
+     320        404        8    1.262
+     384        487        8    1.268
+     448        549       16    1.225
+     512        654       16    1.277
+     640        807       16    1.261
+     768        978       16    1.273
+    1024       1299       16    1.269
+    1280       1666       16    1.302
+  mean T(K)/K for K>=64: 1.291   periods observed: [1, 2, 4, 8, 16]
+
+wrote results/phase2b_results.json  (331.8 s)
