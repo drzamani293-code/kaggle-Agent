@@ -1,0 +1,7 @@
+file            : phase1_results/center_column_1000001.txt
+bits            : 1000001  (t = 0..1000000)
+ones / zeros    : 500768 / 499233
+first 32 bits   : 11011100110001011001001110101110
+last 32 bits    : 11111100110010000011011011111110
+sha256(file)    : 0bb02e4ed6c3d80bd832eed0b6991cc99f6de01a5f32fa795281d3efb2e9104e
+generation time : 333.6 s

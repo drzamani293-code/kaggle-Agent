@@ -1,0 +1,15 @@
+sequence file      : phase1_results/center_column_1000001.txt
+sha256(file)       : 0bb02e4ed6c3d80bd832eed0b6991cc99f6de01a5f32fa795281d3efb2e9104e
+length N           : 1000001 bits (t = 0..1000000)
+ones / zeros       : 500768 / 499233
+
+   n  A rolling-int B numpy-unique   C string-set      agree  ceiling N-n+1
+  20         644259         644259         644259        YES         999982   (2.2 s)
+  24         970865         970865         970865        YES         999978   (1.9 s)
+  26         992634         992634         992634        YES         999976   (1.6 s)
+  28         998140         998140         998140        YES         999974   (1.5 s)
+
+Lemma A  =>  T + p >= 998140   (witness length n = 28)
+ceiling of this method at N = 1000001 is 999974
+
+RESULT: all methods agree

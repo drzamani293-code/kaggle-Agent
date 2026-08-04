@@ -1,0 +1,56 @@
+generating 1000001 center bits ...
+factor counts ...
+  p_obs(20) = 644259
+  p_obs(24) = 970865
+  p_obs(26) = 992634
+  p_obs(28) = 998140
+residue tests ...
+period scan ...
+{
+  "N": 1000001,
+  "generation_sec": 346.7,
+  "split": 200001,
+  "prefix_consistent_with_200001_run": true,
+  "global_frequency": {
+    "N": 1000001,
+    "ones": 500768,
+    "zeros": 499233,
+    "freq_one": 0.5007674992325007,
+    "excess_ones": 1535,
+    "z_fair_coin": 1.5349992325005755
+  },
+  "missing_factor_retest": {
+    "word": "10000010011",
+    "occurrences_in_full_sequence": 458,
+    "note": "absent from the first 20001 bits only; a sampling artefact"
+  },
+  "factor_counts": {
+    "20": 644259,
+    "24": 970865,
+    "26": 992634,
+    "28": 998140
+  },
+  "rigorous_T_plus_p_lower_bound": {
+    "value": 998140,
+    "witness_n": 28,
+    "argument": "an eventually periodic word with preperiod T and period p has at most T + p distinct factors of any fixed length",
+    "ceiling_from_this_N": 999974
+  },
+  "period_scan": {
+    "max_period": 20000,
+    "min_last_mismatch_over_p": 979998,
+    "argmin_p": 19999,
+    "periods_with_no_mismatch_in_window": [],
+    "sec": 9.9
+  }
+}
+
+mod 3, discovery sample t < 200001:
+  r=0 n=66667 freq=0.496228 z=-1.948 p=0.0514
+  r=1 n=66667 freq=0.506412 z=+3.311 p=0.0009
+  r=2 n=66667 freq=0.498448 z=-0.802 p=0.4227
+mod 3, FRESH sample t >= 200001:
+  r=0 n=266667 freq=0.501281 z=+1.323 p=0.1860
+  r=1 n=266667 freq=0.501363 z=+1.408 p=0.1592
+  r=2 n=266666 freq=0.499962 z=-0.039 p=0.9691
+wrote phase1_results/anomaly_followup.json

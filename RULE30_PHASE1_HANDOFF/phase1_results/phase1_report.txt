@@ -1,0 +1,200 @@
+RULE 30 PHASE 1 -- RAW RESULTS
+==============================================================================
+settings: {"steps": 200000, "center_column_length": 200001, "max_period": 10000, "subword_max": 24, "convention": "c(t) = a_t(0), t = 0..steps, c(0) = 1; rule a'(i) = a(i-1) XOR (a(i) OR a(i+1))"}
+environment: {"python": "3.11.15", "platform": "Linux-6.18.5-fc-v18-x86_64-with-glibc2.39", "numpy": "2.4.6", "git_commit": "602d9fc773759972e27690550498d5c7752092d5", "script": "run_phase1.py"}
+timings: {"center_column": 9.17, "berlekamp_massey": 41.3, "period_scan": 1.03, "left_region": 0.28, "total": 56.27}
+
+VERIFICATION: 21/21 passed
+  [PASS] rule_number_bits
+  [PASS] table_equals_xor_or_formula
+  [PASS] left_permutive
+  [PASS] not_right_permutive
+  [PASS] mirror_is_86
+  [PASS] hand_row_t0
+  [PASS] hand_row_t1
+  [PASS] hand_row_t2
+  [PASS] hand_row_t3
+  [PASS] A_vs_B_full_rows
+  [PASS] A_vs_C_full_rows
+  [PASS] B_vs_C_center_column
+  [PASS] mirror86_center_column
+  [PASS] mirror86_rows_reversed
+  [PASS] invariant_left_edge_all_ones
+  [PASS] invariant_right_edge_all_ones
+  [PASS] invariant_subdiagonal_alternates
+  [PASS] boundary_independence
+  [PASS] lemma1_left_reconstruction
+  [PASS] lemma2_leftward_determinism
+  [PASS] lemma3_strip_determinism
+
+EXTERNAL REFERENCE CHECK: match=True
+
+FIRST 256 CENTER BITS (t = 0..255), rows of 64:
+  t=  0  1101110011000101100100111010111001110101011000011001010110101011
+  t= 64  1111000011110001010111000001001011000111000110110110100000001000
+  t=128  1111101110100111000111010111000001100100011001111001111110000001
+  t=192  1111110110010110111000001011000110110001100011101101100101011111
+
+FREQUENCIES
+           N       ones      zeros      freq1     excess          z
+          16          9          7   0.562500          2      0.500
+          64         35         29   0.546875          6      0.750
+         256        135        121   0.527344         14      0.875
+        1024        490        534   0.478516        -44     -1.375
+        4096       2028       2068   0.495117        -40     -0.625
+       16384       8277       8107   0.505188        170      1.328
+       65536      32877      32659   0.501663        218      0.852
+      200001     100073      99928   0.500362        145      0.324
+
+SUBWORD (FACTOR) COMPLEXITY of the observed prefix
+     n     p_obs(n)            2^n          N-n+1
+     1            2              2         200001
+     2            4              4         200000
+     3            8              8         199999
+     4           16             16         199998
+     5           32             32         199997
+     6           64             64         199996
+     7          128            128         199995
+     8          256            256         199994
+     9          512            512         199993
+    10         1024           1024         199992
+    11         2048           2048         199991
+    12         4096           4096         199990
+    13         8192           8192         199989
+    14        16384          16384         199988
+    15        32683          32768         199987
+    16        62377          65536         199986
+    17       102485         131072         199985
+    18       139865         262144         199984
+    19       166240         524288         199983
+    20       181994        1048576         199982
+    21       190645        2097152         199981
+    22       195180        4194304         199980
+    23       197530        8388608         199979
+    24       198744       16777216         199978
+
+BERLEKAMP-MASSEY LINEAR COMPLEXITY over GF(2)
+           N       L(N)        L/N
+          16          9    0.56250
+          64         33    0.51562
+         256        128    0.50000
+        1024        513    0.50098
+        4096       2049    0.50024
+       16384       8192    0.50000
+       65536      32771    0.50005
+      200001     100001    0.50000
+
+BEHAVIOUR AT t = 2^k-1, 2^k, 2^k+1
+    k      2^k-1      c        2^k      c      2^k+1      c
+    0          0      1          1      1          2      0
+    1          1      1          2      0          3      1
+    2          3      1          4      1          5      1
+    3          7      0          8      1          9      1
+    4         15      1         16      1         17      0
+    5         31      0         32      0         33      1
+    6         63      1         64      1         65      1
+    7        127      0        128      1        129      1
+    8        255      1        256      1        257      1
+    9        511      0        512      0        513      1
+   10       1023      0       1024      1       1025      0
+   11       2047      1       2048      0       2049      1
+   12       4095      1       4096      1       4097      0
+   13       8191      1       8192      1       8193      0
+   14      16383      0      16384      0      16385      0
+   15      32767      0      32768      1      32769      0
+   16      65535      1      65536      1      65537      1
+   17     131071      1     131072      0     131073      1
+  family 2^k-1   ones=11/18  two-sided binomial p (fair coin) = 0.4807
+  family 2^k     ones=12/18  two-sided binomial p (fair coin) = 0.2379
+  family 2^k+1   ones=11/18  two-sided binomial p (fair coin) = 0.4807
+
+CANDIDATE PERIODS (first and last mismatch within the window)
+     p first_mismatch  last_mismatch     window_end    slack
+     1              1         199999         199999        0
+     2              0         199997         199998        1
+     3              2         199995         199997        2
+     4              3         199996         199996        0
+     5              1         199995         199995        0
+     6              0         199994         199994        0
+     7              0         199993         199993        0
+     8              3         199989         199992        3
+     9              1         199991         199991        0
+    10              0         199986         199990        4
+    11              0         199989         199989        0
+    12              0         199987         199988        1
+    13              1         199986         199987        1
+    14              0         199985         199986        1
+    15              3         199984         199985        1
+    16              1         199983         199984        1
+    17              0         199977         199983        6
+    18              0         199982         199982        0
+    19              1         199980         199981        1
+    20              0         199978         199980        2
+    21              0         199979         199979        0
+    22              2         199978         199978        0
+    23              4         199976         199977        1
+    24              1         199975         199976        1
+    25              0         199974         199975        1
+    26              1         199973         199974        1
+    27              0         199970         199973        3
+    28              2         199972         199972        0
+    29              3         199964         199971        7
+    30              1         199970         199970        0
+    31              0         199968         199969        1
+    32              0         199966         199968        2
+  over all p <= 10000: min last_mismatch = 189998 (at p = 10000)
+  largest first_mismatch = 11 (at p = 9988)
+  periods with NO mismatch in the window: []
+
+RIGOROUS LOWER BOUNDS ON T + p  (T = preperiod, p = period)
+  {
+    "N": 200001,
+    "factor_bound_T_plus_p_at_least": 198744,
+    "factor_bound_witness_n": 24,
+    "linear_complexity_bound_T_plus_p_at_least": 100001,
+    "combined_T_plus_p_at_least": 198744
+  }
+
+RUN LENGTHS: {"longest_run_of_0": 19, "longest_run_of_1": 21, "run_counts_0": {"1": 25069, "2": 12538, "3": 6195, "4": 3126, "5": 1573, "6": 765, "7": 394, "8": 186, "9": 112, "10": 46, "11": 14, "12": 14}, "run_counts_1": {"1": 25041, "2": 12484, "3": 6323, "4": 3070, "5": 1523, "6": 803, "7": 429, "8": 183, "9": 92, "10": 54, "11": 19, "12": 15}}
+
+BLOCK ENTROPY (first 100000 bits)
+  n= 1  H_n =   1.00000 bits   H_n/n = 1.00000   distinct = 2
+  n= 2  H_n =   1.99999 bits   H_n/n = 1.00000   distinct = 4
+  n= 3  H_n =   2.99999 bits   H_n/n = 1.00000   distinct = 8
+  n= 4  H_n =   3.99997 bits   H_n/n = 0.99999   distinct = 16
+  n= 5  H_n =   4.99983 bits   H_n/n = 0.99997   distinct = 32
+  n= 6  H_n =   5.99952 bits   H_n/n = 0.99992   distinct = 64
+  n= 7  H_n =   6.99896 bits   H_n/n = 0.99985   distinct = 128
+  n= 8  H_n =   7.99812 bits   H_n/n = 0.99977   distinct = 256
+  n= 9  H_n =   8.99624 bits   H_n/n = 0.99958   distinct = 512
+  n=10  H_n =   9.99261 bits   H_n/n = 0.99926   distinct = 1024
+  n=11  H_n =  10.98457 bits   H_n/n = 0.99860   distinct = 2048
+  n=12  H_n =  11.96894 bits   H_n/n = 0.99741   distinct = 4096
+  n=13  H_n =  12.93759 bits   H_n/n = 0.99520   distinct = 8192
+  n=14  H_n =  13.87380 bits   H_n/n = 0.99099   distinct = 16350
+  n=15  H_n =  14.73582 bits   H_n/n = 0.98239   distinct = 31167
+  n=16  H_n =  15.44626 bits   H_n/n = 0.96539   distinct = 51114
+
+AUTOCORRELATION (+-1 sequence)
+  lag   1  corr -0.000920  z   -0.411
+  lag   2  corr +0.000345  z   +0.154
+  lag   3  corr -0.000610  z   -0.273
+  lag   4  corr +0.002725  z   +1.219
+  lag   5  corr +0.001110  z   +0.496
+  lag   6  corr -0.003405  z   -1.523
+  lag   7  corr +0.003150  z   +1.409
+  lag   8  corr +0.002105  z   +0.941
+  lag   9  corr -0.000920  z   -0.411
+  lag  10  corr -0.002735  z   -1.223
+  lag  11  corr +0.001550  z   +0.693
+  lag  12  corr +0.005405  z   +2.417
+  lag  13  corr -0.000570  z   -0.255
+  lag  14  corr +0.000725  z   +0.324
+  lag  15  corr -0.002630  z   -1.176
+  lag  16  corr -0.001375  z   -0.615
+
+RESIDUE-CLASS BIAS (|z| > 3 only)
+  t = 1 mod 3: n=66667 ones=33761 freq=0.506412 z=+3.311
+
+LEFT-REGION SHIFT SYMMETRY (best (tau, sigma))
+  {"steps": 4000, "best_by_slope": {"tau": 16, "sigma": 0, "slope": 0.7675717271302809, "intercept": -9.873692981899875, "min_width": 1529, "max_width": 3010, "widths_sample": [[2000, 1529], [2396, 1826], [2793, 2124], [3190, 2440], [3587, 2740]]}, "minimal_tau_with_wedge": {"tau": 16, "sigma": 0, "slope": 0.7675717271302809, "intercept": -9.873692981899875, "min_width": 1529, "max_width": 3010, "widths_sample": [[2000, 1529], [2396, 1826], [2793, 2124], [3190, 2440], [3587, 2740]]}, "implied_boundary_speed_leftward": 0.23242827286971912, "all": [{"tau": 4, "sigma": 0, "slope": 0.0, "intercept": 29.0, "min_width": 29, "max_width": 29, "widths_sample": [[2000, 29], [2396, 29], [2793, 29], [3190, 29], [3587, 29]]}, {"tau": 8, "sigma": 0, "slope": 0.0, "intercept": 400.0, "min_width": 400, "max_width": 400, "widths_sample": [[2000, 400], [2396, 400], [2793, 400], [3190, 400], [3587, 400]]}, {"tau": 12, "sigma": 0, "slope": 0.0, "intercept": 29.0, "min_width": 29, "max_width": 29, "widths_sample": [[2000, 29], [2396, 29], [2793, 29], [3190, 29], [3587, 29]]}, {"tau": 16, "sigma": 0, "slope": 0.7675717271302809, "intercept": -9.873692981899875, "min_width": 1529, "max_width": 3010, "widths_sample": [[2000, 1529], [2396, 1826], [2793, 2124], [3190, 2440], [3587, 2740]]}, {"tau": 24, "sigma": 0, "slope": 0.0, "intercept": 400.0, "min_width": 400, "max_width": 400, "widths_sample": [[2000, 400], [2396, 400], [2793, 400], [3190, 400], [3587, 400]]}, {"tau": 32, "sigma": 0, "slope": 0.7675717271302809, "intercept": -9.873692981899875, "min_width": 1529, "max_width": 3010, "widths_sample": [[2000, 1529], [2396, 1826], [2793, 2124], [3190, 2440], [3587, 2740]]}, {"tau": 64, "sigma": 0, "slope": 0.7675717271302809, "intercept": -9.873692981899875, "min_width": 1529, "max_width": 3010, "widths_sample": [[2000, 1529], [2396, 1826], [2793, 2124], [3190, 2440], [3587, 2740]]}]}

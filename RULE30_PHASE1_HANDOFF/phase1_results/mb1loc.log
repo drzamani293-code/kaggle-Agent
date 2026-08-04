@@ -1,0 +1,9 @@
+{"a": 0, "eligible_positions": 949254892, "violations": 474627476, "violation_rate": 0.500000031603735, "witness": {"a": 0, "t": 17, "p": 1, "col0_window_agrees_on_[t-a,t]": true, "a_t(0)": 0, "a_t(1)": 0, "a_{t+p}(1)": 1, "violates_MB1_loc": true}}
+{"a": 4, "eligible_positions": 59333217, "violations": 17654730, "violation_rate": 0.29755221261641684, "witness": {"a": 4, "t": 15363, "p": 1, "col0_window_agrees_on_[t-a,t]": true, "a_t(0)": 0, "a_t(1)": 0, "a_{t+p}(1)": 1, "violates_MB1_loc": true}}
+{"a": 8, "eligible_positions": 3709400, "violations": 964006, "violation_rate": 0.2598819216045722, "witness": {"a": 8, "t": 3189, "p": 2, "col0_window_agrees_on_[t-a,t]": true, "a_t(0)": 0, "a_t(1)": 0, "a_{t+p}(1)": 1, "violates_MB1_loc": true}}
+{"a": 12, "eligible_positions": 232492, "violations": 56857, "violation_rate": 0.2445546513428419, "witness": {"a": 12, "t": 94693, "p": 2, "col0_window_agrees_on_[t-a,t]": true, "a_t(0)": 0, "a_t(1)": 0, "a_{t+p}(1)": 1, "violates_MB1_loc": true}}
+{"a": 16, "eligible_positions": 14639, "violations": 3517, "violation_rate": 0.24024865086413005, "witness": {"a": 16, "t": 62233, "p": 7, "col0_window_agrees_on_[t-a,t]": true, "a_t(0)": 0, "a_t(1)": 0, "a_{t+p}(1)": 1, "violates_MB1_loc": true}}
+{"a": 20, "eligible_positions": 885, "violations": 204, "violation_rate": 0.2305084745762712, "witness": {"a": 20, "t": 183982, "p": 115, "col0_window_agrees_on_[t-a,t]": true, "a_t(0)": 0, "a_t(1)": 0, "a_{t+p}(1)": 1, "violates_MB1_loc": true}}
+{"a": 24, "eligible_positions": 49, "violations": 11, "violation_rate": 0.22448979591836735, "witness": {"a": 24, "t": 82630, "p": 1324, "col0_window_agrees_on_[t-a,t]": true, "a_t(0)": 0, "a_t(1)": 0, "a_{t+p}(1)": 1, "violates_MB1_loc": true}}
+{"a": 28, "eligible_positions": 5, "violations": 0, "violation_rate": 0.0, "witness": null}
+{"a": 32, "eligible_positions": 1, "violations": 0, "violation_rate": 0.0, "witness": null}

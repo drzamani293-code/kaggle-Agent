@@ -1,0 +1,41 @@
+locality probe (maximal windows) ...
+forward transfer profile ...
+two-sided table ...
+backward transfer depth profile ...
+period-band homogeneity ...
+
+--- forward conditioning: P[col1 agrees | col0 agrees on [t, t+b]] ---
+baseline = 0.500008
+  window  1  n=  25584787  P=0.49997  (zero set: 0.50093)
+  window  2  n=  12795250  P=0.49996  (zero set: 0.50079)
+  window  3  n=   6398068  P=0.49995  (zero set: 0.50070)
+  window  4  n=   3199629  P=0.49989  (zero set: 0.50068)
+  window  5  n=   1600007  P=0.49960  (zero set: 0.50042)
+  window  6  n=    799025  P=0.49956  (zero set: 0.50049)
+  window  7  n=    399022  P=0.49914  (zero set: 0.50056)
+  window  8  n=    199331  P=0.49897  (zero set: 0.50128)
+  window  9  n=     99697  P=0.50357  (zero set: 0.50793)
+  window 10  n=     49938  P=0.50392  (zero set: 0.51083)
+
+--- two-sided: rows = lookback a, cols = lookahead b ---
+        b=0         b=1         b=2         b=4         b=8       
+a=0     0.5009    0.5008    0.5007    0.5004    0.5079  
+a=1     0.6239    0.6239    0.6237    0.6233    0.6317  
+a=2     0.6566    0.6564    0.6566    0.6563    0.6674  
+a=4     0.7048    0.7052    0.7066    0.7073    0.7162  
+a=8     0.7410    0.7428    0.7427    0.7368    0.7130  
+
+--- backward depth profile (b = 0) ---
+  lookback  0  n= 202435269  P=0.50002
+  lookback  1  n= 101224798  P=0.62287
+  lookback  2  n=  50616048  P=0.65468
+  lookback  3  n=  25305510  P=0.69387
+  lookback  4  n=  12652859  P=0.70268
+  lookback  6  n=   3163500  P=0.72570
+  lookback  8  n=    790986  P=0.74018
+  lookback 10  n=    197462  P=0.74906
+  lookback 12  n=     49588  P=0.75559
+  lookback 14  n=     12427  P=0.75762
+  lookback 16  n=      3124  P=0.75544
+
+wrote phase1_results/bridge_probe.json

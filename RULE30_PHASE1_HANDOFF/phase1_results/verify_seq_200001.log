@@ -1,0 +1,12 @@
+stored file      : phase1_results/center_column_200001.txt
+stored bits      : 200001
+stored sha256    : cf018b09db932412d5f42c3d03076181a34d806173fbee749e30c871fe5d994a
+
+[1] mirror engine (rule 86, reversed shifts), 200000 steps ...
+    sha256         : cf018b09db932412d5f42c3d03076181a34d806173fbee749e30c871fe5d994a
+    identical      : True   (9.3 s)
+
+[2] numpy engine (engine B), first 20000 steps ...
+    prefix match   : True   (3.1 s)
+
+RESULT: ALL ENGINES AGREE
