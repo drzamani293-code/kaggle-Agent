@@ -1,0 +1,89 @@
+
+=== 1. MODEL A sweep: a in [0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48], p in 1..64 ===
+  a= 0  p=1..64  SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+  a= 4  p=1..64  SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+  a= 8  p=1..64  SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+  a=12  p=1..64  SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+  a=16  p=1..64  SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+  a=20  p=1..64  SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+  a=24  p=1..64  SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+  a=28  p=1..64  SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+  a=32  p=1..64  SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+  a=36  p=1..64  SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+  a=40  p=1..64  SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+  a=44  p=1..64  SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+  a=48  p=1..64  SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+  instances: 832   SAT: 832   UNSAT: 0   cross-config disagreements: 0   (1211.0 s)
+
+=== 2. solver-independent brute force (base rows enumerated) ===
+  18 instances decided twice; all agree: True
+
+=== 3. MODEL A certificates (independently re-simulated) ===
+  26 certificates written; all re-simulate correctly: True
+
+=== 4. UNSAT control: the Proposition 6 forcing case ===
+  p=1  a_t(0)=1  expected UNSAT  got UNSAT (enum UNSAT)  agree=True  core=['C_left_disagree', 'H1_agree_0', 'H1_agree_1', 'H2_centre_one']
+  p=1  a_t(0)=0  expected SAT    got SAT   (enum SAT)  agree=True  core=-
+  p=2  a_t(0)=1  expected UNSAT  got UNSAT (enum UNSAT)  agree=True  core=['C_left_disagree', 'H1_agree_0', 'H1_agree_1', 'H2_centre_one']
+  p=2  a_t(0)=0  expected SAT    got SAT   (enum SAT)  agree=True  core=-
+  p=3  a_t(0)=1  expected UNSAT  got UNSAT (enum UNSAT)  agree=True  core=['C_left_disagree', 'H1_agree_0', 'H1_agree_1', 'H2_centre_one']
+  p=3  a_t(0)=0  expected SAT    got SAT   (enum SAT)  agree=True  core=-
+  p=5  a_t(0)=1  expected UNSAT  got UNSAT (enum UNSAT)  agree=True  core=['C_left_disagree', 'H1_agree_0', 'H1_agree_1', 'H2_centre_one']
+  p=5  a_t(0)=0  expected SAT    got SAT   (enum SAT)  agree=True  core=-
+  p=8  a_t(0)=1  expected UNSAT  got UNSAT (enum UNSAT)  agree=True  core=['C_left_disagree', 'H1_agree_0', 'H1_agree_1', 'H2_centre_one']
+  p=8  a_t(0)=0  expected SAT    got SAT   (enum SAT)  agree=True  core=-
+  p=13  a_t(0)=1  expected UNSAT  got UNSAT (enum SKIPPED)  agree=False  core=['C_left_disagree', 'H1_agree_0', 'H1_agree_1', 'H2_centre_one']
+  p=13  a_t(0)=0  expected SAT    got SAT   (enum SKIPPED)  agree=False  core=-
+
+=== 5. MODEL B sweep (full light cone to time 0): t<=48, p<=24, a in [0, 4, 8] ===
+  3168 instances solved (80.4 s)
+  MODEL B SAT (i.e. genuine counterexamples): 122
+  direct-simulation counterexamples:          122
+  the two searches agree: True
+    counterexample a=0 t=2 p=8
+    counterexample a=0 t=2 p=9
+    counterexample a=0 t=2 p=10
+    counterexample a=0 t=2 p=16
+    counterexample a=0 t=2 p=19
+    counterexample a=0 t=6 p=4
+    counterexample a=0 t=6 p=5
+    counterexample a=0 t=6 p=6
+    counterexample a=0 t=6 p=12
+    counterexample a=0 t=6 p=15
+    counterexample a=0 t=6 p=21
+    counterexample a=0 t=7 p=3
+
+=== 6. MODEL B certification of the a=0 witness (t=17, p=1) ===
+  solvers: {'cadical153': 'SAT', 'glucose42': 'SAT', 'minisat22': 'SAT', 'z3': 'SAT'}
+  recovered base row equals the single-cell seed: True
+  constraints re-checked on the patch: True
+  independent orbit simulation says counterexample: True
+  certificate: results/modelB_witness_a00_t17_p1.txt
+
+=== 7. MODEL B' certification of the eight Phase 1 witnesses ===
+  a= 0 t=     17 p=    1  cells=    4 (1-cone 6)  SAT  certified=True  0.0s
+  a= 4 t=  15363 p=    1  cells=   60 (1-cone 42)  SAT  certified=True  0.2s
+  a= 8 t=   3189 p=    2  cells=  180 (1-cone 132)  SAT  certified=True  0.0s
+  a=12 t=  94693 p=    2  cells=  364 (1-cone 240)  SAT  certified=True  5.9s
+  a=16 t= 850603 p=    6  cells=  612 (1-cone 552)  SAT  certified=True  483.9s
+  a=20 t= 322343 p=   27  cells=  924 (1-cone 2352)  SAT  certified=True  67.5s
+  a=24 t=  82630 p= 1324  cells= 1300 (1-cone 1821150)  SAT  certified=True  3.5s
+  a=28 t= 529506 p= 2750  cells= 1740 (1-cone 7725620)  SAT  certified=True  127.4s
+  all eight certified: True
+
+=== 8. real-orbit eligibility census (N = 200000, p <= 20000) ===
+  a= 0  eligible=   949254892  violations=   474627476  rate=0.5000
+  a= 4  eligible=    59333217  violations=    17654730  rate=0.2976
+  a= 8  eligible=     3709400  violations=      964006  rate=0.2599
+  a=12  eligible=      232492  violations=       56857  rate=0.2446
+  a=16  eligible=       14639  violations=        3517  rate=0.2402
+  a=20  eligible=         885  violations=         204  rate=0.2305
+  a=24  eligible=          49  violations=          11  rate=0.2245
+  a=28  eligible=           5  violations=           0  rate=0.0000
+  a=32  eligible=           1  violations=           0  rate=0.0000
+  a=36  eligible=           0  violations=           0  rate=n/a
+  a=40  eligible=           0  violations=           0  rate=n/a
+  a=44  eligible=           0  violations=           0  rate=n/a
+  a=48  eligible=           0  violations=           0  rate=n/a
+
+wrote results/phase2a_results.json   (2353.4 s total)

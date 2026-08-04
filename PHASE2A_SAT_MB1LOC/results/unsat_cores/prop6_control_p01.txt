@@ -1,0 +1,21 @@
+UNSAT control -- Proposition 6 forcing case
+p = 1, a_t(0) = 1
+
+Constraints:
+  H1_agree_0 : col_0(t)   = col_0(t+p)
+  H1_agree_1 : col_0(t+1) = col_0(t+1+p)
+  H2_centre_one : col_0(t) = 1
+  C_left_disagree : col_-1(t) != col_-1(t+p)
+
+STATUS: UNSAT (label: THEOREM for this (p), see
+PHASE2A_RESULTS.md section 4 -- the forcing is uniform in p
+and is proved by hand in Proposition 6.)
+
+unsat core [enc1/cadical153]: ['C_left_disagree', 'H1_agree_0', 'H1_agree_1', 'H2_centre_one']
+unsat core [enc1/glucose42]: ['C_left_disagree', 'H1_agree_0', 'H1_agree_1', 'H2_centre_one']
+unsat core [enc1/minisat22]: ['C_left_disagree', 'H1_agree_0', 'H1_agree_1', 'H2_centre_one']
+unsat core [enc2/cadical153]: ['C_left_disagree', 'H1_agree_0', 'H1_agree_1', 'H2_centre_one']
+unsat core [enc2/glucose42]: ['C_left_disagree', 'H1_agree_0', 'H1_agree_1', 'H2_centre_one']
+unsat core [enc2/minisat22]: ['C_left_disagree', 'H1_agree_0', 'H1_agree_1', 'H2_centre_one']
+
+brute-force enumeration over all 256 base rows: UNSAT

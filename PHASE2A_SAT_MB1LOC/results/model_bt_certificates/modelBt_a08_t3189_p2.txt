@@ -1,0 +1,68 @@
+MODEL B' CERTIFICATE (two-window form)
+======================================================================
+a = 8   t = 3189   p = 2
+
+LABEL: COMPUTATIONAL CERTIFICATE.
+This certifies that the triple (a,t,p) violates MB1-loc(8) in the
+actual single-cell rule-30 orbit.  Soundness is relative to the two
+base rows, which come from the Phase 1 engine (cross-checked by four
+independent implementations and by SHA-256 against stored sequences).
+
+window 1: times 3181..3189, base row over sites -8..9
+window 2: times 3183..3191, base row over sites -8..9
+cells: two-window 180, single-cone equivalent 132
+CNF: {'vars': 191, 'clauses': 1209}
+single-cone cross-run: {'cells': 132, 'status': 'SAT'}
+
+solver verdicts (all must be SAT): {'cadical153': 'SAT', 'glucose42': 'SAT', 'minisat22': 'SAT', 'enc2/cadical153': 'SAT'}
+
+hypotheses re-checked on the simulated patch:
+  H1_agree_0           True
+  H1_agree_1           True
+  H1_agree_2           True
+  H1_agree_3           True
+  H1_agree_4           True
+  H1_agree_5           True
+  H1_agree_6           True
+  H1_agree_7           True
+  H1_agree_8           True
+  H2_zero              True
+  C_violated           True
+  ALL                  True
+
+independent full-orbit simulation from the single-cell seed:
+  a                        8
+  t                        3189
+  p                        2
+  H1_agreement_on_window   True
+  H2_centre_zero           True
+  col1_t                   0
+  col1_t_plus_p            1
+  C_violated               True
+  is_counterexample        True
+
+window 1 (times 3181..3189):
+          sites -8 .. 9   (columns 0 and 1 marked in the header)
+                  01        
+t=   3181 .#.#.##..##.#.....   H1,H1'
+t=   3182  #.#.#.###..##...    H1,H1'
+t=   3183   .#.#.#..###.#.     H1,H1'
+t=   3184    #.#.####...#      H1,H1'
+t=   3185     .#.#...#.#       H1,H1'
+t=   3186      #.##.##.        H1,H1'
+t=   3187       .#..#.         H1,H1'
+t=   3188        ####          H1,H1'
+t=   3189         ..           H1,H2/C,H1',C'
+
+window 2 (times 3183..3191):
+          sites -8 .. 9   (columns 0 and 1 marked in the header)
+                  01        
+t=   3183 .#.#.#.#..###.#.##   H1,H1'
+t=   3184  #.#.#.####...#.#    H1,H1'
+t=   3185   .#.#.#...#.##.     H1,H1'
+t=   3186    #.#.##.##.#.      H1,H1'
+t=   3187     .#.#..#..#       H1,H1'
+t=   3188      #.######        H1,H1'
+t=   3189       .#....         H1,H1'
+t=   3190        ##..          H1,H1'
+t=   3191         .#           H1,H2/C,H1',C'

@@ -1,0 +1,61 @@
+python 3.11.15   cwd /home/user/kaggle-Agent/PHASE2A_SAT_MB1LOC
+
+=== 1. rule-30 local rule ===
+[PASS] rule30 table == l XOR (c OR r) on all 8 neighbourhoods
+[PASS] table sourced from rule30_lab.rule_table(30)  -- (0, 1, 1, 1, 1, 0, 0, 0)
+[PASS] Phase 1 local-rule checks still pass  -- 5/5
+
+=== 2. Lemma C: cone containment ===
+[PASS] every cell's three predecessors lie inside the cone  -- checked heights 1..59 and three top-site ranges
+
+=== 3. Lemma T: MODEL A does not depend on t ===
+[PASS] A(a=0,p=1) verdict identical at t = a+1, a+9, a+137, a+5000  -- SAT
+[PASS] A(a=4,p=3) verdict identical at t = a+1, a+9, a+137, a+5000  -- SAT
+[PASS] A(a=8,p=5) verdict identical at t = a+1, a+9, a+137, a+5000  -- SAT
+[PASS] A(a=12,p=2) verdict identical at t = a+1, a+9, a+137, a+5000  -- SAT
+
+=== 4. ENC1 vs ENC2 vs Z3 ===
+[PASS] all encodings and solvers agree on 36 instances  -- []
+
+=== 5. SAT vs solver-free exhaustive enumeration ===
+[PASS] enumeration and SAT agree on 12 instances  -- []
+
+=== 6. Proposition 6 UNSAT control ===
+[PASS] forced case (a_t(0)=1) is UNSAT for p in {1,2,3,5,8}, by SAT and by enumeration
+[PASS] unforced case (a_t(0)=0) is SAT for the same p
+[PASS] unsat core names the disagreement and the centre-one hypothesis
+
+=== 7. MODEL B, full backward light cone to time 0 ===
+[PASS] all solvers say SAT for (a,t,p) = (0,17,1)  -- {'cadical153': 'SAT', 'glucose42': 'SAT', 'minisat22': 'SAT', 'z3': 'SAT'}
+[PASS] recovered base row is exactly the single-cell seed  -- 38 sites at time 0
+[PASS] H1, H2 and not-C re-checked on the independently evolved patch
+[PASS] independent orbit simulation confirms the counterexample  -- {'a': 0, 't': 17, 'p': 1, 'H1_agreement_on_window': True, 'H2_centre_zero': True, 'col1_t': 0, 'col1_t_plus_p': 1, 'C_violated': True, 'is_counterexample': True}
+
+=== 8. MODEL B' certification of the registered witnesses ===
+[PASS] registry contains 8 real-orbit witnesses  -- 8 found
+[PASS] witness a=0 t=17 p=1: SAT + patch re-check + orbit re-simulation  -- sat=SAT recheck=True orbit=True
+[PASS] witness a=4 t=15363 p=1: SAT + patch re-check + orbit re-simulation  -- sat=SAT recheck=True orbit=True
+[PASS] witness a=8 t=3189 p=2: SAT + patch re-check + orbit re-simulation  -- sat=SAT recheck=True orbit=True
+[PASS] witness a=12 t=94693 p=2: SAT + patch re-check + orbit re-simulation  -- sat=SAT recheck=True orbit=True
+[PASS] witness a=16 t=850603 p=6: SAT + patch re-check + orbit re-simulation  -- sat=SAT recheck=True orbit=True
+[PASS] witness a=20 t=322343 p=27: SAT + patch re-check + orbit re-simulation  -- sat=SAT recheck=True orbit=True
+[PASS] witness a=24 t=82630 p=1324: SAT + patch re-check + orbit re-simulation  -- sat=SAT recheck=True orbit=True
+[PASS] witness a=28 t=529506 p=2750: SAT + patch re-check + orbit re-simulation  -- sat=SAT recheck=True orbit=True
+[PASS] 8 witnesses re-certified in this process
+
+=== 9. MODEL B sweep vs direct simulation ===
+[PASS] MODEL B and simulation find the same counterexamples (t<=20, p<=8)  -- 22 found by each
+
+=== 10. stored results are consistent with the reported claims ===
+[PASS] MODEL A sweep: every instance decided by every configuration  -- 832 instances
+[PASS] MODEL A sweep: no cross-configuration disagreements
+[PASS] MODEL A sweep: UNSAT count recorded  -- n_unsat = 0
+[PASS] brute force agrees with SAT everywhere it was run  -- 18 instances
+[PASS] all MODEL A certificates re-simulate correctly
+[PASS] UNSAT control matched its prediction in every configuration  -- 12 control instances
+[PASS] control instances also decided by solver-free enumeration  -- 10 of 12 (wider base rows are skipped by design)
+[PASS] MODEL B sweep agrees with direct simulation  -- 3168 instances
+[PASS] all eight witnesses certified by MODEL B'
+
+======================================================================
+37 passed, 0 FAILED   (795.3 s)

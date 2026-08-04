@@ -1,0 +1,116 @@
+MODEL B' CERTIFICATE (two-window form)
+======================================================================
+a = 24   t = 82630   p = 1324
+
+LABEL: COMPUTATIONAL CERTIFICATE.
+This certifies that the triple (a,t,p) violates MB1-loc(24) in the
+actual single-cell rule-30 orbit.  Soundness is relative to the two
+base rows, which come from the Phase 1 engine (cross-checked by four
+independent implementations and by SHA-256 against stored sequences).
+
+window 1: times 82606..82630, base row over sites -24..25
+window 2: times 83930..83954, base row over sites -24..25
+cells: two-window 1300, single-cone equivalent 1821150
+CNF: {'vars': 1327, 'clauses': 9753}
+single-cone cross-run: None
+
+solver verdicts (all must be SAT): {'cadical153': 'SAT', 'glucose42': 'SAT', 'minisat22': 'SAT', 'enc2/cadical153': 'SAT'}
+
+hypotheses re-checked on the simulated patch:
+  H1_agree_0           True
+  H1_agree_1           True
+  H1_agree_2           True
+  H1_agree_3           True
+  H1_agree_4           True
+  H1_agree_5           True
+  H1_agree_6           True
+  H1_agree_7           True
+  H1_agree_8           True
+  H1_agree_9           True
+  H1_agree_10          True
+  H1_agree_11          True
+  H1_agree_12          True
+  H1_agree_13          True
+  H1_agree_14          True
+  H1_agree_15          True
+  H1_agree_16          True
+  H1_agree_17          True
+  H1_agree_18          True
+  H1_agree_19          True
+  H1_agree_20          True
+  H1_agree_21          True
+  H1_agree_22          True
+  H1_agree_23          True
+  H1_agree_24          True
+  H2_zero              True
+  C_violated           True
+  ALL                  True
+
+independent full-orbit simulation from the single-cell seed:
+  a                        24
+  t                        82630
+  p                        1324
+  H1_agreement_on_window   True
+  H2_centre_zero           True
+  col1_t                   0
+  col1_t_plus_p            1
+  C_violated               True
+  is_counterexample        True
+
+window 1 (times 82606..82630):
+          sites -24 .. 25   (columns 0 and 1 marked in the header)
+              |         |         01        |         |     
+t=  82606 .###.#....##..#..##.#....#.###..#...#..#..#.#..#..   H1,H1'
+t=  82607  #...##..##.######..##..##.#..####.########.#####    H1,H1'
+t=  82608   #.##.###..#.....###.###..####....#........#...     H1,H1'
+t=  82609    .#..#..####...##...#..###...#..###......###.      H1,H1'
+t=  82610     #######...#.##.#.#####..#.#####..#....##..       H1,H1'
+t=  82611      ......#.##.#..#.#....###.#....####..##.#        H1,H1'
+t=  82612       ....##.#..####.##..##...##..##...###..         H1,H1'
+t=  82613        ..##..####....#.###.#.##.###.#.##..#          H1,H1'
+t=  82614         ##.###...#..##.#...#.#..#...#.#.##           H1,H1'
+t=  82615          ..#..#.#####..##.##.#####.##.#.#            H1,H1'
+t=  82616           #####.#....###..#..#.....#..#.             H1,H1'
+t=  82617            .....##..##..#######...#####              H1,H1'
+t=  82618             ...##.###.###......#.##...               H1,H1'
+t=  82619              .##..#...#..#....##.#.#.                H1,H1'
+t=  82620               #.####.######..##..#.#                 H1,H1'
+t=  82621                .#....#.....###.###.                  H1,H1'
+t=  82622                 ##..###...##...#..                   H1,H1'
+t=  82623                  .###..#.##.#.###                    H1,H1'
+t=  82624                   #..###.#..#.#.                     H1,H1'
+t=  82625                    ###...####.#                      H1,H1'
+t=  82626                     ..#.##....                       H1,H1'
+t=  82627                      ##.#.#..                        H1,H1'
+t=  82628                       ..#.##                         H1,H1'
+t=  82629                        ##.#                          H1,H1'
+t=  82630                         ..                           H1,H2/C,H1',C'
+
+window 2 (times 83930..83954):
+          sites -24 .. 25   (columns 0 and 1 marked in the header)
+              |         |         01        |         |     
+t=  83930 #####..#.#.#..#..##.#....#.#.####..#######....###.   H1,H1'
+t=  83931  ....###.#.#######..##..##.#.#...###......#..##..    H1,H1'
+t=  83932   ..##...#.#......###.###..#.##.##..#....#####.#     H1,H1'
+t=  83933    ##.#.##.##....##...#..###.#..#.####..##.....      H1,H1'
+t=  83934     ..#.#..#.#..##.#.#####...####.#...###.#...       H1,H1'
+t=  83935      ##.####.####..#.#....#.##....##.##...##.        H1,H1'
+t=  83936       ..#....#...###.##..##.#.#..##..#.#.##.         H1,H1'
+t=  83937        ###..###.##...#.###..#.####.###.#.#.          H1,H1'
+t=  83938         ..###...#.#.##.#..###.#....#...#.#           H1,H1'
+t=  83939          ##..#.##.#.#..####...##..###.##.            H1,H1'
+t=  83940           .###.#..#.####...#.##.###...#.             H1,H1'
+t=  83941            #...####.#...#.##.#..#..#.##              H1,H1'
+t=  83942             #.##....##.##.#..#######.#               H1,H1'
+t=  83943              .#.#..##..#..####.......                H1,H1'
+t=  83944               #.####.######...#.....                 H1,H1'
+t=  83945                .#....#.....#.###...                  H1,H1'
+t=  83946                 ##..###...##.#..#.                   H1,H1'
+t=  83947                  .###..#.##..####                    H1,H1'
+t=  83948                   #..###.#.###..                     H1,H1'
+t=  83949                    ###...#.#..#                      H1,H1'
+t=  83950                     ..#.##.###                       H1,H1'
+t=  83951                      ##.#..#.                        H1,H1'
+t=  83952                       ..####                         H1,H1'
+t=  83953                        ##..                          H1,H1'
+t=  83954                         .#                           H1,H2/C,H1',C'

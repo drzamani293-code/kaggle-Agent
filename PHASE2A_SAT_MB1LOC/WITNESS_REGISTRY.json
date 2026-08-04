@@ -1,0 +1,1918 @@
+{
+  "schema": {
+    "a": "look-back depth of MB1-loc",
+    "t": "time index of the queried cell (real orbit only)",
+    "p": "lag",
+    "model": "real_orbit | A_relaxation",
+    "label": "COMPUTATIONAL CERTIFICATE | SAT WITNESS (RELAXATION)",
+    "note": "A_relaxation entries are NOT counterexamples to MB1-loc; see SAT_MODEL_SPECIFICATION.md Theorem A-incomplete."
+  },
+  "generated": "2026-08-04T18:01:00Z",
+  "witnesses": [
+    {
+      "id": "real_a00_t17_p1",
+      "model": "real_orbit",
+      "label": "COMPUTATIONAL CERTIFICATE",
+      "a": 0,
+      "t": 17,
+      "p": 1,
+      "hypotheses": {
+        "H1_col0_agrees_on_window": true,
+        "H2_col0_zero_at_t": true
+      },
+      "conclusion_violated": true,
+      "values": {
+        "a_t(0)": 0,
+        "a_t(1)": 0,
+        "a_{t+p}(1)": 1
+      },
+      "is_counterexample": true,
+      "verification": {
+        "orbit_resimulation_from_seed": true,
+        "model_b_prime_solvers": {
+          "cadical153": "SAT",
+          "glucose42": "SAT",
+          "minisat22": "SAT",
+          "enc2/cadical153": "SAT"
+        },
+        "model_b_prime_constraints_ok": true,
+        "two_window_cells": 4,
+        "single_cone_cells": 6,
+        "single_cone_run": {
+          "cells": 6,
+          "status": "SAT"
+        },
+        "certificate_file": "results/model_bt_certificates/modelBt_a00_t17_p1.txt",
+        "model_b_full_light_cone": {
+          "solvers": {
+            "cadical153": "SAT",
+            "glucose42": "SAT",
+            "minisat22": "SAT",
+            "z3": "SAT"
+          },
+          "cells": 380,
+          "base_row_is_seed": true,
+          "certificate_file": "results/modelB_witness_a00_t17_p1.txt"
+        }
+      },
+      "source": "Phase 1 find_mb1loc_witnesses.py; re-certified in Phase 2A"
+    },
+    {
+      "id": "real_a04_t15363_p1",
+      "model": "real_orbit",
+      "label": "COMPUTATIONAL CERTIFICATE",
+      "a": 4,
+      "t": 15363,
+      "p": 1,
+      "hypotheses": {
+        "H1_col0_agrees_on_window": true,
+        "H2_col0_zero_at_t": true
+      },
+      "conclusion_violated": true,
+      "values": {
+        "a_t(0)": 0,
+        "a_t(1)": 0,
+        "a_{t+p}(1)": 1
+      },
+      "is_counterexample": true,
+      "verification": {
+        "orbit_resimulation_from_seed": true,
+        "model_b_prime_solvers": {
+          "cadical153": "SAT",
+          "glucose42": "SAT",
+          "minisat22": "SAT",
+          "enc2/cadical153": "SAT"
+        },
+        "model_b_prime_constraints_ok": true,
+        "two_window_cells": 60,
+        "single_cone_cells": 42,
+        "single_cone_run": {
+          "cells": 42,
+          "status": "SAT"
+        },
+        "certificate_file": "results/model_bt_certificates/modelBt_a04_t15363_p1.txt"
+      },
+      "source": "Phase 1 find_mb1loc_witnesses.py; re-certified in Phase 2A"
+    },
+    {
+      "id": "real_a08_t3189_p2",
+      "model": "real_orbit",
+      "label": "COMPUTATIONAL CERTIFICATE",
+      "a": 8,
+      "t": 3189,
+      "p": 2,
+      "hypotheses": {
+        "H1_col0_agrees_on_window": true,
+        "H2_col0_zero_at_t": true
+      },
+      "conclusion_violated": true,
+      "values": {
+        "a_t(0)": 0,
+        "a_t(1)": 0,
+        "a_{t+p}(1)": 1
+      },
+      "is_counterexample": true,
+      "verification": {
+        "orbit_resimulation_from_seed": true,
+        "model_b_prime_solvers": {
+          "cadical153": "SAT",
+          "glucose42": "SAT",
+          "minisat22": "SAT",
+          "enc2/cadical153": "SAT"
+        },
+        "model_b_prime_constraints_ok": true,
+        "two_window_cells": 180,
+        "single_cone_cells": 132,
+        "single_cone_run": {
+          "cells": 132,
+          "status": "SAT"
+        },
+        "certificate_file": "results/model_bt_certificates/modelBt_a08_t3189_p2.txt"
+      },
+      "source": "Phase 1 find_mb1loc_witnesses.py; re-certified in Phase 2A"
+    },
+    {
+      "id": "real_a12_t94693_p2",
+      "model": "real_orbit",
+      "label": "COMPUTATIONAL CERTIFICATE",
+      "a": 12,
+      "t": 94693,
+      "p": 2,
+      "hypotheses": {
+        "H1_col0_agrees_on_window": true,
+        "H2_col0_zero_at_t": true
+      },
+      "conclusion_violated": true,
+      "values": {
+        "a_t(0)": 0,
+        "a_t(1)": 0,
+        "a_{t+p}(1)": 1
+      },
+      "is_counterexample": true,
+      "verification": {
+        "orbit_resimulation_from_seed": true,
+        "model_b_prime_solvers": {
+          "cadical153": "SAT",
+          "glucose42": "SAT",
+          "minisat22": "SAT",
+          "enc2/cadical153": "SAT"
+        },
+        "model_b_prime_constraints_ok": true,
+        "two_window_cells": 364,
+        "single_cone_cells": 240,
+        "single_cone_run": {
+          "cells": 240,
+          "status": "SAT"
+        },
+        "certificate_file": "results/model_bt_certificates/modelBt_a12_t94693_p2.txt"
+      },
+      "source": "Phase 1 find_mb1loc_witnesses.py; re-certified in Phase 2A"
+    },
+    {
+      "id": "real_a16_t850603_p6",
+      "model": "real_orbit",
+      "label": "COMPUTATIONAL CERTIFICATE",
+      "a": 16,
+      "t": 850603,
+      "p": 6,
+      "hypotheses": {
+        "H1_col0_agrees_on_window": true,
+        "H2_col0_zero_at_t": true
+      },
+      "conclusion_violated": true,
+      "values": {
+        "a_t(0)": 0,
+        "a_t(1)": 1,
+        "a_{t+p}(1)": 0
+      },
+      "is_counterexample": true,
+      "verification": {
+        "orbit_resimulation_from_seed": true,
+        "model_b_prime_solvers": {
+          "cadical153": "SAT",
+          "glucose42": "SAT",
+          "minisat22": "SAT",
+          "enc2/cadical153": "SAT"
+        },
+        "model_b_prime_constraints_ok": true,
+        "two_window_cells": 612,
+        "single_cone_cells": 552,
+        "single_cone_run": {
+          "cells": 552,
+          "status": "SAT"
+        },
+        "certificate_file": "results/model_bt_certificates/modelBt_a16_t850603_p6.txt"
+      },
+      "source": "Phase 1 find_mb1loc_witnesses.py; re-certified in Phase 2A"
+    },
+    {
+      "id": "real_a20_t322343_p27",
+      "model": "real_orbit",
+      "label": "COMPUTATIONAL CERTIFICATE",
+      "a": 20,
+      "t": 322343,
+      "p": 27,
+      "hypotheses": {
+        "H1_col0_agrees_on_window": true,
+        "H2_col0_zero_at_t": true
+      },
+      "conclusion_violated": true,
+      "values": {
+        "a_t(0)": 0,
+        "a_t(1)": 1,
+        "a_{t+p}(1)": 0
+      },
+      "is_counterexample": true,
+      "verification": {
+        "orbit_resimulation_from_seed": true,
+        "model_b_prime_solvers": {
+          "cadical153": "SAT",
+          "glucose42": "SAT",
+          "minisat22": "SAT",
+          "enc2/cadical153": "SAT"
+        },
+        "model_b_prime_constraints_ok": true,
+        "two_window_cells": 924,
+        "single_cone_cells": 2352,
+        "single_cone_run": {
+          "cells": 2352,
+          "status": "SAT"
+        },
+        "certificate_file": "results/model_bt_certificates/modelBt_a20_t322343_p27.txt"
+      },
+      "source": "Phase 1 find_mb1loc_witnesses.py; re-certified in Phase 2A"
+    },
+    {
+      "id": "real_a24_t82630_p1324",
+      "model": "real_orbit",
+      "label": "COMPUTATIONAL CERTIFICATE",
+      "a": 24,
+      "t": 82630,
+      "p": 1324,
+      "hypotheses": {
+        "H1_col0_agrees_on_window": true,
+        "H2_col0_zero_at_t": true
+      },
+      "conclusion_violated": true,
+      "values": {
+        "a_t(0)": 0,
+        "a_t(1)": 0,
+        "a_{t+p}(1)": 1
+      },
+      "is_counterexample": true,
+      "verification": {
+        "orbit_resimulation_from_seed": true,
+        "model_b_prime_solvers": {
+          "cadical153": "SAT",
+          "glucose42": "SAT",
+          "minisat22": "SAT",
+          "enc2/cadical153": "SAT"
+        },
+        "model_b_prime_constraints_ok": true,
+        "two_window_cells": 1300,
+        "single_cone_cells": 1821150,
+        "single_cone_run": null,
+        "certificate_file": "results/model_bt_certificates/modelBt_a24_t82630_p1324.txt"
+      },
+      "source": "Phase 1 find_mb1loc_witnesses.py; re-certified in Phase 2A"
+    },
+    {
+      "id": "real_a28_t529506_p2750",
+      "model": "real_orbit",
+      "label": "COMPUTATIONAL CERTIFICATE",
+      "a": 28,
+      "t": 529506,
+      "p": 2750,
+      "hypotheses": {
+        "H1_col0_agrees_on_window": true,
+        "H2_col0_zero_at_t": true
+      },
+      "conclusion_violated": true,
+      "values": {
+        "a_t(0)": 0,
+        "a_t(1)": 0,
+        "a_{t+p}(1)": 1
+      },
+      "is_counterexample": true,
+      "verification": {
+        "orbit_resimulation_from_seed": true,
+        "model_b_prime_solvers": {
+          "cadical153": "SAT",
+          "glucose42": "SAT",
+          "minisat22": "SAT",
+          "enc2/cadical153": "SAT"
+        },
+        "model_b_prime_constraints_ok": true,
+        "two_window_cells": 1740,
+        "single_cone_cells": 7725620,
+        "single_cone_run": null,
+        "certificate_file": "results/model_bt_certificates/modelBt_a28_t529506_p2750.txt"
+      },
+      "source": "Phase 1 find_mb1loc_witnesses.py; re-certified in Phase 2A"
+    },
+    {
+      "id": "modelA_a00_p01",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 0,
+      "p": 1,
+      "t": null,
+      "base_row": "0001",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a00_p01.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a00_p07",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 0,
+      "p": 7,
+      "t": null,
+      "base_row": "1000000000000011",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a00_p07.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a04_p01",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 4,
+      "p": 1,
+      "t": null,
+      "base_row": "000000000001",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a04_p01.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a04_p07",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 4,
+      "p": 7,
+      "t": null,
+      "base_row": "100000000000000000000011",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a04_p07.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a08_p01",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 8,
+      "p": 1,
+      "t": null,
+      "base_row": "00000000000000000001",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a08_p01.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a08_p07",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 8,
+      "p": 7,
+      "t": null,
+      "base_row": "10000000000000000000000000000011",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a08_p07.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a12_p01",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 12,
+      "p": 1,
+      "t": null,
+      "base_row": "0000000000000000000000000001",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a12_p01.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a12_p07",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 12,
+      "p": 7,
+      "t": null,
+      "base_row": "1000000000000000000000000000000000000011",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a12_p07.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a16_p01",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 16,
+      "p": 1,
+      "t": null,
+      "base_row": "000000000000000000000000000000000001",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a16_p01.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a16_p07",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 16,
+      "p": 7,
+      "t": null,
+      "base_row": "100000000000000000000000000000000000000000000011",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a16_p07.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a20_p01",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 20,
+      "p": 1,
+      "t": null,
+      "base_row": "00000000000000000000000000000000000000000001",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a20_p01.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a20_p07",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 20,
+      "p": 7,
+      "t": null,
+      "base_row": "10000000000000000000000000000000000000000000000000000011",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a20_p07.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a24_p01",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 24,
+      "p": 1,
+      "t": null,
+      "base_row": "0000000000000000000000000000000000000000000000000001",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a24_p01.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a24_p07",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 24,
+      "p": 7,
+      "t": null,
+      "base_row": "1000000000000000000000000000000000000000000000000000000000000011",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a24_p07.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a28_p01",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 28,
+      "p": 1,
+      "t": null,
+      "base_row": "000000000000000000000000000000000000000000000000000000000001",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a28_p01.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a28_p07",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 28,
+      "p": 7,
+      "t": null,
+      "base_row": "100000000000000000000000000000000000000000000000000000000000000000000011",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a28_p07.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a32_p01",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 32,
+      "p": 1,
+      "t": null,
+      "base_row": "00000000000000000000000000000000000000000000000000000000000000000001",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a32_p01.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a32_p07",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 32,
+      "p": 7,
+      "t": null,
+      "base_row": "10000000000000000000000000000000000000000000000000000000000000000000000000000011",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a32_p07.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a36_p01",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 36,
+      "p": 1,
+      "t": null,
+      "base_row": "0000000000000000000000000000000000000000000000000000000000000000000000000001",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a36_p01.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a36_p07",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 36,
+      "p": 7,
+      "t": null,
+      "base_row": "1000000000000000000000000000000000000000000000000000000000000000000000000000000000000011",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a36_p07.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a40_p01",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 40,
+      "p": 1,
+      "t": null,
+      "base_row": "000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a40_p01.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a40_p07",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 40,
+      "p": 7,
+      "t": null,
+      "base_row": "100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000011",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a40_p07.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a44_p01",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 44,
+      "p": 1,
+      "t": null,
+      "base_row": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a44_p01.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a44_p07",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 44,
+      "p": 7,
+      "t": null,
+      "base_row": "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000011",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a44_p07.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a48_p01",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 48,
+      "p": 1,
+      "t": null,
+      "base_row": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a48_p01.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    },
+    {
+      "id": "modelA_a48_p07",
+      "model": "A_relaxation",
+      "label": "SAT WITNESS (RELAXATION) -- NOT a counterexample to MB1-loc",
+      "a": 48,
+      "p": 7,
+      "t": null,
+      "base_row": "1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000011",
+      "verification": {
+        "patch_resimulated_and_rechecked": true,
+        "certificate_file": "results/model_a_patches/modelA_a48_p07.txt"
+      },
+      "note": "MODEL A drops the single-cell seed; a satisfying patch need not occur in the real orbit (Theorem A-incomplete)."
+    }
+  ],
+  "no_witness_found": [
+    {
+      "a": 32,
+      "eligible_positions": 3,
+      "violations": 0,
+      "status": "BOUNDED UNSAT (search-bound limited; see PHASE2A_RESULTS.md section 8)"
+    }
+  ],
+  "model_b_sweep_counterexamples": {
+    "label": "COMPUTATIONAL CERTIFICATE (exhaustive over the stated range)",
+    "bounds": {
+      "t_max": 48,
+      "p_max": 24,
+      "a_vals": [
+        0,
+        4,
+        8
+      ]
+    },
+    "n_instances_solved": 3168,
+    "count": 121,
+    "all_reverified": true,
+    "entries": [
+      {
+        "a": 0,
+        "t": 2,
+        "p": 8,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 2,
+        "p": 9,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 2,
+        "p": 10,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 2,
+        "p": 16,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 2,
+        "p": 19,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 6,
+        "p": 4,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 6,
+        "p": 5,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 6,
+        "p": 6,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 6,
+        "p": 12,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 6,
+        "p": 15,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 6,
+        "p": 21,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 7,
+        "p": 3,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 7,
+        "p": 4,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 7,
+        "p": 5,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 7,
+        "p": 11,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 7,
+        "p": 14,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 7,
+        "p": 20,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 10,
+        "p": 4,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 10,
+        "p": 7,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 10,
+        "p": 10,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 10,
+        "p": 15,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 10,
+        "p": 21,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 11,
+        "p": 3,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 11,
+        "p": 6,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 11,
+        "p": 9,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 11,
+        "p": 14,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 11,
+        "p": 20,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 12,
+        "p": 2,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 12,
+        "p": 5,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 12,
+        "p": 8,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 12,
+        "p": 13,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 12,
+        "p": 19,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 12,
+        "p": 24,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 14,
+        "p": 4,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 14,
+        "p": 7,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 14,
+        "p": 13,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 14,
+        "p": 18,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 14,
+        "p": 24,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 17,
+        "p": 4,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 17,
+        "p": 10,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 17,
+        "p": 15,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 17,
+        "p": 21,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 18,
+        "p": 2,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 18,
+        "p": 7,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 18,
+        "p": 13,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 18,
+        "p": 18,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 18,
+        "p": 22,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 20,
+        "p": 1,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 20,
+        "p": 7,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 20,
+        "p": 12,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 20,
+        "p": 18,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 20,
+        "p": 24,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 21,
+        "p": 4,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 21,
+        "p": 10,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 21,
+        "p": 15,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 21,
+        "p": 19,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 21,
+        "p": 22,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 25,
+        "p": 2,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 25,
+        "p": 7,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 25,
+        "p": 13,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 25,
+        "p": 19,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 25,
+        "p": 20,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 25,
+        "p": 21,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 25,
+        "p": 24,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 27,
+        "p": 4,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 27,
+        "p": 9,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 27,
+        "p": 13,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 27,
+        "p": 16,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 31,
+        "p": 1,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 31,
+        "p": 7,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 31,
+        "p": 13,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 31,
+        "p": 14,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 31,
+        "p": 15,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 31,
+        "p": 18,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 31,
+        "p": 19,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 31,
+        "p": 23,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 32,
+        "p": 4,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 32,
+        "p": 8,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 32,
+        "p": 11,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 32,
+        "p": 20,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 36,
+        "p": 2,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 36,
+        "p": 8,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 36,
+        "p": 9,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 36,
+        "p": 10,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 36,
+        "p": 13,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 36,
+        "p": 14,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 36,
+        "p": 18,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 38,
+        "p": 2,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 38,
+        "p": 5,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 38,
+        "p": 14,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 38,
+        "p": 19,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 38,
+        "p": 21,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 40,
+        "p": 4,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 40,
+        "p": 5,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 40,
+        "p": 6,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 40,
+        "p": 9,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 40,
+        "p": 10,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 40,
+        "p": 14,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 40,
+        "p": 21,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 43,
+        "p": 1,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 43,
+        "p": 2,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 43,
+        "p": 3,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 43,
+        "p": 6,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 43,
+        "p": 7,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 43,
+        "p": 11,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 43,
+        "p": 18,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 0,
+        "t": 44,
+        "p": 8,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 44,
+        "p": 13,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 44,
+        "p": 15,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 44,
+        "p": 24,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 45,
+        "p": 7,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 45,
+        "p": 12,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 45,
+        "p": 14,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 45,
+        "p": 23,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 46,
+        "p": 6,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 46,
+        "p": 11,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 46,
+        "p": 13,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 0,
+        "t": 46,
+        "p": 22,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 4,
+        "t": 38,
+        "p": 21,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 1,
+          "a_{t+p}(1)": 0
+        }
+      },
+      {
+        "a": 4,
+        "t": 40,
+        "p": 14,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      },
+      {
+        "a": 4,
+        "t": 40,
+        "p": 21,
+        "is_counterexample": true,
+        "values": {
+          "a_t(1)": 0,
+          "a_{t+p}(1)": 1
+        }
+      }
+    ]
+  },
+  "summary": {
+    "real_orbit_counterexamples": 8,
+    "model_a_relaxation_patches": 26,
+    "all_real_orbit_reverified": true
+  }
+}

@@ -1,0 +1,44 @@
+MODEL B' CERTIFICATE (two-window form)
+======================================================================
+a = 0   t = 17   p = 1
+
+LABEL: COMPUTATIONAL CERTIFICATE.
+This certifies that the triple (a,t,p) violates MB1-loc(0) in the
+actual single-cell rule-30 orbit.  Soundness is relative to the two
+base rows, which come from the Phase 1 engine (cross-checked by four
+independent implementations and by SHA-256 against stored sequences).
+
+window 1: times 17..17, base row over sites 0..1
+window 2: times 18..18, base row over sites 0..1
+cells: two-window 4, single-cone equivalent 6
+CNF: {'vars': 7, 'clauses': 9}
+single-cone cross-run: {'cells': 6, 'status': 'SAT'}
+
+solver verdicts (all must be SAT): {'cadical153': 'SAT', 'glucose42': 'SAT', 'minisat22': 'SAT', 'enc2/cadical153': 'SAT'}
+
+hypotheses re-checked on the simulated patch:
+  H1_agree_0           True
+  H2_zero              True
+  C_violated           True
+  ALL                  True
+
+independent full-orbit simulation from the single-cell seed:
+  a                        0
+  t                        17
+  p                        1
+  H1_agreement_on_window   True
+  H2_centre_zero           True
+  col1_t                   0
+  col1_t_plus_p            1
+  C_violated               True
+  is_counterexample        True
+
+window 1 (times 17..17):
+          sites 0 .. 1   (columns 0 and 1 marked in the header)
+          01
+t=     17 ..   H1,H2/C,H1',C'
+
+window 2 (times 18..18):
+          sites 0 .. 1   (columns 0 and 1 marked in the header)
+          01
+t=     18 .#   H1,H2/C,H1',C'

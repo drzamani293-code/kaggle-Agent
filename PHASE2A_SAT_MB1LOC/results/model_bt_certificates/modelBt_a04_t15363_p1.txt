@@ -1,0 +1,56 @@
+MODEL B' CERTIFICATE (two-window form)
+======================================================================
+a = 4   t = 15363   p = 1
+
+LABEL: COMPUTATIONAL CERTIFICATE.
+This certifies that the triple (a,t,p) violates MB1-loc(4) in the
+actual single-cell rule-30 orbit.  Soundness is relative to the two
+base rows, which come from the Phase 1 engine (cross-checked by four
+independent implementations and by SHA-256 against stored sequences).
+
+window 1: times 15359..15363, base row over sites -4..5
+window 2: times 15360..15364, base row over sites -4..5
+cells: two-window 60, single-cone equivalent 42
+CNF: {'vars': 67, 'clauses': 353}
+single-cone cross-run: {'cells': 42, 'status': 'SAT'}
+
+solver verdicts (all must be SAT): {'cadical153': 'SAT', 'glucose42': 'SAT', 'minisat22': 'SAT', 'enc2/cadical153': 'SAT'}
+
+hypotheses re-checked on the simulated patch:
+  H1_agree_0           True
+  H1_agree_1           True
+  H1_agree_2           True
+  H1_agree_3           True
+  H1_agree_4           True
+  H2_zero              True
+  C_violated           True
+  ALL                  True
+
+independent full-orbit simulation from the single-cell seed:
+  a                        4
+  t                        15363
+  p                        1
+  H1_agreement_on_window   True
+  H2_centre_zero           True
+  col1_t                   0
+  col1_t_plus_p            1
+  C_violated               True
+  is_counterexample        True
+
+window 1 (times 15359..15363):
+          sites -4 .. 5   (columns 0 and 1 marked in the header)
+              01    
+t=  15359 ..........   H1,H1'
+t=  15360  ........    H1,H1'
+t=  15361   ......     H1,H1'
+t=  15362    ....      H1,H1'
+t=  15363     ..       H1,H2/C,H1',C'
+
+window 2 (times 15360..15364):
+          sites -4 .. 5   (columns 0 and 1 marked in the header)
+              01    
+t=  15360 .........#   H1,H1'
+t=  15361  .......#    H1,H1'
+t=  15362   .....#     H1,H1'
+t=  15363    ...#      H1,H1'
+t=  15364     .#       H1,H2/C,H1',C'

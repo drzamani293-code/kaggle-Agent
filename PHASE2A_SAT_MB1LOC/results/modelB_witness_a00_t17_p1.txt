@@ -1,0 +1,34 @@
+MODEL B certificate -- FULL backward light cone to time 0
+a = 0   t = 17   p = 1
+patch cells: 380   CNF vars: 383   clauses: 2779
+base row is time 0 over sites -18..19, pinned to the single-cell seed
+
+solver verdicts: {'cadical153': 'SAT', 'glucose42': 'SAT', 'minisat22': 'SAT', 'z3': 'SAT'}
+recovered base row is the seed: True
+constraint re-check on the recovered patch: {'H1_agree_0': True, 'H2_zero': True, 'C_violated': True, 'ALL': True}
+independent orbit re-simulation: {'a': 0, 't': 17, 'p': 1, 'H1_agreement_on_window': True, 'H2_centre_zero': True, 'col1_t': 0, 'col1_t_plus_p': 1, 'C_violated': True, 'is_counterexample': True}
+
+LABEL: COMPUTATIONAL CERTIFICATE -- (a,t,p) = (0,17,1) is a
+genuine counterexample to MB1-loc(0) in the real orbit.
+
+          sites -18 .. 19   (columns 0 and 1 marked in the header)
+                  |         01        |         
+t=      0 ..................#...................   
+t=      1  ................###.................    
+t=      2   ..............##..#...............     
+t=      3    ............##.####.............      
+t=      4     ..........##..#...#...........       
+t=      5      ........##.####.###.........        
+t=      6       ......##..#....#..#.......         
+t=      7        ....##.####..######.....          
+t=      8         ..##..#...###.....#...           
+t=      9          ##.####.##..#...###.            
+t=     10           ..#....#.####.##..             
+t=     11            ###..##.#....#.#              
+t=     12             ..###..##..##.               
+t=     13              ##..###.###.                
+t=     14               .###...#..                 
+t=     15                #..#.###                  
+t=     16                 ###.#.                   
+t=     17                  ...#                    H1,H2/C
+t=     18                   .#                     H1',C'

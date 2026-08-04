@@ -1,0 +1,26 @@
+MODEL A certificate (unrestricted rule-30 patch)
+a = 4   p = 1   normalised t = 4
+STATUS: SAT.  This is NOT a counterexample to MB1-loc(4):
+it is a rule-30 patch with a FREE base row, not the
+single-cell orbit.  See PHASE2A_METHOD.md section 3.
+
+base row (time 0): 000000000001
+
+          sites -5 .. 6   (columns 0 and 1 marked in the header)
+               01     
+t=      0 ...........#   H1
+t=      1  .........#    H1,H1'
+t=      2   .......#     H1,H1'
+t=      3    .....#      H1,H1'
+t=      4     ...#       H1,H2/C,H1'
+t=      5      .#        H1',C'
+
+constraint re-check after independent simulation:
+  H1_agree_0           True
+  H1_agree_1           True
+  H1_agree_2           True
+  H1_agree_3           True
+  H1_agree_4           True
+  H2_zero              True
+  C_violated           True
+  ALL                  True
