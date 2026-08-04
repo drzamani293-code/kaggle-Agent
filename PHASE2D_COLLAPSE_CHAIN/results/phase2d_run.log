@@ -1,0 +1,49 @@
+
+=== 1. level classification and collapse formulas ===
+  class counts: {'COLLAPSING': 2995, 'DOUBLING': 4}
+  non-collapsing levels: [3, 8, 29, 400]
+  formula verification: {'collapsing_levels_checked': 2995, 'reset_value_mismatches': 0, 'phi_constant_mismatches': 0, 'erasure_failures': 0, 'sharp_transient_bound_violations': 0, 'all_exact': True}
+
+=== 2. zero coordinates ===
+  eventually zero (zero on their cycle): [2, 7, 28, 399]
+  permanently zero (zero for all t):     [7]
+  non-collapsing levels == {k+1 : k eventually zero}: True
+
+=== 3. collapse chains and the transducer ===
+  maximal COLLAPSING runs: [(2, 2), (4, 7), (9, 28), (30, 399), (401, 3000)]
+  longest chain: length 2600, K in [401, 3000]
+  transducer on the last chain: {'levels_checked': 2598, 'levels_with_unique_solution': 2598, 'cycle_word_always_a_solution': True, 'memory_bits': 32, 'period': 16}
+
+=== 4. diagonal dependency cone ===
+  t=   40  cone entirely transient from s=37  (fraction 0.9250)
+  t=  120  cone entirely transient from s=93  (fraction 0.7750)
+  t=  400  cone entirely transient from s=333  (fraction 0.8325)
+  t= 1200  cone entirely transient from s=987  (fraction 0.8225)
+  t= 2400  cone entirely transient from s=1942  (fraction 0.8092)
+
+=== 5. diagonal ANF ===
+     t    monomials   degree dep on z_t vars
+     0            1        1       True 1
+     1            3        2       True 2
+     2            6        3       True 3
+     3           10        3       True 4
+     4           19        4       True 5
+     5           44        5       True 6
+     6           81        6       True 7
+     7          150        8       True 8
+     8          256        9       True 9
+     9          545       10       True 10
+    10         1100       11       True 11
+    11         2183       12       True 12
+    12         4297       13       True 13
+    13         8701       14       True 14
+  ANF vs orbit under the seed: {'cells_checked': 130, 'mismatches': 0, 'exact': True}
+  first t at which w_t(k) no longer contains z_k: [(0, None), (1, None), (2, None), (3, None), (4, None), (5, None), (6, None), (7, None), (8, None), (9, None), (10, None)]
+
+=== 6. doubling points ===
+  K=  3  P_base= 1  a-word=1  c-word=0  parity=1 -> P=2
+  K=  8  P_base= 2  a-word=01  c-word=00  parity=1 -> P=4
+  K= 29  P_base= 4  a-word=1011  c-word=0000  parity=1 -> P=8
+  K=400  P_base= 8  a-word=01100001  c-word=00000000  parity=1 -> P=16
+
+wrote results/phase2d_results.json (51.3 s)

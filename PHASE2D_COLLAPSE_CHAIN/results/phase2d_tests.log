@@ -1,0 +1,50 @@
+python 3.11.15  cwd /home/user/kaggle-Agent/PHASE2D_COLLAPSE_CHAIN
+
+=== 1. collapse reset formulas (R1-R3) ===
+[PASS] R1 reset value exact  -- 2995 levels
+[PASS] R2 one-period constant Phi exact
+[PASS] R1 erasure: P-periodic from tau+1
+[PASS] R3 sharp transient bound T(K) <= max(T(K-1), tau+1)
+
+=== 2. zero coordinates and N1 ===
+[PASS] eventually-zero coordinates are {2,7,28,399}  -- [2, 7, 28, 399]
+[PASS] K=7 is the only permanently-zero coordinate  -- [7]
+[PASS] N1: non-COLLAPSING levels == {k+1 : k eventually zero}  -- [3, 8, 29, 400]
+[PASS] N2: w_t(m-2) = w_t(m-1) on a zero cycle
+[PASS] all four opportunities have ODD parity (hence DOUBLING, not NEUTRAL)
+
+=== 3. chains and the transducer (CH1, CH2) ===
+[PASS] chain runs are the gaps between doubling points  -- [(2, 2), (4, 7), (9, 28), (30, 399), (401, 3000)]
+[PASS] CH1: cycle word is always a solution of the fibre recurrence  -- 2598 levels
+[PASS] CH1: the solution is UNIQUE at every collapsing level
+[PASS] CH2: transducer memory is 2P bits  -- 32 bits
+[PASS] NEUTRAL words admit two solutions (relaxed-model counterexample)
+
+=== 4. diagonal cone (DD1) ===
+[PASS] DD1 cone at s=t is the single point (t,t) [t=60]
+[PASS] DD1 cone at s=t/2 is the whole row [t=60]
+[PASS] DD1 cone at s=0 is the seed cell [t=60]
+[PASS] cone becomes entirely transient before s=t [t=60]  -- s=50 (0.833 t)
+[PASS] DD1 cone at s=t is the single point (t,t) [t=400]
+[PASS] DD1 cone at s=t/2 is the whole row [t=400]
+[PASS] DD1 cone at s=0 is the seed cell [t=400]
+[PASS] cone becomes entirely transient before s=t [t=400]  -- s=333 (0.833 t)
+[PASS] DD1 cone at s=t is the single point (t,t) [t=1200]
+[PASS] DD1 cone at s=t/2 is the whole row [t=1200]
+[PASS] DD1 cone at s=0 is the seed cell [t=1200]
+[PASS] cone becomes entirely transient before s=t [t=1200]  -- s=987 (0.823 t)
+
+=== 5. diagonal ANF ===
+[PASS] ANF reproduces the orbit under the single-cell seed
+[PASS] monomial count is strictly increasing in t  -- [1, 3, 6, 10, 19, 44, 81, 150, 256, 545, 1100, 2183]
+[PASS] NEGATIVE RESULT: w_t(k) never loses z_k (no variable elimination)
+
+=== 6. stored results ===
+[PASS] stored run: all collapse formulas exact
+[PASS] stored run: N1 holds
+[PASS] stored run: 4 doubling points at 3,8,29,400  -- [3, 8, 29, 400]
+[PASS] stored run: transducer unique everywhere
+[PASS] stored run: no variable elimination observed
+
+======================================================================
+34 passed, 0 FAILED   (4.0 s)
