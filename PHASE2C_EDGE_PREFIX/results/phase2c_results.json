@@ -1,0 +1,310 @@
+{
+  "settings": {
+    "K_max": 30000,
+    "T_max": 50000,
+    "quick": false
+  },
+  "environment": {
+    "python": "3.11.15",
+    "platform": "Linux-6.18.5-fc-v18-x86_64-with-glibc2.39"
+  },
+  "F_forms": {
+    "K_max": 10,
+    "assignments_checked": 4094,
+    "forms_agree": true
+  },
+  "projection": {
+    "K_max": 9,
+    "assignments_checked": 4092,
+    "projection_commutes": true
+  },
+  "skew_form": {
+    "K_max": 9,
+    "assignments_checked": 4088,
+    "skew_form_exact": true
+  },
+  "edge_vs_rule30": {
+    "cells_checked": 50400,
+    "mismatches": 0,
+    "exact": true
+  },
+  "fibre_table": [
+    {
+      "a": 0,
+      "c": 0,
+      "g(0)": 0,
+      "g(1)": 1,
+      "type": "id"
+    },
+    {
+      "a": 0,
+      "c": 1,
+      "g(0)": 1,
+      "g(1)": 1,
+      "type": "const"
+    },
+    {
+      "a": 1,
+      "c": 0,
+      "g(0)": 1,
+      "g(1)": 0,
+      "type": "neg"
+    },
+    {
+      "a": 1,
+      "c": 1,
+      "g(0)": 0,
+      "g(1)": 0,
+      "type": "const"
+    }
+  ],
+  "classification": {
+    "words_checked": 63855,
+    "structural_rule_exact": true,
+    "counts": {
+      "COLLAPSING": 63473,
+      "NEUTRAL": 183,
+      "DOUBLING": 199
+    }
+  },
+  "exact_TP": {
+    "K_max": 30000,
+    "T_max": 50000,
+    "seconds": 3.2,
+    "crosscheck_reference_hash": {
+      "K_range": 400,
+      "agree": true
+    },
+    "crosscheck_incremental_skew": {
+      "K_range": 1500,
+      "agree": true,
+      "status": {
+        "failed_at_K": null
+      }
+    },
+    "full_verification_sample": {
+      "0": {
+        "periodic_from_T": true,
+        "T_minimal": true,
+        "P_minimal": true,
+        "all": true
+      },
+      "1": {
+        "periodic_from_T": true,
+        "T_minimal": true,
+        "P_minimal": true,
+        "all": true
+      },
+      "5": {
+        "periodic_from_T": true,
+        "T_minimal": true,
+        "P_minimal": true,
+        "all": true
+      },
+      "17": {
+        "periodic_from_T": true,
+        "T_minimal": true,
+        "P_minimal": true,
+        "all": true
+      },
+      "18": {
+        "periodic_from_T": true,
+        "T_minimal": true,
+        "P_minimal": true,
+        "all": true
+      },
+      "50": {
+        "periodic_from_T": true,
+        "T_minimal": true,
+        "P_minimal": true,
+        "all": true
+      },
+      "400": {
+        "periodic_from_T": true,
+        "T_minimal": true,
+        "P_minimal": true,
+        "all": true
+      },
+      "401": {
+        "periodic_from_T": true,
+        "T_minimal": true,
+        "P_minimal": true,
+        "all": true
+      },
+      "1000": {
+        "periodic_from_T": true,
+        "T_minimal": true,
+        "P_minimal": true,
+        "all": true
+      },
+      "2500": {
+        "periodic_from_T": true,
+        "T_minimal": true,
+        "P_minimal": true,
+        "all": true
+      },
+      "5000": {
+        "periodic_from_T": true,
+        "T_minimal": true,
+        "P_minimal": true,
+        "all": true
+      },
+      "10000": {
+        "periodic_from_T": true,
+        "T_minimal": true,
+        "P_minimal": true,
+        "all": true
+      },
+      "12000": {
+        "periodic_from_T": true,
+        "T_minimal": true,
+        "P_minimal": true,
+        "all": true
+      }
+    },
+    "full_verification_all_pass": true
+  },
+  "E_statements": {
+    "E1_all_periods_powers_of_two": {
+      "counterexamples": [],
+      "count": 0
+    },
+    "E2_P_divides_and_at_most_doubles": {
+      "counterexamples": [],
+      "count": 0
+    },
+    "E3_T_nondecreasing": {
+      "counterexamples": [],
+      "count": 0
+    },
+    "E4_T_greater_than_K": {
+      "counterexamples": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "count": 18,
+      "first_K_where_it_holds": 18
+    },
+    "E5_T_minus_K": {
+      "min_over_K_ge_100": 34,
+      "max": 10202,
+      "at_K_max": 10197
+    },
+    "period_doubling_points": [
+      [
+        1,
+        0
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        4,
+        8
+      ],
+      [
+        8,
+        29
+      ],
+      [
+        16,
+        400
+      ]
+    ]
+  },
+  "forcing_census": {
+    "counts": {
+      "COLLAPSING": 4995,
+      "NEUTRAL": 0,
+      "DOUBLING": 4
+    },
+    "doubling_K": [
+      3,
+      8,
+      29,
+      400
+    ],
+    "classification_matches_measured_period": true,
+    "inconsistencies": [],
+    "per_K_sample": [
+      {
+        "K": 2,
+        "kind": "COLLAPSING",
+        "P_prev": 1,
+        "P": 1
+      },
+      {
+        "K": 3,
+        "kind": "DOUBLING",
+        "P_prev": 1,
+        "P": 2
+      },
+      {
+        "K": 4,
+        "kind": "COLLAPSING",
+        "P_prev": 2,
+        "P": 2
+      },
+      {
+        "K": 5,
+        "kind": "COLLAPSING",
+        "P_prev": 2,
+        "P": 2
+      },
+      {
+        "K": 6,
+        "kind": "COLLAPSING",
+        "P_prev": 2,
+        "P": 2
+      }
+    ]
+  },
+  "coordinate_ever_one": {
+    "K_max": 3000,
+    "coordinates_never_one": [
+      7
+    ],
+    "all_coordinates_take_value_one": false
+  },
+  "diagonal_range": {
+    "K_max": 30000,
+    "K_with_nonempty_range": [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      12
+    ],
+    "count": 8,
+    "note": "empty for every K means Theorem D1 is vacuous on the real orbit"
+  },
+  "diagonal_D1_verified": {
+    "pairs_checked": 16,
+    "exact": true
+  },
+  "csv": {
+    "path": "PREFIX_PERIOD_TABLE.csv",
+    "rows": 30001
+  },
+  "elapsed_sec": 58.6
+}

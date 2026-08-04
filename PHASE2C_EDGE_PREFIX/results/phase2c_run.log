@@ -1,0 +1,47 @@
+
+=== 1. formal prefix dynamics ===
+  F list/bit-parallel forms agree: True
+  P1 projection commutes: True (4092 assignments)
+  P2 skew form exact: True
+  edge rows equal x_t(-t+k): True (50400 cells)
+
+=== 2. fibre classification ===
+  structural rule exact over 63855 forcing words: True
+  class counts among sampled words: {'COLLAPSING': 63473, 'NEUTRAL': 183, 'DOUBLING': 199}
+
+=== 3. exact T(K), P(K) ===
+  first-repeat scan: 3.2 s, undetermined K: 0
+  vs hash reference (K<=400): True
+  vs incremental skew-product (K<=1500): True
+  full periodicity+minimality check at 13 sampled K: True
+         K      T(K)   P(K)      T/K
+        10         6      4   0.6000
+        18        20      4   1.1111
+       100       134      8   1.3400
+       400       501     16   1.2525
+      1000      1275     16   1.2750
+      5000      6646     16   1.3292
+     10000     13315     16   1.3315
+     20000     26839     16   1.3419
+     30000     40197     16   1.3399
+
+=== 4. E1-E5 ===
+  E1 counterexamples: 0
+  E2 counterexamples: 0
+  E3 counterexamples: 0
+  E4 counterexamples: 18  -> [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+  E5 T(K)-K: min over K>=100 = 34, max = 10202, at K_max = 10197
+  period doubling points (P, first K): [(1, 0), (2, 3), (4, 8), (8, 29), (16, 400)]
+
+=== 5. forced-bit census on the real orbit ===
+  class counts: {'COLLAPSING': 4995, 'NEUTRAL': 0, 'DOUBLING': 4}
+  classification matches the measured period at every K: True
+  DOUBLING at K = [3, 8, 29, 400]
+  coordinates never equal to 1: [7]
+
+=== 6. diagonal relation D1 ===
+  K with non-empty range for D1: [4, 5, 6, 7, 8, 9, 10, 12] (count 8)
+  D1 verified at 16 (K,t) pairs where it has content: True
+
+wrote PREFIX_PERIOD_TABLE.csv (30001 rows)
+wrote results/phase2c_results.json (58.6 s)

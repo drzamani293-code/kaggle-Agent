@@ -1,0 +1,53 @@
+python 3.11.15  cwd /home/user/kaggle-Agent/PHASE2C_EDGE_PREFIX
+
+=== 1. formal prefix dynamics ===
+[PASS] F list form == bit-parallel form  -- 4094 assignments
+[PASS] P1 projection commutes  -- 4092 assignments
+[PASS] P2 new coordinate is a one-bit fibre  -- 4088 assignments
+[PASS] edge rows equal x_t(-t+k)  -- 50400 cells, 0 mismatches
+[PASS] coordinate 0 is a fixed point of F
+
+=== 2. fibre trichotomy ===
+[PASS] c=1 gives a constant map
+[PASS] c=0 gives a bijection
+[PASS] structural rule matches the composed map on every forcing word  -- 63855 words
+[PASS] all three classes are realised among abstract words  -- {'COLLAPSING': 63473, 'NEUTRAL': 183, 'DOUBLING': 199}
+
+=== 3. exact T(K), P(K): three algorithms ===
+[PASS] first-repeat scan determines every K
+[PASS] agrees with the hash reference  -- K <= 400
+[PASS] agrees with the incremental skew-product algorithm  -- K <= 1200
+[PASS] periodicity + minimality of T and P verified directly  -- sampled [0, 1, 5, 17, 18, 50, 100, 400, 1200]
+
+=== 4. E1-E5 ===
+[PASS] E1 every P(K) is a power of two (THEOREM S1)
+[PASS] E2 P(K) | P(K+1) and P(K+1) <= 2P(K) (THEOREM S1)
+[PASS] E3 T nondecreasing (THEOREM P1a)
+[PASS] E4 is FALSE as stated: counterexamples are exactly K=0..17  -- 18 counterexamples
+[PASS] E4' T(K) > K holds for 18 <= K <= 1200
+[PASS] S4 weakest provable form T(K) > floor(K/2) - P(K)
+[PASS] E5 T(K)-K grows (bounded observation)
+
+=== 5. forced-bit census and the zero coordinate ===
+[PASS] classification reproduces the measured period at every K  -- {'COLLAPSING': 2995, 'NEUTRAL': 0, 'DOUBLING': 4}
+[PASS] DOUBLING occurs exactly at the period-doubling points  -- [3, 8, 29, 400]
+[PASS] NEUTRAL never occurs in the real orbit (observation, K<=3000)
+[PASS] coordinate 7 is the unique permanently-zero coordinate  -- [7]
+[PASS] the 7-prefix 2-cycle certifies w_t(7)=0  -- cycle states [19, 123]
+
+=== 6. diagonal identity D1 ===
+[PASS] D1 range is non-empty exactly for K in {4..10, 12}  -- [4, 5, 6, 7, 8, 9, 10, 12]
+[PASS] D1 verified where it has content  -- 16 (K,t) pairs
+[PASS] (HYP-D) of Theorem D2 fails for every 18 <= K <= 1200  -- so the D2 bridge is blocked
+
+=== 7. stored artifacts ===
+[PASS] CSV has 30001 rows  -- 30001
+[PASS] CSV T,P agree with a fresh computation on a sample
+[PASS] CSV matches recomputation for K <= 500
+[PASS] stored run recorded 0 counterexamples for E1,E2,E3
+[PASS] stored run recorded exactly 18 E4 counterexamples
+[PASS] stored run found exactly 4 period doublings  -- [[1, 0], [2, 3], [4, 8], [8, 29], [16, 400]]
+[PASS] all three exact algorithms agreed in the stored run
+
+======================================================================
+35 passed, 0 FAILED   (0.5 s)
