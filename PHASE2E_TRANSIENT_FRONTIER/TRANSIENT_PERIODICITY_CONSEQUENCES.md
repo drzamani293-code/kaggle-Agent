@@ -167,3 +167,78 @@ W2. Phase 2E adds nothing to this beyond restating it in strip coordinates.
   word counts, or from any statistical regularity. No randomness tests were run.
 * Failed routes A–D are kept in full rather than deleted, per the standing rule
   on preserving negative results.
+
+---
+
+## 5. (H) in the transient-frontier variables (Phase 2E brief §8)
+
+The brief asks what (H) implies for the reset schedule along the diagonal, the
+frontier increments, the surviving skeletons, and the equality of proof DAGs at
+`t` and `t+p`. Each is answered below. **None yields a contradiction, and the
+first two turn out to be circular for a reason worth recording.**
+
+### 5.1 The reset schedule along the diagonal IS the centre column
+
+### THEOREM G1
+
+> The diagonal cell `(t,t)` has its self-edge erased exactly when
+> `w_{t-1}(t-1) = 1`, i.e. exactly when `x_{t-1}(0) = 1`. So the reset schedule
+> along the diagonal is the centre column, shifted by one.
+
+*Proof.* The edge `(s,k) → (s-1,k)` is erased iff `w_{s-1}(k-1) = 1`
+(`DIAGONAL_RESET_SKELETON.md` §6.1). At `(t,t)` this is `w_{t-1}(t-1)`, which by
+Theorem EA3 is `x_{t-1}(0)`. ∎
+
+*Verified:* identity holds at every `t ≤ 3000`.
+
+**Consequence, and it is a sharp one.** The registry target
+"eventual periodicity of `c_t` forces eventual periodicity of the reset schedule
+along the diagonal" (**F3** in the brief's numbering) is **true but vacuous**:
+the two sequences are the same object up to a shift. It is not a step towards
+anything, and it must not be counted as one.
+
+### 5.2 Frontier increments under (H)
+
+(H) constrains the diagonal `w_t(t)`. The frontier increments are governed by
+the defect bits `D(K) = w_{T(K-1)}(K) XOR Φ_K` (Theorem C2), read at
+`(T(K-1), K)` — a cell with `T(K-1) < T(K)` and `K < T(K)`, i.e. **off** the
+diagonal, at a level whose index and time are unrelated to any single `t`.
+
+No implication runs from (H) to the increment sequence, and none is derived
+here. This is the same mismatch as Proposition 8.1: (H) moves both indices
+together; the level theory moves them independently.
+
+### 5.3 Equality of proof DAGs at `t` and `t+p` — refuted as a route
+
+The natural hope is that (H) forces the derivations of `c_t` and `c_{t+p}` to
+agree, so that some finite invariant of the DAG could be played off against the
+growing cone. **It does not.**
+
+Measured with `p = 29` (the lag minimising `T+p` for the centre column over
+`q ≤ 32`, `PROPOSITION 8.6`):
+
+| `t` | `c_t` | `c_{t+p}` | DAG(`t`) | DAG(`t+p`) |
+|---|---|---|---|---|
+| 200 | 1 | 0 | 11 874 | 17 159 |
+| **300** | **0** | **0** | **28 553** | **33 843** |
+| 400 | 1 | 0 | 51 526 | 55 122 |
+| 500 | 0 | 1 | 77 446 | 85 382 |
+
+The `t = 300` row is the point: **equal values, different DAGs.** So
+
+> `c_t = c_{t+p}`  ⟹  `DAG(c_t) ≅ DAG(c_{t+p})`
+
+is **false**, by explicit counterexample. Any argument of the form "(H) forces
+the derivations to repeat, and they visibly do not" is invalid, and Phase 2E
+does not use one.
+
+### 5.4 Surviving skeletons under (H)
+
+Likewise: (H) says nothing about the skeleton of `c_t`, because the skeleton is
+determined by the *values* of the whole cone (which cells are `1`), not by the
+value of the diagonal bit. §5.3 exhibits the failure concretely.
+
+**Net result of brief §8: three of the four proposed consequences are either
+circular (5.1), unavailable (5.2, 5.4) or refuted (5.3). No contradiction is
+claimed, and the dependencies that would be needed are named rather than
+assumed.**

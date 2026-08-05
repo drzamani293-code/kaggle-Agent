@@ -167,7 +167,80 @@ show why re-coordinatising does not by itself reach the diagonal.
 
 ---
 
-## 4. Range and controls
+## 4. The three reset times, and R(K) as the fibre dependence horizon
+
+§§1–3 above use `R(K) = r_{P(K)}(K)` (the coordinate preperiod) and Phase 2D's
+`τ(K)` (the *first* collapse at or after `T(K-1)`). The brief asks for two
+different objects, and they are genuinely different. Both readings are carried
+below, and the relations between all of them are proved.
+
+### 4.1 The brief's `R(K)`: the fibre dependence horizon
+
+**Definition.** Treat the initial fibre bit `w_0(K)` as a free variable, hold
+the rest of the orbit fixed, and run the level-`K` fibre recursion
+`u_{t+1} = a_t XOR (c_t OR u_t)`. Then
+
+```
+    R_dep(K)  :=  max { t : w_t(K) still depends on w_0(K) } .
+```
+
+### THEOREM 4.1
+
+> `R_dep(K) = σ(K)`, where `σ(K) := min{ t ≥ 0 : w_t(K-1) = 1 }` is the
+> **first reset ever** of level `K` (`R_dep(K) = ∞` if no reset occurs).
+
+*Proof.* Let `u_t, v_t` be the two runs from `u_0 = 0, v_0 = 1`. If `c_t = 0`
+then `u_{t+1} XOR v_{t+1} = u_t XOR v_t`; if `c_t = 1` then both equal
+`a_t XOR 1`, so the difference is `0` and stays `0` by the first clause. Hence
+the runs differ exactly for `t ≤ σ(K)`. ∎
+
+*Verified two independent ways:* by direct perturbation (re-running the fibre
+with the bit flipped) and by computing `σ(K)`. Agreement at every sampled
+level, `K ≤ 30000`.
+
+### 4.2 The three reset times
+
+```
+    σ(K)  = min{ t ≥ 0        : w_t(K-1) = 1 }      first reset ever
+    τ(K)  = min{ t ≥ T(K-1)   : w_t(K-1) = 1 }      first reset after the base settles
+    ρ(K)  = max{ t < T(K)     : w_t(K-1) = 1 }      last reset before the level settles
+```
+
+`σ ≤ τ` always, by definition. The brief's phrase *"the last masking/reset time
+relevant to coordinate K"* is `ρ(K)`; Phase 2D's `τ_K` is the first such time
+after the base settles. Measured over the first 2000 levels:
+
+| relation | count | verdict |
+|---|---|---|
+| `σ(K) < τ(K)` | 1988 | **σ and τ are distinct**, and differ almost always |
+| `σ(K) = τ(K)` | 8 | only where the first reset already lies past `T(K-1)` |
+| `τ(K) = ρ(K)` | 1078 | exactly the RESETTING levels (Theorem 1.8) |
+| `ρ(K) < τ(K)` | 914 | the INHERITING levels — there `ρ` looks backwards from `T(K-1)` while `τ` looks forwards |
+| `τ(K) > ρ(K)` with `ρ` undefined | 5 | `K = 4…8` |
+
+**So the answer to the brief's question is: all three are distinct.** They
+coincide only on the RESETTING levels, where `τ(K) = ρ(K) = T(K) - 1`
+(Theorem 1.8), and even there `σ(K)` is generally much smaller.
+
+### 4.3 `R_dep` versus `R = r_{P(K)}(K)`
+
+These are different quantities with different meanings:
+
+* `R_dep(K) = σ(K)` is about **forgetting the initial condition**; it is small
+  (the first `1` in coordinate `K-1` appears near `t ≈ K/2`).
+* `R(K) = r_{P(K)}(K)` is about **settling into the cycle**; it is large
+  (`≈ 1.34 K`).
+
+Both are legitimate readings of "the transient of coordinate `K`", and
+conflating them would be an error. Forgetting the seed **does not** mean having
+settled: after `σ(K)` the fibre is a function of the base orbit alone, but that
+base orbit is itself still transient. The gap `R(K) - R_dep(K)` is exactly the
+part of the transient that is inherited from below rather than owned by the
+level, and it is what Theorem A decomposes.
+
+---
+
+## 5. Range and controls
 
 * All statements labelled THEOREM are proved for **all `K`**; the computational
   lines say only that the proofs were also checked.

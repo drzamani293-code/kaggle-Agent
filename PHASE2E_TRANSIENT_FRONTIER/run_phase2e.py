@@ -16,6 +16,12 @@ Sections
   6  diagonal reset ancestry
   7  the hash-consed proof DAG for the diagonal
   8  consequences of the periodicity hypothesis
+  9  reset times sigma / tau / rho, and the fibre dependence horizon R(K)
+ 10  the five-way level classification (and the classification CSV)
+ 11  whether the frontier increments admit a finite-state description
+ 12  the co-moving strip of full width 2R+1: automaton, lookahead, memory
+ 13  the reset-erased dependency skeleton and its proof DAG
+ 14  the periodicity hypothesis in the transient-frontier variables
 """
 
 from __future__ import annotations
@@ -30,6 +36,7 @@ import time
 
 import collapse_lab as CL
 import frontier_lab as F
+import transient_lab as X
 
 
 def log(m):
@@ -95,17 +102,8 @@ def main(argv=None):
     log("  RESETTING => T(K) = tau_K + 1:        %s" % dich["resetting_T_equals_tau_plus_1"])
     log("  eventually-zero coordinates: %s" % ez)
 
-    with open("TRANSIENT_CLASSIFICATION.csv", "w", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(["K", "P_prev", "P_K", "fibre_kind", "T_prev", "T_K",
-                    "tau_K", "D_bit", "class", "T_predicted", "matches",
-                    "R_K", "increment"])
-        for r in recs:
-            w.writerow([r["K"], r["P_prev"], r["P_K"], r["fibre_kind"],
-                        r["T_prev"], r["T_K"], r["tau_K"], r["D_bit"],
-                        r["cls"], r["T_pred"], int(r["T_pred"] == r["T_K"]),
-                        r["R_K"], r["T_K"] - r["T_prev"]])
-    log("  wrote TRANSIENT_CLASSIFICATION.csv (%d rows)" % len(recs))
+    log("  (TRANSIENT_CLASSIFICATION.csv is written in section 10, with both "
+        "the two-way class and the five-way case)")
 
     # --- 3 ---------------------------------------------------------------
     log("\n=== 3. reset schedule ===")
@@ -211,6 +209,138 @@ def main(argv=None):
     for r, v in sorted(dl["lines"].items(), key=lambda kv: int(kv[0])):
         log("    r=%-3s length %d  min(T+p) = %d at p = %d"
             % (r, v["length"], v["min_T_plus_p"], v["argmin_p"]))
+
+    # --- 9 ---------------------------------------------------------------
+    log("\n=== 9. reset times sigma / tau / rho, and the horizon R(K) ===")
+    t_hi = min(len(rows), T[K_max] + 64)
+    rt = X.reset_time_table(recs[:min(len(recs), 2000)], rows, t_hi)
+    cmp_ = X.compare_reset_times(rt)
+    hz = X.verify_horizon(rows, [2, 3, 5, 9, 17, 33, 100, 500, 1500,
+                                 min(2999, K_max)], min(t_hi, 6000))
+    out["reset_times"] = {"comparison": cmp_, "horizon_check": hz,
+                          "sample": rt[:8]}
+    log("  R(K) by perturbation = sigma(K) at every sampled level: %s" % hz["agree"])
+    c = cmp_["counts"]
+    log("  sigma < tau at %d levels, sigma = tau at %d  -> sigma and tau DISTINCT"
+        % (c["sigma_lt_tau"], c["sigma_eq_tau"]))
+    log("  tau = rho at %d levels, rho < tau at %d      -> tau and rho DISTINCT"
+        % (c["tau_eq_rho"], c["rho_lt_tau"]))
+
+    # --- 10 --------------------------------------------------------------
+    log("\n=== 10. five-way level classification ===")
+    ct = X.classification_table(recs, rows, ez)
+    out["five_way"] = {k: v for k, v in ct.items() if k != "rows"}
+    log("  counts: %s" % ct["counts"])
+    log("  prediction failures: %d, independent disagreements: %d"
+        % (ct["n_prediction_failures"], ct["n_independent_disagreements"]))
+    log("  PERIOD_DOUBLING levels %s; ZERO_PREDECESSOR levels %s; identical: %s"
+        % (ct["period_doubling_levels"], ct["zero_predecessor_levels"],
+           ct["doubling_equals_zero_predecessor"]))
+    byK5 = {r["K"]: r["class"] for r in ct["rows"]}
+    with open("TRANSIENT_CLASSIFICATION.csv", "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["K", "P_prev", "P_K", "fibre_kind", "T_prev", "T_K",
+                    "tau_K", "D_bit", "class2", "case5", "T_predicted",
+                    "matches", "R_K", "increment", "zero_predecessor"])
+        for r, r5 in zip(recs, ct["rows"]):
+            w.writerow([r["K"], r["P_prev"], r["P_K"], r["fibre_kind"],
+                        r["T_prev"], r["T_K"], r["tau_K"], r["D_bit"],
+                        r["cls"], r5["class"], r["T_pred"],
+                        int(r["T_pred"] == r["T_K"]), r["R_K"],
+                        r["T_K"] - r["T_prev"], r5["zero_predecessor"]])
+    log("  rewrote TRANSIENT_CLASSIFICATION.csv with the five-way case column")
+
+    # --- 11 --------------------------------------------------------------
+    log("\n=== 11. is the frontier increment finite-state? ===")
+    il = X.verify_increment_law(recs, rows)
+    df = X.verify_defect_bit_formula(recs, rows)
+    fl = X.verify_flip_flips_defect(recs, rows, 400)
+    fs1 = X.defect_bit_is_finite_state(recs, rows, 1)
+    fs2 = X.defect_bit_is_finite_state(recs, rows, 2)
+    iw = X.increment_word_repeats(recs, 30)
+    out["finite_state"] = {"increment_law": il, "defect_formula": df,
+                           "flip": fl, "depth1": fs1, "depth2": fs2,
+                           "increment_word": iw}
+    log("  C1 increment = f(cycle word, D): exact %s (%d levels)"
+        % (il["exact"], il["levels_checked"]))
+    log("  C2 D(K) = w_{T(K-1)}(K) XOR Phi_K: exact %s (%d levels)"
+        % (df["exact"], df["levels_checked"]))
+    log("  flipping that one transient bit always flips D: %s"
+        % fl["flip_always_flips_D"])
+    log("  depth-1 cycle-word windows: %d distinct, %d counterexamples -> refuted %s"
+        % (fs1["distinct_windows"], fs1["counterexamples"],
+           fs1["finite_state_refuted"]))
+    log("  depth-2: %d distinct windows over %d levels -- collision test has NO "
+        "power here" % (fs2["distinct_windows"], len(recs)))
+
+    # --- 12 --------------------------------------------------------------
+    log("\n=== 12. co-moving strip of width 2R+1 ===")
+    ss = X.verify_strip_step(2000, 6)
+    pre = [X.verify_preimage(R) for R in (1, 2, 3, 4, 5, 6, 7)]
+    t_strip = min(50000, 4 * K_max)
+    wide = X.strip_states(t_strip, 8)
+    oa = [X.strip_orbit_vs_automaton(t_strip, R,
+                                     [s & ((1 << (2 * R + 1)) - 1) for s in wide])
+          for R in (2, 4, 6, 8)]
+    la = [X.strip_lookahead(min(20000, t_strip), R) for R in (1, 2, 3, 4, 6)]
+    ch = [X.centre_history_determines_next(min(50000, t_strip), m)
+          for m in (1, 2, 4, 8, 12, 16, 20)]
+    me = X.strip_minimal_extension(4, 10)
+    out["strip"]["step_law"] = ss
+    out["strip"]["preimage"] = pre
+    out["strip"]["orbit_vs_automaton"] = oa
+    out["strip"]["lookahead"] = la
+    out["strip"]["centre_history"] = ch
+    out["strip"]["minimal_extension"] = me
+    log("  strip step law exact against the orbit: %s" % ss["exact"])
+    log("  every state has in-degree exactly 4 (Theorem D2), radii 1..7: %s"
+        % all(p["every_state_has_indegree_4"] for p in pre))
+    log("  recurrent core = whole state space at every radius: %s"
+        % all(not o["automaton_excludes_anything"] for o in oa))
+    log("  strip lookahead: theory R, first counterexample at R+1:")
+    for r in la:
+        log("    R=%d -> first counterexample at n=%s"
+            % (r["radius"], r["first_n_with_counterexample"]))
+    log("  centre column determined by its own last m bits: %s"
+        % [(r["memory"], r["determined"]) for r in ch])
+
+    # --- 13 --------------------------------------------------------------
+    log("\n=== 13. reset-erased dependency skeleton and its proof DAG ===")
+    sk_ts = [100, 300, 600] if a.quick else [100, 300, 600, 1200]
+    sk = X.skeleton_growth(sk_ts, rows)
+    sp = [X.verify_spine(t, rows) for t in ([100, 300] if a.quick else [100, 300, 600])]
+    ec = X.erased_edge_census(400, rows)
+    dg = [X.proof_dag(t, rows) for t in sk_ts]
+    cb = [X.skeleton_combined(t, rows, T, P) for t in sk_ts]
+    st_ = X.dag_special_times(rows, T, P, K_max)
+    rf = X.dag_recursive_family(rows, [64, 128, 256, 512])
+    out["skeleton"] = {"growth": sk, "spine": sp, "erased_edges": ec,
+                       "proof_dag": dg, "combined": cb,
+                       "special_times": st_, "recursive_family": rf}
+    log("  %6s %10s %10s %10s %10s %10s"
+        % ("t", "cone", "skeleton", "reset+per", "DAG", "width"))
+    for s, c2, d in zip(sk, cb, dg):
+        t_ = s["t"]
+        cone = sum(min(t_, 2 * u) - max(0, 2 * u - t_) + 1 for u in range(t_ + 1))
+        log("  %6d %10d %10d %10d %10d %10d"
+            % (t_, cone, s["nodes"], c2["nodes"], d["dag_nodes"], s["max_width"]))
+    log("  spine contained in the skeleton at every t tested: %s"
+        % all(x["spine_contained"] for x in sp))
+    log("  mean surviving edges per cell (of 3): %.4f" % ec["mean_surviving_edges"])
+    log("  recursive family among special-time DAGs found: %s"
+        % rf["recursive_family_found"])
+
+    # --- 14 --------------------------------------------------------------
+    log("\n=== 14. periodicity hypothesis in these variables ===")
+    drs = X.diagonal_reset_schedule(rows, min(3000, len(rows) - 1))
+    de = X.dag_equality_under_shift(rows, [200, 300, 400, 500], 29)
+    out["hypothesis"]["diagonal_reset_schedule"] = drs
+    out["hypothesis"]["dag_equality"] = de
+    log("  reset schedule along the diagonal = centre column shifted: %s"
+        % drs["identity_verified"])
+    log("  equal centre value with different DAG size: %d cases -> "
+        "'equal value => equal derivation' is REFUTED: %s"
+        % (de["n_equal_value_different_dag"], de["implication_refuted"]))
 
     out["elapsed_sec"] = round(time.time() - t0, 1)
     path = os.path.join(a.outdir, "phase2e_results.json")

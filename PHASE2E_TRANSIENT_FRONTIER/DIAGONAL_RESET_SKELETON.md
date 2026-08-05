@@ -121,3 +121,93 @@ DAG — and finds a constant-factor saving only.
 **This is the same wall as Phase 1 §10.3, reached along a fourth route.** An
 argument built from the settled part of the diagram is blind to the transient
 that carries the seed, and the diagonal lives in the transient.
+
+---
+
+## 6. The reset-erased dependency skeleton (Phase 2E brief §6)
+
+§§1–5 located the diagonal relative to the reset events. The brief asks for
+something sharper: trace the backward dependency cone of `w_t(t)` and **delete
+every edge whose dependence a reset erases**.
+
+### 6.1 Which edges a reset erases
+
+From `w_s(k) = w_{s-1}(k-2) XOR ( w_{s-1}(k-1) OR w_{s-1}(k) )`:
+
+| edge | erased when | why |
+|---|---|---|
+| `(s,k) → (s-1, k-2)` | **never** | the rule is XOR-permutive in that argument |
+| `(s,k) → (s-1, k-1)` | `w_{s-1}(k) = 1` | the OR is already `1` |
+| `(s,k) → (s-1, k)` | `w_{s-1}(k-1) = 1` | the OR is already `1` |
+
+Together with constant folding (`k < 0`, `k > 2s`, `s = 0`) this defines the
+**surviving dependency skeleton** of `w_t(t)`: the sub-DAG reachable from
+`(t,t)` along non-erased edges.
+
+Measured at `t = 400` over the 80400 cells of the plain cone: **20029** cells
+keep one edge, **40550** keep two, **19821** keep all three — mean **1.9974** of
+3. So reset erasure removes about a third of the edges.
+
+### 6.2 The skeleton grows unboundedly — proved
+
+### THEOREM E1 (the XOR spine)
+
+> For every `t`, the cells `(t-j, t-2j)` for `0 ≤ j ≤ ⌊t/2⌋` all lie in the
+> skeleton. Hence `|skeleton(t)| ≥ ⌊t/2⌋ + 1`, and the skeleton grows
+> unboundedly.
+
+*Proof.* The edge `(s,k) → (s-1,k-2)` is never erased, so the path from `(t,t)`
+following it repeatedly stays in the skeleton. Its cells satisfy
+`k = t-2j ≤ 2(t-j) = 2s`, so none is folded by the support bound, and
+`k ≥ 0` for `j ≤ ⌊t/2⌋`. ∎
+
+*Verified independently:* the spine is contained in the separately-constructed
+skeleton at every `t` tested, with `|skeleton| ≥ ⌊t/2⌋+1` in every case.
+
+**This answers the brief's question "whether it grows unboundedly" with a
+theorem rather than a measurement**, and it identifies the canonical path the
+brief asks about: the spine is a *unique* canonical path, present for every `t`
+and every seed, because it is forced by permutivity alone.
+
+### 6.3 Measured size and width
+
+| `t` | plain cone | skeleton | skeleton / `t²` | max width | spine length |
+|---|---|---|---|---|---|
+| 100 | 5 101 | 3 763 | 0.3763 | 67 | 51 |
+| 300 | 45 301 | 35 777 | 0.3975 | 212 | 151 |
+| 600 | 180 601 | 146 292 | 0.4064 | 436 | 301 |
+| 1200 | 721 201 | 565 408 | 0.3926 | 840 | 601 |
+
+* **Number of surviving ancestors**: quadratic in `t`, `≈ 0.39 t²`, i.e. about
+  78 % of the plain cone. **BOUNDED OBSERVATION**, `t ≤ 1200`, four values, no
+  constant fitted.
+* **Spatial width**: `≈ 0.7 t` and growing, so the skeleton is not confined to a
+  bounded-width strip.
+* **Branching pattern**: mean out-degree `≈ 2.0` throughout; the skeleton is a
+  genuinely branching DAG, not a path with decorations. The only canonical
+  structure inside it is the spine of Theorem E1.
+
+### 6.4 With the periodicity rewrite as well
+
+Adding the rewrite `w_s(k) = w_{s-P(k)}(k)` for `s ≥ T(k)+P(k)` — the strongest
+sound simplification the project supplies — on top of reset erasure:
+
+| `t` | plain cone | reset-erased | reset + periodicity | reduction |
+|---|---|---|---|---|
+| 100 | 5 101 | 3 763 | 2 313 | 2.21× |
+| 300 | 45 301 | 35 777 | 22 996 | 1.97× |
+| 600 | 180 601 | 146 292 | 91 263 | 1.98× |
+| 1200 | 721 201 | 565 408 | 339 093 | 2.13× |
+
+**The two simplifications together buy a factor of about two, and the skeleton
+stays quadratic.** That is the honest state of §6: everything the project has
+proved about resets and about periodicity, applied at once, does not reduce the
+diagonal's ancestry below `Θ(t²)`.
+
+### 6.5 Control
+
+The skeleton is a **sound over-approximation** of true dependence: an edge that
+survives the reset test may still be irrelevant through cancellation higher up.
+So the sizes above are upper bounds on the true dependency set — which makes
+Theorem E1 the load-bearing statement, since a lower bound is what the brief's
+question actually needs, and the spine supplies one unconditionally.

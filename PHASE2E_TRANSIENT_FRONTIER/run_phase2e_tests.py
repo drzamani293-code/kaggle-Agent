@@ -15,6 +15,12 @@ Coverage
   7  the co-moving strip: identity, non-autonomy, cone growth
   8  the proof DAG: soundness of the rewrite, and its measured limits
   9  the stored results JSON matches what the documents claim
+ 11  reset times sigma/tau/rho and the fibre dependence horizon (Theorem 4.1)
+ 12  the five-way classification, cross-derived
+ 13  Theorems C1/C2/C3: the frontier increment is not finite-state
+ 14  the co-moving strip: step law, preimage (D2), lookahead (D4)
+ 15  the reset-erased skeleton, the XOR spine (E1), and its proof DAG
+ 16  Theorem G1 and the refutation of "equal value => equal derivation"
 """
 
 from __future__ import annotations
@@ -28,6 +34,7 @@ import time
 import collapse_lab as CL
 import frontier_lab as F
 import prefix_lab as PL
+import transient_lab as X
 
 PASSES, FAILURES = [], []
 _CACHE = {}
@@ -304,7 +311,7 @@ def t9_results_json():
 
 def t10_csv():
     print("\n=== 10. CSV files ===")
-    for name, ncol in (("TRANSIENT_CLASSIFICATION.csv", 13),
+    for name, ncol in (("TRANSIENT_CLASSIFICATION.csv", 15),
                        ("RESET_SCHEDULE_RESULTS.csv", 8)):
         if not os.path.exists(name):
             check("%s present" % name, False, "run run_phase2e.py")
@@ -320,6 +327,168 @@ def t10_csv():
             bad = [r["K"] for r in _csv.DictReader(f) if r["matches"] != "1"]
         check("every row of TRANSIENT_CLASSIFICATION.csv has matches=1",
               not bad, str(bad[:5]))
+
+
+def t11_reset_times(fast):
+    print("\n=== 11. reset times and the dependence horizon ===")
+    K = 800 if fast else 3000
+    recs, T, P, rows, Rq = table(K)
+    ks = [k for k in (2, 3, 5, 9, 17, 33, 100, 500, 1500, 2999) if k <= K]
+    hz = X.verify_horizon(rows, ks, min(len(rows), 6000))
+    check("Theorem 4.1: R_dep(K) by perturbation = sigma(K)", hz["agree"],
+          "%d levels, %d mismatches" % (hz["levels_checked"], hz["mismatches"]))
+    tab = X.reset_time_table(recs[:400], rows, min(len(rows), 6000))
+    c = X.compare_reset_times(tab)["counts"]
+    check("sigma and tau are distinct (sigma < tau on most levels)",
+          c["sigma_lt_tau"] > c["sigma_eq_tau"],
+          "sigma<tau %d, sigma=tau %d" % (c["sigma_lt_tau"], c["sigma_eq_tau"]))
+    check("tau and rho are distinct (rho < tau on the inheriting levels)",
+          c["rho_lt_tau"] > 0, "rho<tau at %d levels" % c["rho_lt_tau"])
+    check("tau never exceeds rho where both are defined", c["tau_lt_rho"] == 0)
+    # sigma <= tau by definition, checked on the table
+    bad = [r["K"] for r in tab
+           if r["sigma"] is not None and r["tau"] is not None
+           and r["sigma"] > r["tau"]]
+    check("sigma <= tau at every level", not bad, str(bad[:5]))
+
+
+def t12_five_way(fast):
+    print("\n=== 12. the five-way classification ===")
+    K = 800 if fast else 3000
+    recs, T, P, rows, Rq = table(K)
+    ez = CL.eventually_zero_coordinates(K, T, P, rows)
+    ct = X.classification_table(recs, rows, ez)
+    check("every level's predicted T matches", ct["n_prediction_failures"] == 0,
+          str(ct["prediction_failures"][:3]))
+    check("the two independent derivations of the case agree",
+          ct["n_independent_disagreements"] == 0,
+          str(ct["independent_disagreements"][:3]))
+    check("the five cases partition the levels",
+          sum(ct["counts"].values()) == len(recs), str(ct["counts"]))
+    check("PERIOD_DOUBLING levels are exactly {3,8,29,400} (BOUNDED)",
+          ct["period_doubling_levels"] == [k for k in (3, 8, 29, 400) if k <= K],
+          str(ct["period_doubling_levels"]))
+    check("no ZERO_PREDECESSOR level occurs (BOUNDED OBSERVATION, not a theorem)",
+          ct["counts"]["ZERO_PREDECESSOR"] == 0)
+    check("PHASE_DELAY is the largest resetting class",
+          ct["counts"]["PHASE_DELAY"] > ct["counts"]["RESET_IMMEDIATE"],
+          "%d vs %d" % (ct["counts"]["PHASE_DELAY"], ct["counts"]["RESET_IMMEDIATE"]))
+
+
+def t13_finite_state(fast):
+    print("\n=== 13. the frontier increment is not finite-state ===")
+    K = 800 if fast else 3000
+    recs, T, P, rows, Rq = table(K)
+    il = X.verify_increment_law(recs, rows)
+    check("Theorem C1: increment = f(cycle word, D)", il["exact"],
+          "%d levels, %d mismatches" % (il["levels_checked"], il["mismatches"]))
+    df = X.verify_defect_bit_formula(recs, rows)
+    check("Theorem C2: D(K) = w_{T(K-1)}(K) XOR Phi_K", df["exact"],
+          "%d levels, %d mismatches" % (df["levels_checked"], df["mismatches"]))
+    fl = X.verify_flip_flips_defect(recs, rows, 200)
+    check("Corollary C3: flipping the transient bit flips D",
+          fl["flip_always_flips_D"], "%d levels" % fl["levels_checked"])
+    fs1 = X.defect_bit_is_finite_state(recs, rows, 1)
+    check("depth-1 cycle-word description refuted by explicit counterexamples",
+          fs1["finite_state_refuted"],
+          "%d counterexamples" % fs1["counterexamples"])
+    fs2 = X.defect_bit_is_finite_state(recs, rows, 2)
+    check("depth-2 collision test is reported as having no power",
+          fs2["distinct_windows"] >= len(recs) - 10,
+          "%d distinct windows over %d levels"
+          % (fs2["distinct_windows"], len(recs)))
+
+
+def t14_strip2(fast):
+    print("\n=== 14. the co-moving strip of width 2R+1 ===")
+    bad = 0
+    for R in (1, 2, 3):
+        for q in range(1 << (2 * R + 1)):
+            for l in (0, 1):
+                for r in (0, 1):
+                    bad += X.strip_step(q, R, l, r) != X.strip_step_slow(q, R, l, r)
+    check("bit-parallel and bit-by-bit strip steps agree exhaustively", bad == 0)
+    ss = X.verify_strip_step(500 if fast else 2000, 6)
+    check("strip step law reproduces the real orbit", ss["exact"],
+          "%d steps, %d mismatches" % (ss["steps"], ss["mismatches"]))
+    for R in ([1, 2, 3] if fast else [1, 2, 3, 4, 5, 6]):
+        v = X.verify_preimage(R)
+        check("Theorem D2 at R=%d: in-degree exactly 4, preimage exact" % R,
+              v["every_state_has_indegree_4"] and v["preimage_failures"] == 0,
+              "%d states" % v["states"])
+    for R in ([1, 2] if fast else [1, 2, 3, 4]):
+        la = X.strip_lookahead(5000 if fast else 20000, R)
+        check("Theorem D4 at R=%d: first counterexample at n=R+1" % R,
+              la["first_n_with_counterexample"] == R + 1,
+              str(la["first_n_with_counterexample"]))
+    for m in ([1, 4] if fast else [1, 4, 12, 20]):
+        r = X.centre_history_determines_next(10000 if fast else 50000, m)
+        check("centre column is not determined by its own last %d bits" % m,
+              r["determined"] is False, str(r.get("witness")))
+
+
+def t15_skeleton(fast):
+    print("\n=== 15. the reset-erased skeleton and its DAG ===")
+    K = 800 if fast else 3000
+    recs, T, P, rows, Rq = table(K)
+    for t in ([60, 150] if fast else [100, 300, 600]):
+        v = X.verify_spine(t, rows)
+        check("Theorem E1: the XOR spine survives at t=%d" % t,
+              v["spine_contained"] and v["bound_holds"],
+              "%d nodes, spine %d, missing %s"
+              % (v["nodes"], v["spine_len"], v["missing"]))
+    sk = X.skeleton_growth([60, 150] if fast else [100, 300, 600], rows)
+    check("skeleton is smaller than the plain cone at every t",
+          all(s["nodes"] < (s["t"] + 1) ** 2 for s in sk),
+          str([(s["t"], s["nodes"]) for s in sk]))
+    check("skeleton width grows with t",
+          all(a["max_width"] < b["max_width"] for a, b in zip(sk, sk[1:])),
+          str([s["max_width"] for s in sk]))
+    ec = X.erased_edge_census(200 if fast else 400, rows)
+    check("reset erasure removes edges but never all three",
+          min(ec["surviving_edge_histogram"]) >= 1
+          and ec["mean_surviving_edges"] < 3.0,
+          "mean %.4f" % ec["mean_surviving_edges"])
+    for t in ([60, 150] if fast else [100, 300]):
+        d = X.proof_dag(t, rows)
+        check("proof DAG at t=%d shares strictly (nodes < cells)" % t,
+              d["dag_nodes"] < d["cells"] and d["constants"] <= 2,
+              "%d nodes from %d cells, %d xor, %d or"
+              % (d["dag_nodes"], d["cells"], d["xor_nodes"], d["or_nodes"]))
+    cb = X.skeleton_combined(150 if fast else 600, rows, T, P)
+    sk1 = X.skeleton(150 if fast else 600, rows)
+    check("reset + periodicity beats reset alone", cb["nodes"] < sk1["nodes"],
+          "%d vs %d" % (cb["nodes"], sk1["nodes"]))
+    rf = X.dag_recursive_family(rows, [32, 64, 128] if fast else [64, 128, 256])
+    check("no constant-ratio or constant-difference DAG family (NEGATIVE)",
+          not rf["constant_ratio"] and not rf["constant_difference"],
+          str(rf["ratios"]))
+
+
+def t16_hypothesis2(fast):
+    print("\n=== 16. the periodicity hypothesis in these variables ===")
+    K = 800 if fast else 3000
+    recs, T, P, rows, Rq = table(K)
+    drs = X.diagonal_reset_schedule(rows, 1000 if fast else 3000)
+    check("Theorem G1: diagonal reset schedule = centre column shifted",
+          drs["identity_verified"], "%d resets" % drs["n_resets"])
+    de = X.dag_equality_under_shift(rows, [200, 300] if fast else [200, 300, 400, 500], 29)
+    check("'equal centre value => equal derivation' is REFUTED",
+          de["implication_refuted"], str(de["equal_value_different_dag"][:1]))
+    # F5's conclusion is impossible: a repeated prefix state forces T(K) <= t
+    bad = []
+    for k in (5, 20, 100):
+        if k > K:
+            continue
+        mask = (1 << (k + 1)) - 1
+        seen = {}
+        for t in range(min(len(rows), T[k] + 3 * P[k] + 5)):
+            st = rows[t] & mask
+            if st in seen and T[k] > seen[st]:
+                bad.append((k, seen[st], t))
+            seen.setdefault(st, t)
+    check("F5's configuration (repeat with t < T(K)) never occurs", not bad,
+          str(bad[:3]))
 
 
 def main(argv=None):
@@ -338,6 +507,12 @@ def main(argv=None):
     t8_dag(a.fast)
     t9_results_json()
     t10_csv()
+    t11_reset_times(a.fast)
+    t12_five_way(a.fast)
+    t13_finite_state(a.fast)
+    t14_strip2(a.fast)
+    t15_skeleton(a.fast)
+    t16_hypothesis2(a.fast)
     print("\n" + "=" * 70)
     print("%d passed, %d FAILED   (%.1f s)"
           % (len(PASSES), len(FAILURES), time.time() - t0))

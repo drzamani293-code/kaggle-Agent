@@ -136,3 +136,74 @@ way Phase 2D's ANF experiment closed the "eliminate variables" route.
   The two counts are reported separately for that reason.
 * No conclusion about non-periodicity is drawn from the DAG's growth. Per the
   standing constraint, **growing complexity is not evidence of aperiodicity**.
+
+---
+
+## 6. The proof DAG built on the reset-erased skeleton (Phase 2E brief §7)
+
+§§1–5 used only the periodicity rewrite. The brief asks for a proof DAG that
+records XOR nodes, OR nodes, constants, **reset eliminations** and repeated
+subexpressions, with exact hash-consing. That DAG is built on the skeleton of
+`DIAGONAL_RESET_SKELETON.md` §6.
+
+### 6.1 Construction
+
+Each surviving cell becomes a node, labelled after reset elimination and
+constant folding:
+
+* if either OR-input is erased (`w_{s-1}(k-1) = 1` or `w_{s-1}(k) = 1`), the OR
+  collapses to the constant `1` and the cell becomes `XOR(child(k-2), 1)`;
+* otherwise the cell becomes `XOR(child(k-2), OR(child(k-1), child(k)))`;
+* cells outside the skeleton contribute folded constants; `k<0`, `k>2s` and
+  `s=0` are constant leaves.
+
+**Hash-consing is structural**, not positional: a canonical key is built
+bottom-up from the operator and the already-canonical child ids, so two cells
+with isomorphic sub-derivations become one node.
+
+### 6.2 Measurements
+
+| `t` | skeleton cells | DAG nodes | XOR | OR | constants | extra sharing | nodes/`t²` |
+|---|---|---|---|---|---|---|---|
+| 100 | 3 763 | 2 796 | 2 231 | 563 | 2 | 1.346× | 0.2796 |
+| 300 | 35 777 | 28 553 | 22 778 | 5 773 | 2 | 1.253× | 0.3173 |
+| 600 | 146 292 | 114 055 | 90 861 | 23 192 | 2 | 1.283× | 0.3168 |
+| 1200 | 565 408 | 423 856 | 338 358 | 85 496 | 2 | 1.334× | 0.2943 |
+
+Structural hash-consing recovers a further **1.25–1.35×** beyond the skeleton
+itself. Combined with §2's periodicity rewrite the best total reduction against
+the plain cone is about **2.1×** (`DIAGONAL_RESET_SKELETON.md` §6.4), and the
+minimal DAG remains `Θ(t²)`.
+
+### 6.3 Special times
+
+The brief asks for a recursive family at `2^n`, `2^n - 1`, the doubling points,
+`T(K)` and `ρ(K)`. DAG node counts:
+
+```
+    t = 2^n :     4→5      8→24     16→45     32→230    64→1125
+                128→5155  256→22647  512→83351  1024→313244
+    t = 2^n-1:    3→8      7→16     15→42     31→217    63→1083
+                127→5115  255→22589  511→78891  1023→312980
+    doubling pts: 3→8      8→24     29→180    400→51526
+    t = T(K):    T(50)=73→1650    T(100)=134→5632    T(200)=259→22860
+                 T(400)=501→77590 T(800)=1032→315155
+```
+
+**No recursive family was found.** Successive ratios along the powers of two are
+`4.582, 4.393, 3.680` — not constant; successive differences `4030, 17492,
+60704` — not constant. Neither of the two simplest candidate shapes holds.
+
+Two honest observations about the table:
+
+* `2^n` and `2^n - 1` give nearly the same counts (e.g. `22647` vs `22589` at
+  `t ≈ 256`). Nothing distinguishes the powers of two.
+* The doubling points and the `T(K)` times likewise sit on the same smooth
+  quadratic trend as everything else. **The times the tower singles out are not
+  special for the diagonal.** That is itself the finding: the level structure
+  that Phases 2C–2E describe so precisely leaves no trace in the diagonal's
+  derivation.
+
+**Control.** "No recursive family found" means two candidate shapes were tested
+and failed. It is **not** a proof that no recursion exists, and it is not
+evidence of aperiodicity. Recorded as a negative result.

@@ -17,7 +17,7 @@
   RESETTING => COLLAPSING:              True
   RESETTING => T(K) = tau_K + 1:        True
   eventually-zero coordinates: [2, 7, 28, 399]
-  wrote TRANSIENT_CLASSIFICATION.csv (29999 rows)
+  (TRANSIENT_CLASSIFICATION.csv is written in section 10, with both the two-way class and the five-way case)
 
 === 3. reset schedule ===
   T(K) = rho(K)+1 at 0.7622 of all levels
@@ -96,4 +96,48 @@
     r=3   length 20001  min(T+p) = 19996 at p = 7
     r=4   length 20001  min(T+p) = 19994 at p = 13
 
-wrote results/phase2e_results.json (21.2 s)
+=== 9. reset times sigma / tau / rho, and the horizon R(K) ===
+  R(K) by perturbation = sigma(K) at every sampled level: True
+  sigma < tau at 1988 levels, sigma = tau at 8  -> sigma and tau DISTINCT
+  tau = rho at 1078 levels, rho < tau at 914      -> tau and rho DISTINCT
+
+=== 10. five-way level classification ===
+  counts: {'INHERITED': 13601, 'RESET_IMMEDIATE': 4386, 'PHASE_DELAY': 12008, 'PERIOD_DOUBLING': 4, 'ZERO_PREDECESSOR': 0}
+  prediction failures: 0, independent disagreements: 0
+  PERIOD_DOUBLING levels [3, 8, 29, 400]; ZERO_PREDECESSOR levels [3, 8, 29, 400]; identical: True
+  rewrote TRANSIENT_CLASSIFICATION.csv with the five-way case column
+
+=== 11. is the frontier increment finite-state? ===
+  C1 increment = f(cycle word, D): exact True (29995 levels)
+  C2 D(K) = w_{T(K-1)}(K) XOR Phi_K: exact True (29995 levels)
+  flipping that one transient bit always flips D: True
+  depth-1 cycle-word windows: 22973 distinct, 2545 counterexamples -> refuted True
+  depth-2: 29995 distinct windows over 29999 levels -- collision test has NO power here
+
+=== 12. co-moving strip of width 2R+1 ===
+  strip step law exact against the orbit: True
+  every state has in-degree exactly 4 (Theorem D2), radii 1..7: True
+  recurrent core = whole state space at every radius: True
+  strip lookahead: theory R, first counterexample at R+1:
+    R=1 -> first counterexample at n=2
+    R=2 -> first counterexample at n=3
+    R=3 -> first counterexample at n=4
+    R=4 -> first counterexample at n=5
+    R=6 -> first counterexample at n=7
+  centre column determined by its own last m bits: [(1, False), (2, False), (4, False), (8, False), (12, False), (16, False), (20, False)]
+
+=== 13. reset-erased dependency skeleton and its proof DAG ===
+       t       cone   skeleton  reset+per        DAG      width
+     100       5101       3763       2313       2796         67
+     300      45301      35777      22996      28553        212
+     600     180601     146292      91263     114055        436
+    1200     721201     565408     339093     423856        840
+  spine contained in the skeleton at every t tested: True
+  mean surviving edges per cell (of 3): 1.9974
+  recursive family among special-time DAGs found: False
+
+=== 14. periodicity hypothesis in these variables ===
+  reset schedule along the diagonal = centre column shifted: True
+  equal centre value with different DAG size: 1 cases -> 'equal value => equal derivation' is REFUTED: True
+
+wrote results/phase2e_results.json (34.3 s)

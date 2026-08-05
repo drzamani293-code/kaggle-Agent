@@ -624,6 +624,459 @@
         23,
         25
       ]
+    },
+    "step_law": {
+      "radius": 6,
+      "steps": 2000,
+      "mismatches": 0,
+      "exact": true
+    },
+    "preimage": [
+      {
+        "radius": 1,
+        "states": 8,
+        "preimage_failures": 0,
+        "indegree_min": 4,
+        "indegree_max": 4,
+        "every_state_has_indegree_4": true
+      },
+      {
+        "radius": 2,
+        "states": 32,
+        "preimage_failures": 0,
+        "indegree_min": 4,
+        "indegree_max": 4,
+        "every_state_has_indegree_4": true
+      },
+      {
+        "radius": 3,
+        "states": 128,
+        "preimage_failures": 0,
+        "indegree_min": 4,
+        "indegree_max": 4,
+        "every_state_has_indegree_4": true
+      },
+      {
+        "radius": 4,
+        "states": 512,
+        "preimage_failures": 0,
+        "indegree_min": 4,
+        "indegree_max": 4,
+        "every_state_has_indegree_4": true
+      },
+      {
+        "radius": 5,
+        "states": 2048,
+        "preimage_failures": 0,
+        "indegree_min": 4,
+        "indegree_max": 4,
+        "every_state_has_indegree_4": true
+      },
+      {
+        "radius": 6,
+        "states": 8192,
+        "preimage_failures": 0,
+        "indegree_min": 4,
+        "indegree_max": 4,
+        "every_state_has_indegree_4": true
+      },
+      {
+        "radius": 7,
+        "states": 32768,
+        "preimage_failures": 0,
+        "indegree_min": 4,
+        "indegree_max": 4,
+        "every_state_has_indegree_4": true
+      }
+    ],
+    "orbit_vs_automaton": [
+      {
+        "radius": 2,
+        "observed_states": 32,
+        "states_total": 32,
+        "recurrent_core": 32,
+        "samples": 50001,
+        "sampling_limited": false,
+        "observed_fraction_of_total": 1.0,
+        "automaton_excludes_anything": false
+      },
+      {
+        "radius": 4,
+        "observed_states": 512,
+        "states_total": 512,
+        "recurrent_core": 512,
+        "samples": 50001,
+        "sampling_limited": false,
+        "observed_fraction_of_total": 1.0,
+        "automaton_excludes_anything": false
+      },
+      {
+        "radius": 6,
+        "observed_states": 8172,
+        "states_total": 8192,
+        "recurrent_core": 8192,
+        "samples": 50001,
+        "sampling_limited": false,
+        "observed_fraction_of_total": 0.99755859375,
+        "automaton_excludes_anything": false
+      },
+      {
+        "radius": 8,
+        "observed_states": 41251,
+        "states_total": 131072,
+        "recurrent_core": 131072,
+        "samples": 50001,
+        "sampling_limited": true,
+        "observed_fraction_of_total": 0.31472015380859375,
+        "automaton_excludes_anything": false
+      }
+    ],
+    "lookahead": [
+      {
+        "radius": 1,
+        "determined_up_to_theory": 1,
+        "n=1": {
+          "counterexample": null,
+          "determined": null
+        },
+        "n=2": {
+          "counterexample": {
+            "t1": 1,
+            "t2": 5,
+            "state": 7,
+            "v1": 1,
+            "v2": 0
+          },
+          "determined": false
+        },
+        "n=3": {
+          "counterexample": {
+            "t1": 0,
+            "t2": 4,
+            "state": 2,
+            "v1": 1,
+            "v2": 0
+          },
+          "determined": false
+        },
+        "first_n_with_counterexample": 2
+      },
+      {
+        "radius": 2,
+        "determined_up_to_theory": 2,
+        "n=1": {
+          "counterexample": null,
+          "determined": null
+        },
+        "n=2": {
+          "counterexample": null,
+          "determined": null
+        },
+        "n=3": {
+          "counterexample": {
+            "t1": 0,
+            "t2": 4,
+            "state": 4,
+            "v1": 1,
+            "v2": 0
+          },
+          "determined": false
+        },
+        "n=4": {
+          "counterexample": {
+            "t1": 1,
+            "t2": 13,
+            "state": 14,
+            "v1": 1,
+            "v2": 0
+          },
+          "determined": false
+        },
+        "first_n_with_counterexample": 3
+      },
+      {
+        "radius": 3,
+        "determined_up_to_theory": 3,
+        "n=1": {
+          "counterexample": null,
+          "determined": null
+        },
+        "n=2": {
+          "counterexample": null,
+          "determined": null
+        },
+        "n=3": {
+          "counterexample": null,
+          "determined": null
+        },
+        "n=4": {
+          "counterexample": {
+            "t1": 16,
+            "t2": 30,
+            "state": 47,
+            "v1": 0,
+            "v2": 1
+          },
+          "determined": false
+        },
+        "n=5": {
+          "counterexample": {
+            "t1": 15,
+            "t2": 29,
+            "state": 105,
+            "v1": 0,
+            "v2": 1
+          },
+          "determined": false
+        },
+        "first_n_with_counterexample": 4
+      },
+      {
+        "radius": 4,
+        "determined_up_to_theory": 4,
+        "n=1": {
+          "counterexample": null,
+          "determined": null
+        },
+        "n=2": {
+          "counterexample": null,
+          "determined": null
+        },
+        "n=3": {
+          "counterexample": null,
+          "determined": null
+        },
+        "n=4": {
+          "counterexample": null,
+          "determined": null
+        },
+        "n=5": {
+          "counterexample": {
+            "t1": 15,
+            "t2": 29,
+            "state": 466,
+            "v1": 0,
+            "v2": 1
+          },
+          "determined": false
+        },
+        "n=6": {
+          "counterexample": {
+            "t1": 15,
+            "t2": 29,
+            "state": 466,
+            "v1": 0,
+            "v2": 1
+          },
+          "determined": false
+        },
+        "first_n_with_counterexample": 5
+      },
+      {
+        "radius": 6,
+        "determined_up_to_theory": 6,
+        "n=1": {
+          "counterexample": null,
+          "determined": null
+        },
+        "n=2": {
+          "counterexample": null,
+          "determined": null
+        },
+        "n=3": {
+          "counterexample": null,
+          "determined": null
+        },
+        "n=4": {
+          "counterexample": null,
+          "determined": null
+        },
+        "n=5": {
+          "counterexample": null,
+          "determined": null
+        },
+        "n=6": {
+          "counterexample": null,
+          "determined": null
+        },
+        "n=7": {
+          "counterexample": {
+            "t1": 98,
+            "t2": 144,
+            "state": 6929,
+            "v1": 0,
+            "v2": 1
+          },
+          "determined": false
+        },
+        "n=8": {
+          "counterexample": {
+            "t1": 97,
+            "t2": 143,
+            "state": 4471,
+            "v1": 0,
+            "v2": 1
+          },
+          "determined": false
+        },
+        "first_n_with_counterexample": 7
+      }
+    ],
+    "centre_history": [
+      {
+        "memory": 1,
+        "determined": false,
+        "witness": {
+          "t1": 0,
+          "t2": 1,
+          "history": [
+            1
+          ],
+          "next1": 1,
+          "next2": 0
+        }
+      },
+      {
+        "memory": 2,
+        "determined": false,
+        "witness": {
+          "t1": 1,
+          "t2": 4,
+          "history": [
+            1,
+            1
+          ],
+          "next1": 0,
+          "next2": 1
+        }
+      },
+      {
+        "memory": 4,
+        "determined": false,
+        "witness": {
+          "t1": 7,
+          "t2": 11,
+          "history": [
+            1,
+            1,
+            0,
+            0
+          ],
+          "next1": 1,
+          "next2": 0
+        }
+      },
+      {
+        "memory": 8,
+        "determined": false,
+        "witness": {
+          "t1": 9,
+          "t2": 34,
+          "history": [
+            0,
+            1,
+            1,
+            1,
+            0,
+            0,
+            1,
+            1
+          ],
+          "next1": 0,
+          "next2": 1
+        }
+      },
+      {
+        "memory": 12,
+        "determined": false,
+        "witness": {
+          "t1": 32,
+          "t2": 157,
+          "history": [
+            0,
+            1,
+            1,
+            1,
+            0,
+            1,
+            0,
+            1,
+            1,
+            1,
+            0,
+            0
+          ],
+          "next1": 1,
+          "next2": 0
+        }
+      },
+      {
+        "memory": 16,
+        "determined": false,
+        "witness": {
+          "t1": 297,
+          "t2": 447,
+          "history": [
+            1,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "next1": 0,
+          "next2": 1
+        }
+      },
+      {
+        "memory": 20,
+        "determined": false,
+        "witness": {
+          "t1": 227,
+          "t2": 1994,
+          "history": [
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1
+          ],
+          "next1": 0,
+          "next2": 1
+        }
+      }
+    ],
+    "minimal_extension": {
+      "radius": 4,
+      "steps": 10,
+      "extra_needed_each_side": 10,
+      "total_width_needed": 29,
+      "finite_extension_autonomous_forever": false
     }
   },
   "ancestry": [
@@ -866,7 +1319,728 @@
       "q_max": 32,
       "statement": "for every line and every lag q <= q_max, the lag-q comparison still fails at the index reported, so any eventual q-periodicity must start later than that",
       "control": "this REFUTES bounded (preperiod, period) budgets; it never establishes periodicity and never proves any line aperiodic"
+    },
+    "diagonal_reset_schedule": {
+      "t_max": 3000,
+      "n_resets": 1484,
+      "identity_verified": true,
+      "note": "reset schedule along the diagonal = centre column shifted"
+    },
+    "dag_equality": {
+      "p": 29,
+      "rows": [
+        {
+          "t": 200,
+          "c_t": 1,
+          "c_t+p": 0,
+          "dag_t": 11874,
+          "dag_t+p": 17159
+        },
+        {
+          "t": 300,
+          "c_t": 0,
+          "c_t+p": 0,
+          "dag_t": 28553,
+          "dag_t+p": 33843
+        },
+        {
+          "t": 400,
+          "c_t": 1,
+          "c_t+p": 0,
+          "dag_t": 51526,
+          "dag_t+p": 55122
+        },
+        {
+          "t": 500,
+          "c_t": 0,
+          "c_t+p": 1,
+          "dag_t": 77446,
+          "dag_t+p": 85382
+        }
+      ],
+      "equal_value_different_dag": [
+        {
+          "t": 300,
+          "dag_t": 28553,
+          "dag_t+p": 33843
+        }
+      ],
+      "n_equal_value_different_dag": 1,
+      "implication_refuted": true
     }
   },
-  "elapsed_sec": 21.2
+  "reset_times": {
+    "comparison": {
+      "levels": 2000,
+      "counts": {
+        "sigma_eq_tau": 8,
+        "sigma_lt_tau": 1988,
+        "tau_eq_rho": 1078,
+        "tau_lt_rho": 0,
+        "rho_lt_tau": 914,
+        "sigma_eq_rho": 6,
+        "rho_is_None": 5,
+        "tau_is_None": 4,
+        "sigma_is_None": 1
+      }
+    },
+    "horizon_check": {
+      "levels_checked": 10,
+      "mismatches": 0,
+      "first": [],
+      "agree": true
+    },
+    "sample": [
+      {
+        "K": 2,
+        "sigma": 1,
+        "tau": 1,
+        "rho": 1,
+        "T_prev": 1,
+        "T_K": 2,
+        "cls": "RESETTING",
+        "R_perturb": 1,
+        "R_theory": 1
+      },
+      {
+        "K": 3,
+        "sigma": 1,
+        "tau": null,
+        "rho": 1,
+        "T_prev": 2,
+        "T_K": 2,
+        "cls": "INHERITING",
+        "R_perturb": 1,
+        "R_theory": 1
+      },
+      {
+        "K": 4,
+        "sigma": 3,
+        "tau": 3,
+        "rho": null,
+        "T_prev": 2,
+        "T_K": 2,
+        "cls": "INHERITING",
+        "R_perturb": 3,
+        "R_theory": 3
+      },
+      {
+        "K": 5,
+        "sigma": 2,
+        "tau": 2,
+        "rho": null,
+        "T_prev": 2,
+        "T_K": 2,
+        "cls": "INHERITING",
+        "R_perturb": 2,
+        "R_theory": 2
+      },
+      {
+        "K": 6,
+        "sigma": 3,
+        "tau": 3,
+        "rho": null,
+        "T_prev": 2,
+        "T_K": 2,
+        "cls": "INHERITING",
+        "R_perturb": 3,
+        "R_theory": 3
+      },
+      {
+        "K": 7,
+        "sigma": 3,
+        "tau": 3,
+        "rho": null,
+        "T_prev": 2,
+        "T_K": 2,
+        "cls": "INHERITING",
+        "R_perturb": 3,
+        "R_theory": 3
+      },
+      {
+        "K": 8,
+        "sigma": null,
+        "tau": null,
+        "rho": null,
+        "T_prev": 2,
+        "T_K": 2,
+        "cls": "INHERITING",
+        "R_perturb": 65,
+        "R_theory": null
+      },
+      {
+        "K": 9,
+        "sigma": 4,
+        "tau": 4,
+        "rho": 4,
+        "T_prev": 2,
+        "T_K": 5,
+        "cls": "RESETTING",
+        "R_perturb": 4,
+        "R_theory": 4
+      }
+    ]
+  },
+  "five_way": {
+    "counts": {
+      "INHERITED": 13601,
+      "RESET_IMMEDIATE": 4386,
+      "PHASE_DELAY": 12008,
+      "PERIOD_DOUBLING": 4,
+      "ZERO_PREDECESSOR": 0
+    },
+    "prediction_failures": [],
+    "n_prediction_failures": 0,
+    "independent_disagreements": [],
+    "n_independent_disagreements": 0,
+    "period_doubling_levels": [
+      3,
+      8,
+      29,
+      400
+    ],
+    "zero_predecessor_levels": [
+      3,
+      8,
+      29,
+      400
+    ],
+    "doubling_equals_zero_predecessor": true
+  },
+  "finite_state": {
+    "increment_law": {
+      "levels_checked": 29995,
+      "mismatches": 0,
+      "first": [],
+      "exact": true
+    },
+    "defect_formula": {
+      "levels_checked": 29995,
+      "mismatches": 0,
+      "first": [],
+      "exact": true
+    },
+    "flip": {
+      "levels_checked": 396,
+      "failures": 0,
+      "first": [],
+      "flip_always_flips_D": true
+    },
+    "depth1": {
+      "depth": 1,
+      "distinct_windows": 22973,
+      "counterexamples": 2545,
+      "first": [
+        {
+          "K1": 14,
+          "K2": 17,
+          "D1": 1,
+          "D2": 0,
+          "window": [
+            4,
+            13
+          ]
+        },
+        {
+          "K1": 11,
+          "K2": 19,
+          "D1": 1,
+          "D2": 0,
+          "window": [
+            4,
+            6
+          ]
+        },
+        {
+          "K1": 11,
+          "K2": 21,
+          "D1": 1,
+          "D2": 0,
+          "window": [
+            4,
+            6
+          ]
+        }
+      ],
+      "finite_state_refuted": true
+    },
+    "depth2": {
+      "depth": 2,
+      "distinct_windows": 29995,
+      "counterexamples": 0,
+      "first": [],
+      "finite_state_refuted": false
+    },
+    "increment_word": {
+      "window": 30,
+      "distinct_blocks": 29969,
+      "first_repeated_block": null,
+      "control": "a repeated block is NOT eventual periodicity"
+    }
+  },
+  "skeleton": {
+    "growth": [
+      {
+        "t": 100,
+        "nodes": 3763,
+        "edges": 7244,
+        "max_width": 67,
+        "spine_len": 51,
+        "nodes_over_t": 37.63,
+        "nodes_over_t2": 0.3763
+      },
+      {
+        "t": 300,
+        "nodes": 35777,
+        "edges": 70732,
+        "max_width": 212,
+        "spine_len": 151,
+        "nodes_over_t": 119.25666666666666,
+        "nodes_over_t2": 0.3975222222222222
+      },
+      {
+        "t": 600,
+        "nodes": 146292,
+        "edges": 291166,
+        "max_width": 436,
+        "spine_len": 301,
+        "nodes_over_t": 243.82,
+        "nodes_over_t2": 0.40636666666666665
+      },
+      {
+        "t": 1200,
+        "nodes": 565408,
+        "edges": 1127906,
+        "max_width": 840,
+        "spine_len": 601,
+        "nodes_over_t": 471.17333333333335,
+        "nodes_over_t2": 0.39264444444444446
+      }
+    ],
+    "spine": [
+      {
+        "t": 100,
+        "spine_len": 51,
+        "missing": [],
+        "spine_contained": true,
+        "nodes": 3763,
+        "bound_holds": true
+      },
+      {
+        "t": 300,
+        "spine_len": 151,
+        "missing": [],
+        "spine_contained": true,
+        "nodes": 35777,
+        "bound_holds": true
+      },
+      {
+        "t": 600,
+        "spine_len": 301,
+        "missing": [],
+        "spine_contained": true,
+        "nodes": 146292,
+        "bound_holds": true
+      }
+    ],
+    "erased_edges": {
+      "t": 400,
+      "cone_cells": 80400,
+      "surviving_edge_histogram": {
+        "1": 20029,
+        "2": 40550,
+        "3": 19821
+      },
+      "mean_surviving_edges": 1.9974129353233832
+    },
+    "proof_dag": [
+      {
+        "t": 100,
+        "cells": 3763,
+        "dag_nodes": 2796,
+        "xor_nodes": 2231,
+        "or_nodes": 563,
+        "constants": 2,
+        "sharing_ratio": 1.34585121602289,
+        "nodes_over_t2": 0.2796
+      },
+      {
+        "t": 300,
+        "cells": 35777,
+        "dag_nodes": 28553,
+        "xor_nodes": 22778,
+        "or_nodes": 5773,
+        "constants": 2,
+        "sharing_ratio": 1.2530031870556508,
+        "nodes_over_t2": 0.31725555555555557
+      },
+      {
+        "t": 600,
+        "cells": 146292,
+        "dag_nodes": 114055,
+        "xor_nodes": 90861,
+        "or_nodes": 23192,
+        "constants": 2,
+        "sharing_ratio": 1.282644338257858,
+        "nodes_over_t2": 0.31681944444444443
+      },
+      {
+        "t": 1200,
+        "cells": 565408,
+        "dag_nodes": 423856,
+        "xor_nodes": 338358,
+        "or_nodes": 85496,
+        "constants": 2,
+        "sharing_ratio": 1.3339624778226566,
+        "nodes_over_t2": 0.29434444444444446
+      }
+    ],
+    "combined": [
+      {
+        "t": 100,
+        "nodes": 2313,
+        "edges": 4615,
+        "nodes_over_t2": 0.2313
+      },
+      {
+        "t": 300,
+        "nodes": 22996,
+        "edges": 46082,
+        "nodes_over_t2": 0.25551111111111113
+      },
+      {
+        "t": 600,
+        "nodes": 91263,
+        "edges": 182923,
+        "nodes_over_t2": 0.25350833333333334
+      },
+      {
+        "t": 1200,
+        "nodes": 339093,
+        "edges": 678748,
+        "nodes_over_t2": 0.23548125
+      }
+    ],
+    "special_times": {
+      "powers_of_two": [
+        {
+          "t": 4,
+          "cells": 6,
+          "dag_nodes": 5,
+          "xor_nodes": 3,
+          "or_nodes": 0,
+          "constants": 2,
+          "sharing_ratio": 1.2,
+          "nodes_over_t2": 0.3125
+        },
+        {
+          "t": 8,
+          "cells": 38,
+          "dag_nodes": 24,
+          "xor_nodes": 16,
+          "or_nodes": 6,
+          "constants": 2,
+          "sharing_ratio": 1.5833333333333333,
+          "nodes_over_t2": 0.375
+        },
+        {
+          "t": 16,
+          "cells": 108,
+          "dag_nodes": 45,
+          "xor_nodes": 34,
+          "or_nodes": 9,
+          "constants": 2,
+          "sharing_ratio": 2.4,
+          "nodes_over_t2": 0.17578125
+        },
+        {
+          "t": 32,
+          "cells": 417,
+          "dag_nodes": 230,
+          "xor_nodes": 178,
+          "or_nodes": 50,
+          "constants": 2,
+          "sharing_ratio": 1.8130434782608695,
+          "nodes_over_t2": 0.224609375
+        },
+        {
+          "t": 64,
+          "cells": 1632,
+          "dag_nodes": 1125,
+          "xor_nodes": 882,
+          "or_nodes": 241,
+          "constants": 2,
+          "sharing_ratio": 1.4506666666666668,
+          "nodes_over_t2": 0.274658203125
+        },
+        {
+          "t": 128,
+          "cells": 6430,
+          "dag_nodes": 5155,
+          "xor_nodes": 4114,
+          "or_nodes": 1039,
+          "constants": 2,
+          "sharing_ratio": 1.24733268671193,
+          "nodes_over_t2": 0.31463623046875
+        },
+        {
+          "t": 256,
+          "cells": 27122,
+          "dag_nodes": 22647,
+          "xor_nodes": 18047,
+          "or_nodes": 4598,
+          "constants": 2,
+          "sharing_ratio": 1.1975979158387424,
+          "nodes_over_t2": 0.3455657958984375
+        },
+        {
+          "t": 512,
+          "cells": 106168,
+          "dag_nodes": 83351,
+          "xor_nodes": 66408,
+          "or_nodes": 16941,
+          "constants": 2,
+          "sharing_ratio": 1.2737459658552386,
+          "nodes_over_t2": 0.3179588317871094
+        },
+        {
+          "t": 1024,
+          "cells": 415729,
+          "dag_nodes": 313244,
+          "xor_nodes": 249956,
+          "or_nodes": 63286,
+          "constants": 2,
+          "sharing_ratio": 1.3271730663636014,
+          "nodes_over_t2": 0.2987327575683594
+        }
+      ],
+      "powers_minus_one": [
+        {
+          "t": 3,
+          "cells": 8,
+          "dag_nodes": 8,
+          "xor_nodes": 4,
+          "or_nodes": 2,
+          "constants": 2,
+          "sharing_ratio": 1.0,
+          "nodes_over_t2": 0.8888888888888888
+        },
+        {
+          "t": 7,
+          "cells": 28,
+          "dag_nodes": 16,
+          "xor_nodes": 10,
+          "or_nodes": 4,
+          "constants": 2,
+          "sharing_ratio": 1.75,
+          "nodes_over_t2": 0.32653061224489793
+        },
+        {
+          "t": 15,
+          "cells": 99,
+          "dag_nodes": 42,
+          "xor_nodes": 31,
+          "or_nodes": 9,
+          "constants": 2,
+          "sharing_ratio": 2.357142857142857,
+          "nodes_over_t2": 0.18666666666666668
+        },
+        {
+          "t": 31,
+          "cells": 396,
+          "dag_nodes": 217,
+          "xor_nodes": 167,
+          "or_nodes": 48,
+          "constants": 2,
+          "sharing_ratio": 1.8248847926267282,
+          "nodes_over_t2": 0.22580645161290322
+        },
+        {
+          "t": 63,
+          "cells": 1581,
+          "dag_nodes": 1083,
+          "xor_nodes": 849,
+          "or_nodes": 232,
+          "constants": 2,
+          "sharing_ratio": 1.4598337950138505,
+          "nodes_over_t2": 0.27286470143613
+        },
+        {
+          "t": 127,
+          "cells": 6364,
+          "dag_nodes": 5115,
+          "xor_nodes": 4082,
+          "or_nodes": 1031,
+          "constants": 2,
+          "sharing_ratio": 1.2441837732160312,
+          "nodes_over_t2": 0.31713063426126853
+        },
+        {
+          "t": 255,
+          "cells": 26993,
+          "dag_nodes": 22589,
+          "xor_nodes": 17998,
+          "or_nodes": 4589,
+          "constants": 2,
+          "sharing_ratio": 1.1949621497188898,
+          "nodes_over_t2": 0.34738946559015765
+        },
+        {
+          "t": 511,
+          "cells": 102452,
+          "dag_nodes": 78891,
+          "xor_nodes": 62868,
+          "or_nodes": 16021,
+          "constants": 2,
+          "sharing_ratio": 1.2986525712692196,
+          "nodes_over_t2": 0.302124302526415
+        },
+        {
+          "t": 1023,
+          "cells": 415191,
+          "dag_nodes": 312980,
+          "xor_nodes": 249743,
+          "or_nodes": 63235,
+          "constants": 2,
+          "sharing_ratio": 1.326573582976548,
+          "nodes_over_t2": 0.29906481330187695
+        }
+      ],
+      "doubling_points": [
+        {
+          "t": 3,
+          "cells": 8,
+          "dag_nodes": 8,
+          "xor_nodes": 4,
+          "or_nodes": 2,
+          "constants": 2,
+          "sharing_ratio": 1.0,
+          "nodes_over_t2": 0.8888888888888888
+        },
+        {
+          "t": 8,
+          "cells": 38,
+          "dag_nodes": 24,
+          "xor_nodes": 16,
+          "or_nodes": 6,
+          "constants": 2,
+          "sharing_ratio": 1.5833333333333333,
+          "nodes_over_t2": 0.375
+        },
+        {
+          "t": 29,
+          "cells": 343,
+          "dag_nodes": 180,
+          "xor_nodes": 136,
+          "or_nodes": 42,
+          "constants": 2,
+          "sharing_ratio": 1.9055555555555554,
+          "nodes_over_t2": 0.2140309155766944
+        },
+        {
+          "t": 400,
+          "cells": 64979,
+          "dag_nodes": 51526,
+          "xor_nodes": 41071,
+          "or_nodes": 10453,
+          "constants": 2,
+          "sharing_ratio": 1.2610914877925707,
+          "nodes_over_t2": 0.3220375
+        }
+      ],
+      "T_of_K": [
+        {
+          "K": 50,
+          "t": 73,
+          "cells": 2234,
+          "dag_nodes": 1650,
+          "xor_nodes": 1304,
+          "or_nodes": 344,
+          "constants": 2,
+          "sharing_ratio": 1.353939393939394,
+          "nodes_over_t2": 0.3096265715894164
+        },
+        {
+          "K": 100,
+          "t": 134,
+          "cells": 7000,
+          "dag_nodes": 5632,
+          "xor_nodes": 4490,
+          "or_nodes": 1140,
+          "constants": 2,
+          "sharing_ratio": 1.2428977272727273,
+          "nodes_over_t2": 0.3136556025840945
+        },
+        {
+          "K": 200,
+          "t": 259,
+          "cells": 27544,
+          "dag_nodes": 22860,
+          "xor_nodes": 18223,
+          "or_nodes": 4635,
+          "constants": 2,
+          "sharing_ratio": 1.204899387576553,
+          "nodes_over_t2": 0.3407820396237385
+        },
+        {
+          "K": 400,
+          "t": 501,
+          "cells": 99789,
+          "dag_nodes": 77590,
+          "xor_nodes": 61836,
+          "or_nodes": 15752,
+          "constants": 2,
+          "sharing_ratio": 1.286106457017657,
+          "nodes_over_t2": 0.30912227441324935
+        },
+        {
+          "K": 800,
+          "t": 1032,
+          "cells": 419866,
+          "dag_nodes": 315155,
+          "xor_nodes": 251480,
+          "or_nodes": 63673,
+          "constants": 2,
+          "sharing_ratio": 1.3322523837476796,
+          "nodes_over_t2": 0.2959135193197524
+        }
+      ],
+      "rho_of_K": []
+    },
+    "recursive_family": {
+      "sizes": [
+        [
+          64,
+          1125
+        ],
+        [
+          128,
+          5155
+        ],
+        [
+          256,
+          22647
+        ],
+        [
+          512,
+          83351
+        ]
+      ],
+      "ratios": [
+        4.5822,
+        4.3932,
+        3.6804
+      ],
+      "differences": [
+        4030,
+        17492,
+        60704
+      ],
+      "constant_ratio": false,
+      "constant_difference": false,
+      "recursive_family_found": false,
+      "control": "two candidate shapes tested; absence of a recursion here is not a proof that none exists"
+    }
+  },
+  "elapsed_sec": 34.3
 }

@@ -152,8 +152,8 @@ Class counts, `2 ≤ K ≤ 30000`:
 ```
 
 The full level-by-level table is `TRANSIENT_CLASSIFICATION.csv`
-(columns `K, P_prev, P_K, fibre_kind, T_prev, T_K, tau_K, D_bit, class,
-T_predicted, matches, R_K, increment`).
+(see §7 for its columns; it carries both the two-way class and the five-way
+case).
 
 ---
 
@@ -206,3 +206,64 @@ the two factors are not independent. See `TRANSIENT_LEMMA_REGISTRY.md` F1.
   classification does not depend on them.
 * No search here is described as UNSAT: "no NEUTRAL level in `K ≤ 30000`" means
   exactly that and nothing more.
+
+---
+
+## 7. The five-way classification (Phase 2E brief §2)
+
+Theorem B gives a two-way dichotomy. The brief asks for the finer split into
+five named cases. They are defined as follows, in the order tested (the two
+non-COLLAPSING cases come first, because for them the defect bit is vacuously
+zero).
+
+| case | definition | preperiod | proved by |
+|---|---|---|---|
+| **PERIOD_DOUBLING** | `P(K) = 2 P(K-1)` | `T(K) = T(K-1)` | Theorem B2 |
+| **ZERO_PREDECESSOR** | coordinate `K-1` is zero on the whole base cycle, period unchanged (= NEUTRAL) | `T(K) = T(K-1)` | Theorem B3 |
+| **INHERITED** | COLLAPSING, `D(K) = 0` | `T(K) = T(K-1)` | Theorem B1 |
+| **RESET_IMMEDIATE** | COLLAPSING, `D(K) = 1`, `τ_K = T(K-1)` | `T(K) = T(K-1) + 1` | Theorem B1 |
+| **PHASE_DELAY** | COLLAPSING, `D(K) = 1`, `τ_K > T(K-1)` | `T(K) = τ_K + 1 > T(K-1)+1` | Theorem B1 |
+
+The last two split the RESETTING levels by **why** the reset is late: in
+RESET_IMMEDIATE the base cycle already carries a `1` at the phase where it
+settles; in PHASE_DELAY the `1` sits further round the cycle, and the extra wait
+is pure phase alignment.
+
+### Counts, `2 ≤ K ≤ 30000`
+
+```
+    INHERITED         13601
+    RESET_IMMEDIATE    4386
+    PHASE_DELAY       12008
+    PERIOD_DOUBLING       4      (K = 3, 8, 29, 400)
+    ZERO_PREDECESSOR      0
+```
+
+**Prediction failures: 0. Independent-derivation disagreements: 0.**
+Each level's case is computed twice — once from the stored per-level record
+(defect bit, fibre kind, periods) and once by re-deriving the fibre kind, `τ_K`
+and `D(K)` directly from the orbit rows — and the two agree everywhere.
+
+Full table: `TRANSIENT_CLASSIFICATION.csv`, columns
+`K, P_prev, P_K, fibre_kind, T_prev, T_K, tau_K, D_bit, class2, case5,
+T_predicted, matches, R_K, increment, zero_predecessor`.
+
+### A coincidence worth naming
+
+> **OBSERVATION.** On `K ≤ 30000` the PERIOD_DOUBLING levels and the levels with
+> an eventually-zero predecessor are the **same four levels**, `{3, 8, 29, 400}`.
+
+This is not an accident of labelling but it is also **not a theorem**. Phase 2D
+Theorem N1 proves *non-COLLAPSING ⟺ predecessor eventually zero*, and the
+non-COLLAPSING levels split into DOUBLING and NEUTRAL by the parity of the
+`a`-word. All four opportunities came out DOUBLING. A NEUTRAL level would be a
+ZERO_PREDECESSOR that is not PERIOD_DOUBLING, and the class is kept in the
+scheme for exactly that reason. **BOUNDED OBSERVATION**, four events.
+
+### Why "phase-alignment delay" is the interesting class
+
+PHASE_DELAY is the largest RESETTING class (12008 of 16394) and it alone
+carries the increments above `1`. By Corollary B5 the whole of
+`T(K)/K - (RESETTING density)` comes from it. Registry item **F1** is, in these
+terms, a statement about how often the base cycle's `1`s fail to sit at the
+settling phase.

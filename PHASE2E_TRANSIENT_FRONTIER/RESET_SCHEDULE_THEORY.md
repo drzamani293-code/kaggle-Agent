@@ -161,3 +161,68 @@ obtains:
    `D(K) = 1`.
 
 Both are registered as open in `TRANSIENT_LEMMA_REGISTRY.md` (F1, F2).
+
+---
+
+## 6. The complete reset schedule (Phase 2E brief §3)
+
+§§1–5 use only `ρ(K)` and `τ(K)`. The brief asks for the **complete** sequence
+of reset times of each level, i.e. every `t` with `w_t(K-1) = 1`, since at each
+such `t` the fibre map `u ↦ a_t XOR (1 OR u)` is constant and the level forgets
+its past.
+
+**Definition.** `Reset(K) = { t : w_t(K-1) = 1 }`, and
+`σ(K) = min Reset(K)`, `τ(K) = min (Reset(K) ∩ [T(K-1), ∞))`,
+`ρ(K) = max (Reset(K) ∩ [0, T(K)))`.
+
+### THEOREM 6.1 (the schedule is eventually periodic, and how)
+
+> `Reset(K) ∩ [T(K-1), ∞)` is the union of `n_K` arithmetic progressions of
+> common difference `P(K-1)`, where `n_K` is the number of `1`s in the base
+> cycle word. It is non-empty iff level `K` is COLLAPSING.
+
+*Proof.* Coordinate `K-1` is `P(K-1)`-periodic from `T(K-1)` (Theorem 1.1 at
+level `K-1`); the positions of its `1`s within one period are the `n_K` residues.
+∎
+
+So the *whole* reset schedule of a level, from `T(K-1)` onwards, is one 16-bit
+cycle word plus a phase — and the entire content of the transient theory is in
+the finitely many resets **before** `T(K-1)`, which the tower does not
+summarise.
+
+### THEOREM 6.2 (what the first reset controls)
+
+> `σ(K)` is exactly the fibre dependence horizon `R_dep(K)` of
+> `TRANSIENT_DEFINITIONS.md` §4: after `σ(K)`, coordinate `K` no longer depends
+> on its own initial value.
+
+Proved there (Theorem 4.1), verified two independent ways.
+
+### Measured, first 2000 levels
+
+| | count |
+|---|---|
+| `σ(K) < τ(K)` | 1988 |
+| `σ(K) = τ(K)` | 8 |
+| `τ(K) = ρ(K)` (exactly the RESETTING levels) | 1078 |
+| `ρ(K) < τ(K)` (the INHERITING levels) | 914 |
+| `σ(K) = ρ(K)` | 6 |
+
+**`σ`, `τ` and `ρ` are three distinct times.** The near-universal strict
+inequality `σ < τ` says the level has already forgotten its own initial
+condition long before the base settles — which is precisely why the transient
+that remains is *inherited from below*, and why Theorem A decomposes `T(K)`
+into coordinate preperiods rather than into anything local to level `K`.
+
+### The formula relating T, ρ, T(K-1), P(K-1) — as far as it goes
+
+Collecting Theorems 3.1, 3.4 and 6.1:
+
+```
+    RESETTING :   T(K) = ρ(K) + 1 = τ(K) + 1,      T(K-1) < T(K) ≤ T(K-1) + P(K-1)
+    INHERITING:   T(K) = T(K-1),                   ρ(K) unconstrained by T
+```
+
+and there is **no formula** for which of the two holds that does not read the
+defect bit `D(K)` — see `FRONTIER_DYNAMICS.md` §5, where that is proved rather
+than merely observed.

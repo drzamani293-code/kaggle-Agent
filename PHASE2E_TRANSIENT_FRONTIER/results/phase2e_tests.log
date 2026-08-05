@@ -71,9 +71,66 @@ python 3.11.15   cwd /home/user/kaggle-Agent/PHASE2E_TRANSIENT_FRONTIER
 [PASS] eventually-zero coordinates recorded as {2,7,28,399}
 
 === 10. CSV files ===
-[PASS] TRANSIENT_CLASSIFICATION.csv has 13 columns and 29999 rows  -- ['K', 'P_prev', 'P_K', 'fibre_kind', 'T_prev', 'T_K', 'tau_K', 'D_bit', 'class', 'T_predicted', 'matches', 'R_K', 'increment']
+[PASS] TRANSIENT_CLASSIFICATION.csv has 15 columns and 29999 rows  -- ['K', 'P_prev', 'P_K', 'fibre_kind', 'T_prev', 'T_K', 'tau_K', 'D_bit', 'class2', 'case5', 'T_predicted', 'matches', 'R_K', 'increment', 'zero_predecessor']
 [PASS] RESET_SCHEDULE_RESULTS.csv has 8 columns and 29999 rows  -- ['K', 'class', 'T_prev', 'tau_K', 'T_K', 'rho_K', 'T_minus_rho_minus_1', 'wait_tau_minus_T_prev']
 [PASS] every row of TRANSIENT_CLASSIFICATION.csv has matches=1  -- []
 
+=== 11. reset times and the dependence horizon ===
+[PASS] Theorem 4.1: R_dep(K) by perturbation = sigma(K)  -- 10 levels, 0 mismatches
+[PASS] sigma and tau are distinct (sigma < tau on most levels)  -- sigma<tau 388, sigma=tau 8
+[PASS] tau and rho are distinct (rho < tau on the inheriting levels)  -- rho<tau at 170 levels
+[PASS] tau never exceeds rho where both are defined
+[PASS] sigma <= tau at every level  -- []
+
+=== 12. the five-way classification ===
+[PASS] every level's predicted T matches  -- []
+[PASS] the two independent derivations of the case agree  -- []
+[PASS] the five cases partition the levels  -- {'INHERITED': 1396, 'RESET_IMMEDIATE': 385, 'PHASE_DELAY': 1214, 'PERIOD_DOUBLING': 4, 'ZERO_PREDECESSOR': 0}
+[PASS] PERIOD_DOUBLING levels are exactly {3,8,29,400} (BOUNDED)  -- [3, 8, 29, 400]
+[PASS] no ZERO_PREDECESSOR level occurs (BOUNDED OBSERVATION, not a theorem)
+[PASS] PHASE_DELAY is the largest resetting class  -- 1214 vs 385
+
+=== 13. the frontier increment is not finite-state ===
+[PASS] Theorem C1: increment = f(cycle word, D)  -- 2995 levels, 0 mismatches
+[PASS] Theorem C2: D(K) = w_{T(K-1)}(K) XOR Phi_K  -- 2995 levels, 0 mismatches
+[PASS] Corollary C3: flipping the transient bit flips D  -- 197 levels
+[PASS] depth-1 cycle-word description refuted by explicit counterexamples  -- 99 counterexamples
+[PASS] depth-2 collision test is reported as having no power  -- 2995 distinct windows over 2999 levels
+
+=== 14. the co-moving strip of width 2R+1 ===
+[PASS] bit-parallel and bit-by-bit strip steps agree exhaustively
+[PASS] strip step law reproduces the real orbit  -- 2000 steps, 0 mismatches
+[PASS] Theorem D2 at R=1: in-degree exactly 4, preimage exact  -- 8 states
+[PASS] Theorem D2 at R=2: in-degree exactly 4, preimage exact  -- 32 states
+[PASS] Theorem D2 at R=3: in-degree exactly 4, preimage exact  -- 128 states
+[PASS] Theorem D2 at R=4: in-degree exactly 4, preimage exact  -- 512 states
+[PASS] Theorem D2 at R=5: in-degree exactly 4, preimage exact  -- 2048 states
+[PASS] Theorem D2 at R=6: in-degree exactly 4, preimage exact  -- 8192 states
+[PASS] Theorem D4 at R=1: first counterexample at n=R+1  -- 2
+[PASS] Theorem D4 at R=2: first counterexample at n=R+1  -- 3
+[PASS] Theorem D4 at R=3: first counterexample at n=R+1  -- 4
+[PASS] Theorem D4 at R=4: first counterexample at n=R+1  -- 5
+[PASS] centre column is not determined by its own last 1 bits  -- {'t1': 0, 't2': 1, 'history': [1], 'next1': 1, 'next2': 0}
+[PASS] centre column is not determined by its own last 4 bits  -- {'t1': 7, 't2': 11, 'history': [1, 1, 0, 0], 'next1': 1, 'next2': 0}
+[PASS] centre column is not determined by its own last 12 bits  -- {'t1': 32, 't2': 157, 'history': [0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0], 'next1': 1, 'next2': 0}
+[PASS] centre column is not determined by its own last 20 bits  -- {'t1': 227, 't2': 1994, 'history': [1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1], 'next1': 0, 'next2': 1}
+
+=== 15. the reset-erased skeleton and its DAG ===
+[PASS] Theorem E1: the XOR spine survives at t=100  -- 3763 nodes, spine 51, missing []
+[PASS] Theorem E1: the XOR spine survives at t=300  -- 35777 nodes, spine 151, missing []
+[PASS] Theorem E1: the XOR spine survives at t=600  -- 146292 nodes, spine 301, missing []
+[PASS] skeleton is smaller than the plain cone at every t  -- [(100, 3763), (300, 35777), (600, 146292)]
+[PASS] skeleton width grows with t  -- [67, 212, 436]
+[PASS] reset erasure removes edges but never all three  -- mean 1.9974
+[PASS] proof DAG at t=100 shares strictly (nodes < cells)  -- 2796 nodes from 3763 cells, 2231 xor, 563 or
+[PASS] proof DAG at t=300 shares strictly (nodes < cells)  -- 28553 nodes from 35777 cells, 22778 xor, 5773 or
+[PASS] reset + periodicity beats reset alone  -- 91263 vs 146292
+[PASS] no constant-ratio or constant-difference DAG family (NEGATIVE)  -- [4.5822, 4.3932]
+
+=== 16. the periodicity hypothesis in these variables ===
+[PASS] Theorem G1: diagonal reset schedule = centre column shifted  -- 1484 resets
+[PASS] 'equal centre value => equal derivation' is REFUTED  -- [{'t': 300, 'dag_t': 28553, 'dag_t+p': 33843}]
+[PASS] F5's configuration (repeat with t < T(K)) never occurs  -- []
+
 ======================================================================
-55 passed, 0 FAILED   (0.7 s)
+100 passed, 0 FAILED   (4.8 s)
