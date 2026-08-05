@@ -1,0 +1,99 @@
+
+=== 0. level table ===
+  29999 levels, T_max = 46000, T(30000) = 40197, P(30000) = 16
+
+=== 1. exact definitions ===
+  Theorem A  T(K) = max_{k<=K} r_{P(K)}(k):  True (30001 levels)
+  r_Q by three implementations agree: True
+  tau_K by two implementations agree:  True
+  T = R at 21139 levels, T > R at 8860, T < R at 0
+  R = tau+1 at 16394 levels, R <= T(K-1) at 13605, neither at 0
+  T(K) <= K exactly for K in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+
+=== 2. the exact recurrence for T(K) ===
+  Theorem B predicts T(K) exactly at 29999/29999 levels (mismatches 0)
+  classes: {'RESETTING': 16394, 'INHERITING': 13605}
+  defect bit D predicts the class:      True
+  RESETTING => COLLAPSING:              True
+  RESETTING => T(K) = tau_K + 1:        True
+  eventually-zero coordinates: [2, 7, 28, 399]
+  wrote TRANSIENT_CLASSIFICATION.csv (29999 rows)
+
+=== 3. reset schedule ===
+  T(K) = rho(K)+1 at 0.7622 of all levels
+    among RESETTING levels:  1.0000
+    among INHERITING levels: 0.4757
+  rho undefined at 5 levels: [4, 5, 6, 7, 8]
+  RESETTING density 0.546485, mean increment 2.451873, product 1.339911
+  T(K_max)/K_max = 1.339900
+  gaps between RESETTING levels: max 12, mean 1.8299
+  wrote RESET_SCHEDULE_RESULTS.csv (29999 rows)
+
+=== 4. frontier dynamics ===
+  K_per implementations agree: True
+  max step of K_per: 12
+  T(K+1) - T(K) histogram: {0: 13605, 1: 4387, 2: 6228, 3: 2825, 4: 1458, 5: 733, 6: 375, 7: 200, 8: 84, 9: 48, 10: 32, 11: 11, 12: 2, 13: 6, 14: 5, 15: 1}
+  violations of T(K+1) - T(K) <= P(K): 0
+  monotonicity violations: []
+         K      T(K)    A(K,K)      T/K
+        18        20         2   1.1111
+       100       134        34   1.3400
+       400       501       101   1.2525
+      1000      1275       275   1.2750
+      5000      6646      1646   1.3292
+     10000     13315      3315   1.3315
+     20000     26839      6839   1.3419
+     30000     40197     10197   1.3399
+
+=== 5. co-moving transient strip ===
+  q_t(r) = x_t(r) verified on 5081 cells, 0 mismatches
+    R   width  distinct  possible autonomous
+    1       2         4         4 False
+    2       3         8         8 False
+    3       4        16        16 False
+    4       5        32        32 False
+    5       6        64        64 False
+    6       7       128       128 False
+    7       8       256       256 False
+    8       9       512       512 False
+    9      10      1024      1024 False
+   10      11      2048      2048 False
+   11      12      4062      4096 False
+   12      13      7514      8192 False
+  backward cone of the strip grows by 1 column per side per step; after 50 steps it is [-50, 54]
+
+=== 6. diagonal reset ancestry ===
+       t allTransFrom   fraction resetEvents maxLevel/t
+     200        157     0.7850         64     0.5600
+     600        499     0.8317        221     0.6717
+    1500       1236     0.8240        518     0.6473
+    3000       2423     0.8077       1002     0.6187
+
+=== 7. hash-consed proof DAG for the diagonal ===
+       t   DAGnodes    naiveCone  irreducible    ratio  nodes/t^2
+     100       3651         5101         3653   1.3972     0.3651
+     300      32520        45301        32543   1.3930     0.3613
+     600     125572       180601       125642   1.4382     0.3488
+    1200     494886       721201       495039   1.4573     0.3437
+    2000    1375666      2002001      1375885   1.4553     0.3439
+    3000    3112401      4503001      3112717   1.4468     0.3458
+
+=== 8. periodicity hypothesis ===
+  p=1    Theorem D1 has content at 14 levels
+  p=2    Theorem D1 has content at 12 levels
+  p=3    Theorem D1 has content at 10 levels
+  p=7    Theorem D1 has content at 0 levels
+  p=16   Theorem D1 has content at 0 levels
+  p=100  Theorem D1 has content at 0 levels
+  line refutations (min T+p over q <= 32):
+    r=-4  length 20001  min(T+p) = 19997 at p = 30
+    r=-3  length 20001  min(T+p) = 19997 at p = 14
+    r=-2  length 20001  min(T+p) = 19997 at p = 3
+    r=-1  length 20001  min(T+p) = 19997 at p = 10
+    r=0   length 20001  min(T+p) = 19996 at p = 29
+    r=1   length 20001  min(T+p) = 19996 at p = 29
+    r=2   length 20001  min(T+p) = 19992 at p = 29
+    r=3   length 20001  min(T+p) = 19996 at p = 7
+    r=4   length 20001  min(T+p) = 19994 at p = 13
+
+wrote results/phase2e_results.json (21.2 s)

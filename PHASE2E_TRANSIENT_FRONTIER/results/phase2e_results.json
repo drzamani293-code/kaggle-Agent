@@ -1,0 +1,872 @@
+{
+  "settings": {
+    "K_max": 30000,
+    "quick": false,
+    "T_max": 46000,
+    "levels_tabulated": 29999
+  },
+  "environment": {
+    "python": "3.11.15",
+    "platform": "Linux-6.18.5-fc-v18-x86_64-with-glibc2.39"
+  },
+  "definitions": {
+    "theorem_A": {
+      "levels_checked": 30001,
+      "mismatches": 0,
+      "first_mismatches": [],
+      "exact": true
+    },
+    "R_implementations": {
+      "K_cross": 2000,
+      "per_lag": {
+        "1": {
+          "mismatches": 0,
+          "first": []
+        },
+        "2": {
+          "mismatches": 0,
+          "first": []
+        },
+        "4": {
+          "mismatches": 0,
+          "first": []
+        },
+        "8": {
+          "mismatches": 0,
+          "first": []
+        },
+        "16": {
+          "mismatches": 0,
+          "first": []
+        }
+      },
+      "spot_checks": [
+        {
+          "Q": 16,
+          "k": 30000,
+          "direct": 40197,
+          "sweep": 40197,
+          "agree": true
+        },
+        {
+          "Q": 16,
+          "k": 15000,
+          "direct": 20100,
+          "sweep": 20100,
+          "agree": true
+        },
+        {
+          "Q": 8,
+          "k": 300,
+          "direct": 389,
+          "sweep": 389,
+          "agree": true
+        }
+      ],
+      "all_agree": true
+    },
+    "tau_implementations": {
+      "levels_checked": 29999,
+      "mismatches": 0,
+      "first": [],
+      "agree": true
+    },
+    "comparison": {
+      "levels": 29999,
+      "counts": {
+        "T_eq_R": 21139,
+        "T_gt_R": 8860,
+        "T_lt_R": 0,
+        "R_eq_tau_plus_1": 16394,
+        "R_le_T_prev": 13605,
+        "R_other": 0,
+        "T_eq_tau_plus_1": 16394
+      },
+      "T_never_below_R": true,
+      "R_always_classified": true
+    },
+    "T_le_K_levels": {
+      "K_max": 30000,
+      "levels_with_T_le_K": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "count": 18,
+      "first_K_from_which_T_gt_K": 18,
+      "diagonal_strictly_transient_above_that": true
+    }
+  },
+  "recurrence": {
+    "theorem_B": {
+      "levels_checked": 29999,
+      "mismatches": 0,
+      "first_mismatches": [],
+      "exact": true,
+      "class_counts": {
+        "RESETTING": 16394,
+        "INHERITING": 13605
+      }
+    },
+    "dichotomy": {
+      "D_bit_predicts_class": true,
+      "D_violations": [],
+      "resetting_implies_collapsing": true,
+      "kind_violations": [],
+      "resetting_T_equals_tau_plus_1": true,
+      "reset_violations": []
+    },
+    "eventually_zero_coordinates": [
+      2,
+      7,
+      28,
+      399
+    ]
+  },
+  "reset_schedule": {
+    "rho": {
+      "levels": 29999,
+      "rho_not_found": 5,
+      "T_equals_rho_plus_1": 22864,
+      "fraction": 0.7621587386246208,
+      "by_class": {
+        "RESETTING": {
+          "levels": 16394,
+          "hits": 16394,
+          "fraction": 1.0
+        },
+        "INHERITING": {
+          "levels": 13600,
+          "hits": 6470,
+          "fraction": 0.47573529411764703
+        }
+      },
+      "gap_histogram": {
+        "0": 22864,
+        "1": 3728,
+        "2": 1663,
+        "3": 879,
+        "4": 432,
+        "5": 198,
+        "6": 111,
+        "7": 56,
+        "8": 36,
+        "9": 13,
+        "10": 7,
+        "11": 4,
+        "12": 1,
+        "13": 2
+      }
+    },
+    "increments": {
+      "resetting_levels": 16394,
+      "increment_histogram": {
+        "1": 4386,
+        "2": 6228,
+        "3": 2825,
+        "4": 1458,
+        "5": 733,
+        "6": 375,
+        "7": 200,
+        "8": 84,
+        "9": 48,
+        "10": 32,
+        "11": 11,
+        "12": 2,
+        "13": 6,
+        "14": 5,
+        "15": 1
+      },
+      "wait_histogram": {
+        "0": 4386,
+        "1": 6228,
+        "2": 2825,
+        "3": 1458,
+        "4": 733,
+        "5": 375,
+        "6": 200,
+        "7": 84,
+        "8": 48,
+        "9": 32,
+        "10": 11,
+        "11": 2,
+        "12": 6,
+        "13": 5,
+        "14": 1
+      },
+      "total_transient_created": 40196,
+      "mean_increment": 2.4518726363303647
+    },
+    "gaps": {
+      "n_resetting": 16394,
+      "first": [
+        2,
+        9,
+        10,
+        11,
+        13,
+        14,
+        15,
+        16,
+        18,
+        20,
+        22,
+        24,
+        25,
+        26,
+        27,
+        28,
+        30,
+        31,
+        32,
+        34
+      ],
+      "last": [
+        29994,
+        29995,
+        29998,
+        29999,
+        30000
+      ],
+      "gap_histogram": {
+        "1": 5928,
+        "2": 8786,
+        "3": 830,
+        "4": 420,
+        "5": 325,
+        "6": 62,
+        "7": 26,
+        "8": 7,
+        "9": 3,
+        "10": 3,
+        "12": 3
+      },
+      "max_gap": 12,
+      "mean_gap": 1.8299274080400172
+    },
+    "resetting_density": 0.5464848828294276,
+    "density_times_mean_increment": 1.3399113303776793,
+    "T_over_K_at_K_max": 1.3399
+  },
+  "frontier": {
+    "stats": {
+      "two_implementations_agree": true,
+      "K_per_step_histogram": {
+        "0": 23802,
+        "1": 5930,
+        "2": 8786,
+        "3": 830,
+        "4": 420,
+        "5": 325,
+        "6": 62,
+        "7": 26,
+        "8": 7,
+        "9": 3,
+        "10": 3,
+        "12": 3
+      },
+      "max_K_per_step": 12,
+      "dT_histogram": {
+        "0": 13605,
+        "1": 4387,
+        "2": 6228,
+        "3": 2825,
+        "4": 1458,
+        "5": 733,
+        "6": 375,
+        "7": 200,
+        "8": 84,
+        "9": 48,
+        "10": 32,
+        "11": 11,
+        "12": 2,
+        "13": 6,
+        "14": 5,
+        "15": 1
+      },
+      "monotonicity_violations": [],
+      "bound_dT_le_P_violations": [],
+      "n_bound_violations": 0
+    },
+    "ages": [
+      {
+        "K": 18,
+        "T": 20,
+        "A_diag": 2,
+        "T_over_K": 1.1111111111111112
+      },
+      {
+        "K": 100,
+        "T": 134,
+        "A_diag": 34,
+        "T_over_K": 1.34
+      },
+      {
+        "K": 400,
+        "T": 501,
+        "A_diag": 101,
+        "T_over_K": 1.2525
+      },
+      {
+        "K": 1000,
+        "T": 1275,
+        "A_diag": 275,
+        "T_over_K": 1.275
+      },
+      {
+        "K": 5000,
+        "T": 6646,
+        "A_diag": 1646,
+        "T_over_K": 1.3292
+      },
+      {
+        "K": 10000,
+        "T": 13315,
+        "A_diag": 3315,
+        "T_over_K": 1.3315
+      },
+      {
+        "K": 20000,
+        "T": 26839,
+        "A_diag": 6839,
+        "T_over_K": 1.34195
+      },
+      {
+        "K": 30000,
+        "T": 40197,
+        "A_diag": 10197,
+        "T_over_K": 1.3399
+      }
+    ]
+  },
+  "strip": {
+    "identity": {
+      "cells_checked": 5081,
+      "mismatches": 0,
+      "exact": true,
+      "t_max": 300,
+      "radius": 8
+    },
+    "census": [
+      {
+        "R": 1,
+        "width": 2,
+        "distinct_words": 4,
+        "possible_words": 4,
+        "all_words_seen": true,
+        "first_repeat": [
+          1,
+          3
+        ],
+        "autonomy_counterexample": {
+          "t1": 1,
+          "t2": 3,
+          "state": 3,
+          "succ1": 0,
+          "succ2": 1
+        },
+        "is_autonomous": false
+      },
+      {
+        "R": 2,
+        "width": 3,
+        "distinct_words": 8,
+        "possible_words": 8,
+        "all_words_seen": true,
+        "first_repeat": [
+          0,
+          4
+        ],
+        "autonomy_counterexample": {
+          "t1": 1,
+          "t2": 5,
+          "state": 3,
+          "succ1": 4,
+          "succ2": 0
+        },
+        "is_autonomous": false
+      },
+      {
+        "R": 3,
+        "width": 4,
+        "distinct_words": 16,
+        "possible_words": 16,
+        "all_words_seen": true,
+        "first_repeat": [
+          0,
+          4
+        ],
+        "autonomy_counterexample": {
+          "t1": 0,
+          "t2": 4,
+          "state": 1,
+          "succ1": 3,
+          "succ2": 11
+        },
+        "is_autonomous": false
+      },
+      {
+        "R": 4,
+        "width": 5,
+        "distinct_words": 32,
+        "possible_words": 32,
+        "all_words_seen": true,
+        "first_repeat": [
+          5,
+          13
+        ],
+        "autonomy_counterexample": {
+          "t1": 6,
+          "t2": 14,
+          "state": 8,
+          "succ1": 28,
+          "succ2": 29
+        },
+        "is_autonomous": false
+      },
+      {
+        "R": 5,
+        "width": 6,
+        "distinct_words": 64,
+        "possible_words": 64,
+        "all_words_seen": true,
+        "first_repeat": [
+          5,
+          13
+        ],
+        "autonomy_counterexample": {
+          "t1": 6,
+          "t2": 14,
+          "state": 8,
+          "succ1": 60,
+          "succ2": 61
+        },
+        "is_autonomous": false
+      },
+      {
+        "R": 6,
+        "width": 7,
+        "distinct_words": 128,
+        "possible_words": 128,
+        "all_words_seen": true,
+        "first_repeat": [
+          5,
+          13
+        ],
+        "autonomy_counterexample": {
+          "t1": 6,
+          "t2": 14,
+          "state": 72,
+          "succ1": 124,
+          "succ2": 125
+        },
+        "is_autonomous": false
+      },
+      {
+        "R": 7,
+        "width": 8,
+        "distinct_words": 256,
+        "possible_words": 256,
+        "all_words_seen": true,
+        "first_repeat": [
+          5,
+          13
+        ],
+        "autonomy_counterexample": {
+          "t1": 5,
+          "t2": 13,
+          "state": 59,
+          "succ1": 72,
+          "succ2": 200
+        },
+        "is_autonomous": false
+      },
+      {
+        "R": 8,
+        "width": 9,
+        "distinct_words": 512,
+        "possible_words": 512,
+        "all_words_seen": true,
+        "first_repeat": [
+          30,
+          42
+        ],
+        "autonomy_counterexample": {
+          "t1": 32,
+          "t2": 44,
+          "state": 70,
+          "succ1": 235,
+          "succ2": 234
+        },
+        "is_autonomous": false
+      },
+      {
+        "R": 9,
+        "width": 10,
+        "distinct_words": 1024,
+        "possible_words": 1024,
+        "all_words_seen": true,
+        "first_repeat": [
+          30,
+          42
+        ],
+        "autonomy_counterexample": {
+          "t1": 32,
+          "t2": 44,
+          "state": 70,
+          "succ1": 747,
+          "succ2": 234
+        },
+        "is_autonomous": false
+      },
+      {
+        "R": 10,
+        "width": 11,
+        "distinct_words": 2048,
+        "possible_words": 2048,
+        "all_words_seen": true,
+        "first_repeat": [
+          30,
+          42
+        ],
+        "autonomy_counterexample": {
+          "t1": 31,
+          "t2": 43,
+          "state": 60,
+          "succ1": 1094,
+          "succ2": 70
+        },
+        "is_autonomous": false
+      },
+      {
+        "R": 11,
+        "width": 12,
+        "distinct_words": 4062,
+        "possible_words": 4096,
+        "all_words_seen": false,
+        "first_repeat": [
+          6,
+          92
+        ],
+        "autonomy_counterexample": {
+          "t1": 8,
+          "t2": 94,
+          "state": 263,
+          "succ1": 905,
+          "succ2": 2952
+        },
+        "is_autonomous": false
+      },
+      {
+        "R": 12,
+        "width": 13,
+        "distinct_words": 7514,
+        "possible_words": 8192,
+        "all_words_seen": false,
+        "first_repeat": [
+          6,
+          92
+        ],
+        "autonomy_counterexample": {
+          "t1": 7,
+          "t2": 93,
+          "state": 252,
+          "succ1": 263,
+          "succ2": 4359
+        },
+        "is_autonomous": false
+      }
+    ],
+    "dependency": {
+      "radius": 4,
+      "steps": 50,
+      "final_cone": [
+        -50,
+        54
+      ],
+      "final_cone_width": 105,
+      "growth_per_step_each_side": 1,
+      "right_dependence_is_genuine": true,
+      "local_patterns_sensitive_to_right_neighbour": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "cone_widths_first_10": [
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25
+      ]
+    }
+  },
+  "ancestry": [
+    {
+      "t": 200,
+      "first_s_with_cone_entirely_transient": 157,
+      "crossover_fraction": 0.785,
+      "reset_events": {
+        "t": 200,
+        "reset_events_in_cone": 64,
+        "max_level_in_cone": 112,
+        "max_level_over_t": 0.56
+      },
+      "cone_cells": 20201,
+      "cone_cells_in_periodic": 5950
+    },
+    {
+      "t": 600,
+      "first_s_with_cone_entirely_transient": 499,
+      "crossover_fraction": 0.8316666666666667,
+      "reset_events": {
+        "t": 600,
+        "reset_events_in_cone": 221,
+        "max_level_in_cone": 403,
+        "max_level_over_t": 0.6716666666666666
+      },
+      "cone_cells": 180601,
+      "cone_cells_in_periodic": 57930
+    },
+    {
+      "t": 1500,
+      "first_s_with_cone_entirely_transient": 1236,
+      "crossover_fraction": 0.824,
+      "reset_events": {
+        "t": 1500,
+        "reset_events_in_cone": 518,
+        "max_level_in_cone": 971,
+        "max_level_over_t": 0.6473333333333333
+      },
+      "cone_cells": 1126501,
+      "cone_cells_in_periodic": 365468
+    },
+    {
+      "t": 3000,
+      "first_s_with_cone_entirely_transient": 2423,
+      "crossover_fraction": 0.8076666666666666,
+      "reset_events": {
+        "t": 3000,
+        "reset_events_in_cone": 1002,
+        "max_level_in_cone": 1856,
+        "max_level_over_t": 0.6186666666666667
+      },
+      "cone_cells": 4503001,
+      "cone_cells_in_periodic": 1416350
+    }
+  ],
+  "proof_dag": [
+    {
+      "t": 100,
+      "nodes": 3651,
+      "edges": 10953,
+      "capped": false,
+      "naive_cone_cells": 5101,
+      "irreducible_cone_cells": 3653,
+      "reduction_factor": 1.3971514653519583,
+      "nodes_over_t_squared": 0.3651
+    },
+    {
+      "t": 300,
+      "nodes": 32520,
+      "edges": 97560,
+      "capped": false,
+      "naive_cone_cells": 45301,
+      "irreducible_cone_cells": 32543,
+      "reduction_factor": 1.393019680196802,
+      "nodes_over_t_squared": 0.36133333333333334
+    },
+    {
+      "t": 600,
+      "nodes": 125572,
+      "edges": 376716,
+      "capped": false,
+      "naive_cone_cells": 180601,
+      "irreducible_cone_cells": 125642,
+      "reduction_factor": 1.4382266747364063,
+      "nodes_over_t_squared": 0.3488111111111111
+    },
+    {
+      "t": 1200,
+      "nodes": 494886,
+      "edges": 1484658,
+      "capped": false,
+      "naive_cone_cells": 721201,
+      "irreducible_cone_cells": 495039,
+      "reduction_factor": 1.4573073394680796,
+      "nodes_over_t_squared": 0.3436708333333333
+    },
+    {
+      "t": 2000,
+      "nodes": 1375666,
+      "edges": 4126998,
+      "capped": false,
+      "naive_cone_cells": 2002001,
+      "irreducible_cone_cells": 1375885,
+      "reduction_factor": 1.455295834890155,
+      "nodes_over_t_squared": 0.3439165
+    },
+    {
+      "t": 3000,
+      "nodes": 3112401,
+      "edges": 9337203,
+      "capped": false,
+      "naive_cone_cells": 4503001,
+      "irreducible_cone_cells": 3112717,
+      "reduction_factor": 1.4467933277235163,
+      "nodes_over_t_squared": 0.34582233333333334
+    }
+  ],
+  "hypothesis": {
+    "D1_content": {
+      "per_p": [
+        {
+          "p": 1,
+          "levels_where_D1_has_content": 14,
+          "first": [
+            3,
+            4,
+            5,
+            6,
+            7
+          ]
+        },
+        {
+          "p": 2,
+          "levels_where_D1_has_content": 12,
+          "first": [
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        },
+        {
+          "p": 3,
+          "levels_where_D1_has_content": 10,
+          "first": [
+            5,
+            6,
+            7,
+            8,
+            9
+          ]
+        },
+        {
+          "p": 7,
+          "levels_where_D1_has_content": 0,
+          "first": []
+        },
+        {
+          "p": 16,
+          "levels_where_D1_has_content": 0,
+          "first": []
+        },
+        {
+          "p": 100,
+          "levels_where_D1_has_content": 0,
+          "first": []
+        }
+      ],
+      "note": "empty on the whole computed range: Theorem D1 is vacuous"
+    },
+    "lines": {
+      "lines": {
+        "-4": {
+          "length": 20001,
+          "min_T_plus_p": 19997,
+          "argmin_p": 30,
+          "preperiod_there": 19967,
+          "smallest_preperiod_over_q": 19967
+        },
+        "-3": {
+          "length": 20001,
+          "min_T_plus_p": 19997,
+          "argmin_p": 14,
+          "preperiod_there": 19983,
+          "smallest_preperiod_over_q": 19969
+        },
+        "-2": {
+          "length": 20001,
+          "min_T_plus_p": 19997,
+          "argmin_p": 3,
+          "preperiod_there": 19994,
+          "smallest_preperiod_over_q": 19967
+        },
+        "-1": {
+          "length": 20001,
+          "min_T_plus_p": 19997,
+          "argmin_p": 10,
+          "preperiod_there": 19987,
+          "smallest_preperiod_over_q": 19968
+        },
+        "0": {
+          "length": 20001,
+          "min_T_plus_p": 19996,
+          "argmin_p": 29,
+          "preperiod_there": 19967,
+          "smallest_preperiod_over_q": 19967
+        },
+        "1": {
+          "length": 20001,
+          "min_T_plus_p": 19996,
+          "argmin_p": 29,
+          "preperiod_there": 19967,
+          "smallest_preperiod_over_q": 19966
+        },
+        "2": {
+          "length": 20001,
+          "min_T_plus_p": 19992,
+          "argmin_p": 29,
+          "preperiod_there": 19963,
+          "smallest_preperiod_over_q": 19963
+        },
+        "3": {
+          "length": 20001,
+          "min_T_plus_p": 19996,
+          "argmin_p": 7,
+          "preperiod_there": 19989,
+          "smallest_preperiod_over_q": 19968
+        },
+        "4": {
+          "length": 20001,
+          "min_T_plus_p": 19994,
+          "argmin_p": 13,
+          "preperiod_there": 19981,
+          "smallest_preperiod_over_q": 19969
+        }
+      },
+      "t_max": 20000,
+      "q_max": 32,
+      "statement": "for every line and every lag q <= q_max, the lag-q comparison still fails at the index reported, so any eventual q-periodicity must start later than that",
+      "control": "this REFUTES bounded (preperiod, period) budgets; it never establishes periodicity and never proves any line aperiodic"
+    }
+  },
+  "elapsed_sec": 21.2
+}
