@@ -109,6 +109,18 @@ seed and cannot settle Problem 1.
 
 *Domain:* FIN (hence SEED). *Depends on:* T2, T3.1, T3.2.
 
+> **Phase 2H addendum — T3's bound is ATTAINED, and this is limitative.**
+> The proofs of T1, T2 and T3 use only four properties: left-permutivity,
+> radius 1, the light cone T2.1, and the frozen edge T2.2. **Rule 90 has all
+> four**, so T1–T3 hold verbatim for rule 90. And rule 90's single-cell orbit
+> has an eventually periodic centre column (`x_t(0) = 0` for all `t ≥ 1`, by
+> Kummer) while its column 1 is provably aperiodic (ones exactly at
+> `t = 2^n - 1`). So the "at most one" of T3 is attained, and **no argument
+> built solely from that machinery can prove rule 30's centre column is
+> aperiodic** — it would prove a false statement about rule 90. See
+> `PHASE2H_CONDITIONAL_REVERSIBILITY/WEAK_BRIDGE_THEOREMS.md` H5 and
+> Corollary 6.6.
+
 ### T3.1 (boundary forcing). For `i < j`, the interior values `x_t(i+1..j-1)` for `t ≥ t₀` are determined by `x_{t₀}(i..j)` together with the two boundary columns `col_i` and `col_j` restricted to `[t₀, ∞)`.
 
 *Proof.* The rule has radius 1, so each interior cell at time `t+1` reads only

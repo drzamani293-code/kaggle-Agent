@@ -62,6 +62,20 @@ Recorded because it is more useful than any novelty claim:
   the initial condition reappears on the right. **We have no analogue.** Our
   entire corpus works on the left/prefix side because we had no handle on the
   right. This is a gap in our work.
+
+  > **Update from Phase 2H** (added later; the paragraph above is the Phase 2G
+  > assessment and is kept as written). Phase 2H derived conditional backward
+  > determinism from the local rule — not from Rowland, whose paper is still
+  > unreadable — and **closed the "no handle on the right" gap**:
+  > `PHASE2H_CONDITIONAL_REVERSIBILITY/WEAK_BRIDGE_THEOREMS.md` H3 shows the
+  > right-aligned tower `v_t(k) = x_t(t-k)` is autonomous with a **bijective**
+  > one-step map (preperiod 0 at every level), whereas Phase 2E's left-aligned
+  > map is not injective at any level. The right side turns out to carry the
+  > **same** obstruction: the centre column is the moving diagonal of both
+  > towers. Phase 2H also measured a `2^n` white-region structure
+  > (`RESTART_EVENT_THEORY.md`) and showed in `RESTART_CENTER_GEOMETRY.md` that
+  > it cannot reach the centre column before `t ≥ 2^{n+1} - W_n`. Whether any
+  > of this is Rowland's mechanism remains **unknown**.
 * **Kopra's rapid left expansivity** and the **distribution-modulo-1**
   apparatus (K-a, K-d): a general framework containing rule 30, where we have
   only rule-30-specific arguments.
