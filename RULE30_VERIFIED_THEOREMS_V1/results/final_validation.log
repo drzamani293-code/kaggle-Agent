@@ -1,0 +1,89 @@
+python 3.11.15
+package dir: /home/user/kaggle-Agent/RULE30_VERIFIED_THEOREMS_V1
+repo root:   /home/user/kaggle-Agent
+
+=== 1. Boolean identities, exhaustive ===
+[PASS] T-01 rule table is (0,1,1,1,1,0,0,0) under 4l+2c+r  -- [0, 1, 1, 1, 1, 0, 0, 0]
+[PASS] T-01(a) left-permutive on all 4 (c,r)
+[PASS] T-01(c) NOT right-permutive (fails exactly when c=1)
+[PASS] T-01(b) local inversion identity, all 8 neighbourhoods
+[PASS] T-05 XOR/OR form exact on all 32 assignments
+[PASS] T-05 ANF form exact on all 32 assignments
+[PASS] T-5.1 a black cell with no defect masks the defect on its right
+[PASS] T-6.1 reduction Delta(u,v,0,g) = g AND NOT u
+[PASS] T-10 trichotomy exact over every base word of length <= 6  -- []
+[PASS] T-21.8 strip transition relation has in-degree exactly 4 (R<=3)
+
+=== 2. theorems re-checked on the real orbit ===
+[PASS] T-07 w_t(k) = x_t(-t+k), cell by cell  -- []
+[PASS] T-2.1 light cone x_t(j)=0 for |j|>t
+[PASS] T-7.3 support bound w_t(k)=0 for k>2t
+[PASS] T-2.2 frozen left edge x_t(-t)=1 for every t
+[PASS] T-21.6 q_t(r) = x_t(r), including negative r  -- []
+[PASS] T-08 F_K is autonomous from t=0 (C-08: no 't >= K/2' needed)  -- []
+[PASS] T-22 w_t(7)=0 for every t, and the orbit is a 2-cycle from t=2  -- W2=11001000 W3=11011110 (bit k=0..7 left to right)
+[PASS] CC-07 exact (T,P) computed for every K in range
+[PASS] T-12 T is non-decreasing
+[PASS] T-09 P(K-1) divides P(K)
+[PASS] T-11 P(K) in {P(K-1), 2P(K-1)} and is a power of two
+[PASS] T-13.1 T(K) <= T(K-1) + P(K-1)
+[PASS] T-21.3 T(K)+P(K) > floor(K/2)
+[PASS] BO-03 T(K) <= K holds EXACTLY for K <= 17 (C-07)
+[PASS] T-18 exact recurrence predicts T(K) at every level  -- 2999 levels checked, first failures []
+[PASS] T-19 T(K) = rho(K)+1 at every resetting level  -- []
+[PASS] BO-04 coordinates zero on their cycle are a subset of {2,7,28,399}  -- [2, 7, 28, 399]
+[PASS] T-15 zero-cycle identity at the COORDINATE indices (C-16)  -- []
+[PASS] T-14 non-COLLAPSING iff predecessor zero on its cycle  -- []
+[PASS] T-20 XOR spine lies in the skeleton at t=60, |Sk| >= floor(t/2)+1  -- |Sk|=1487 spine=31
+[PASS] T-20 XOR spine lies in the skeleton at t=150, |Sk| >= floor(t/2)+1  -- |Sk|=8468 spine=76
+[PASS] T-20 XOR spine lies in the skeleton at t=300, |Sk| >= floor(t/2)+1  -- |Sk|=35777 spine=151
+[PASS] VQ-02 no prefix-state repeat with t < T(K) (F5's configuration)  -- []
+[PASS] T-21.10 diagonal reset schedule = centre column shifted by one  -- []
+
+=== 3. finite certificates against raw artifacts ===
+[PASS] CC-01 the stored sequence has 1000001 bits  -- 1000001
+[PASS] CC-01 an independent engine reproduces the first 200001 bits
+[PASS] CC-02 exactly 998140 distinct length-28 factors  -- 998140
+[PASS] CT-01 hence T + p >= 998140 (conditional on CC-02)  -- conditional theorem; the numeral is the certificate
+
+=== 4. SHA-256 of catalogued artifacts ===
+[PASS] hash RULE30_PHASE1_HANDOFF/phase1_results/center_column_1000001.txt
+[PASS] hash RULE30_PHASE1_HANDOFF/phase1_results/center_column_200001.txt
+[PASS] hash PHASE2A_SAT_MB1LOC/results/phase2a_results.json
+[PASS] hash PHASE2B_GLOBAL_DEFECT/results/phase2b_results.json
+[PASS] hash PHASE2C_EDGE_PREFIX/results/phase2c_results.json
+[PASS] hash PHASE2C_EDGE_PREFIX/PREFIX_PERIOD_TABLE.csv
+[PASS] hash PHASE2D_COLLAPSE_CHAIN/results/phase2d_results.json
+[PASS] hash PHASE2E_TRANSIENT_FRONTIER/results/phase2e_results.json
+[PASS] hash PHASE2E_TRANSIENT_FRONTIER/TRANSIENT_CLASSIFICATION.csv
+[PASS] hash PHASE2E_TRANSIENT_FRONTIER/RESET_SCHEDULE_RESULTS.csv
+
+=== 5. claim IDs are declared in the ledger ===
+[PASS] the ledger declares at least 50 claim IDs  -- 73 declared
+[PASS] ledger category A (T-) is non-empty  -- 23 entries
+[PASS] ledger category B (CT-) is non-empty  -- 6 entries
+[PASS] ledger category C (CC-) is non-empty  -- 12 entries
+[PASS] ledger category D (BO-) is non-empty  -- 12 entries
+[PASS] ledger category E (CJ-) is non-empty  -- 7 entries
+[PASS] ledger category F (RF-) is non-empty  -- 7 entries
+[PASS] ledger category G (VQ-) is non-empty  -- 5 entries
+[PASS] ledger category H (BR-) is non-empty  -- 1 entries
+[PASS] every claim ID cited in any document exists in the ledger  -- []
+[PASS] VERIFIED_THEOREMS.md contains sections T1..T23  -- []
+[PASS] every theorem section carries a 'why this does not solve Problem 1' note  -- 23 notes for 23 sections
+[PASS] all 11 required documents are present  -- []
+[PASS] dependency graph has a mermaid block
+[PASS] dependency graph marks the bridge
+
+=== 6. banned-overclaim scan ===
+[PASS] no document claims Problem 1 is solved or the centre column proved aperiodic  -- []
+[PASS] every use of 'UNSAT' is qualified  -- []
+[PASS] the paper draft disclaims solving Problem 1
+[PASS] novelty is recorded as unresolved
+[PASS] the ledger states that tests do not promote a claim
+[PASS] PAPER_DRAFT_V1.md states that Problem 1 is not solved
+[PASS] EXPERT_REVIEW_REQUEST.md states that Problem 1 is not solved
+[PASS] MASTER_CLAIM_LEDGER.md states that Problem 1 is not solved
+
+======================================================================
+71 passed, 0 FAILED, 0 skipped   (31.4 s)
