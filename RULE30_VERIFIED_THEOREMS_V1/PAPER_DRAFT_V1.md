@@ -1,5 +1,30 @@
 # Nested Prefix Dynamics and Transient Structure in the Single-Seed Rule 30 Space-Time Diagram
 
+> ## SUPERSEDED BY `PHASE2G_LITERATURE_COMPARISON/REVISED_PAPER_OUTLINE.md`
+>
+> Phase 2G's comparison shows that this draft **claims too much**. On the
+> available (secondary, unverified) evidence:
+>
+> * §§3–4's period structure — left-justified coordinates, eventual periodicity
+>   of each diagonal, periods a power of two, and the **doubling criterion** —
+>   is due to **E. S. Rowland, "Local Nested Structure in Rule 30", Complex
+>   Systems 16 (2006) 239–258**, not to us. Theorem 4.1/Corollary 4.2 and
+>   Theorems 5.1/5.2 must be demoted to recalled results with a citation.
+> * §8's `T(K)/K = 1.3399` is a re-measurement of the known rule-30 order/chaos
+>   boundary speed `≈ 0.252` (`1/(1-0.252) = 1.337`), not an observation of ours.
+> * §5's column results (T-02/T-03) sit on territory occupied by **Jen (1990)**
+>   and **Kopra (2022, Thm 3.5)**; their status is **uncertain**, and no priority
+>   may be implied.
+> * The title's "Nested" is Rowland's word for his mechanism. The revised title
+>   is **"Preperiods in the left-diagonal tower of Rule 30"**.
+> * Rowland's `2^n` nested-restart mechanism and its conditional time-reversal
+>   have **no analogue here** — a gap in this work, now stated explicitly.
+>
+> **This draft must not be submitted or circulated in its current form.**
+> The revised outline supersedes it. The text below is kept unaltered for the
+> record.
+
+
 **Draft v1.** This paper does **not** solve Wolfram's Rule 30 Prize Problem 1
 and makes no partial claim on it. Section 9 states precisely why the results
 here do not resolve centre-column aperiodicity.

@@ -1,5 +1,39 @@
 # Novelty Status
 
+> ## SUPERSEDED IN PART BY PHASE 2G — read `PHASE2G_LITERATURE_COMPARISON/REVISED_NOVELTY_LEDGER.md` first
+>
+> Phase 2G obtained bibliographic metadata and secondary summaries for Rowland
+> (2006), Kopra (arXiv:2202.13809) and Jen (1990). **The papers still could not
+> be retrieved** — every fetch returns HTTP 403 at this environment's proxy, for
+> every host including Wikipedia — so novelty remains formally unresolved.
+> But one attributed numerical statement was testable and **matched exactly**,
+> and it forces several downgrades:
+>
+> * **T-07, T-08, T-11, T-14, and the DOUBLING half of T-10 are relabelled
+>   KNOWN (Rowland 2006).** Rowland uses left-justified coordinates, states that
+>   each left diagonal is eventually periodic with period a power of two, and
+>   his **Proposition 2** appears to be exactly our doubling criterion
+>   ("a diagonal becomes a white stripe, and the diagonal to its left has an odd
+>   number of black cells per repeating block").
+> * **Phase 2F's assessment "T-13 – T-19 … POSSIBLY NEW as a block" is
+>   withdrawn.**
+> * **BO-08 and BO-09 are re-measurements of a known constant** — the rule-30
+>   order/chaos boundary speed `≈ 0.252`; our implied value is `0.25368`.
+> * **T-02 and T-03 are moved to UNCERTAIN**: Jen (1990) and Kopra's Theorem 3.5
+>   occupy that territory and neither could be read.
+> * **The rule-numbering assumption is retired.** We reproduced all 48 terms of
+>   Rowland's published diagonal-period sequence exactly — a far stronger
+>   external anchor than the 14-bit prefix relied on below.
+>
+> What survives as plausibly new is the **preperiod** material — T-16, T-18,
+> T-19, T-21.5 — because every attributed statement about Rowland concerns
+> periods only. That is a weak basis and is labelled as such.
+>
+> The assessments in the rest of this file are the Phase 2F priors, kept for the
+> record. Where they conflict with the revised ledger, **the revised ledger
+> wins**.
+
+
 **Novelty is unresolved for this corpus, and this document does not resolve
 it.**
 

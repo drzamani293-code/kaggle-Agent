@@ -1,0 +1,15 @@
+diagonal periods, k = 0 .. 47
+  ours      : [1, 1, 1, 2, 1, 2, 2, 1, 4, 1, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 4, 4, 4, 4, 1, 8, 1, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 4, 8, 8]
+  attributed: [1, 1, 1, 2, 1, 2, 2, 1, 4, 1, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 4, 4, 4, 4, 1, 8, 1, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 4, 8, 8]
+  EXACT MATCH on all 48 terms: True
+  two independent period methods agree: True
+  prefix P(K) = running max of diagonal periods: True
+  first-doubling positions (ours): [3, 8, 29]
+  period-1 diagonals (ours):       [0, 1, 2, 4, 7, 9, 28, 30]
+  diagonal preperiods (ours):      [0, 1, 2, 2, 2, 2, 2, 0, 2, 5, 6, 8, 6, 10, 11, 13, 16, 15, 20, 18, 23, 23, 25, 24, 27, 28, 29, 30, 31, 30, 33, 34, 36, 36, 40, 37, 46, 41, 48, 50, 55, 52, 57, 56, 61, 59, 64, 62]
+
+frontier slope vs attributed boundary speed
+  T(30000)/30000        = 1.339900
+  implied boundary speed = 1 - K_per/t = 0.253676
+  attributed             = 0.252
+  relative difference    = 0.665 %
